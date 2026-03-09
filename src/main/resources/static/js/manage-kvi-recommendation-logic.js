@@ -550,8 +550,10 @@ const KviRecommendationLogicPage = {
     const value = raw.slice(token.length).trim();
     let type = defaultType || 'contains';
     if (token === '=') type = 'equals';
-    else if (token === '>' || token === '>=') type = 'greaterThan';
-    else if (token === '<' || token === '<=') type = 'lessThan';
+    else if (token === '>') type = 'greaterThan';
+    else if (token === '>=') type = 'greaterThanOrEqual';
+    else if (token === '<') type = 'lessThan';
+    else if (token === '<=') type = 'lessThanOrEqual';
     else if (token === '!=' || token === '<>') type = 'notEqual';
 
     return { value, type };
@@ -562,14 +564,16 @@ const KviRecommendationLogicPage = {
     if (!op) return null;
 
     if (op === 'equals') return 'eq';
-    if (op === 'greaterThan' || op === 'greaterThanOrEqual') return 'gt';
-    if (op === 'lessThan' || op === 'lessThanOrEqual') return 'ls';
+    if (op === 'greaterThan') return 'gt';
+    if (op === 'greaterThanOrEqual') return 'gte';
+    if (op === 'lessThan') return 'ls';
+    if (op === 'lessThanOrEqual') return 'lte';
     if (op === 'contains') return 'like';
     if (op === 'startsWith' || op === 'endsWith') return 'like';
-    if (op === 'notEqual') return 'eq';
+    if (op === 'notEqual') return 'neq';
     if (op === 'blank' || op === 'notBlank') return null;
 
-    // Backend contract for KVI output supports eq/gt/ls/like.
+    // Backend contract for KVI output supports eq/gt/gte/ls/lte/like/neq.
     // Fall back by field type when AG Grid sends unknown operator names.
     if (field === 'effective_date' || field === 'termination_date') return 'eq';
     return 'like';
