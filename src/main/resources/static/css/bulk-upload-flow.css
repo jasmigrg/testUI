@@ -1,0 +1,123 @@
+.bulk-upload-batch-section {
+  margin: 8px 0 12px;
+  border: 1px solid #add8e6;
+  border-radius: 12px;
+  background: #eef5fb;
+  padding: 10px 12px 12px;
+}
+
+.bulk-upload-batch-info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.bulk-upload-batch-info-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bulk-upload-batch-info-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #1d8ef0;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.bulk-upload-batch-info-text {
+  color: #2c3e50;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.bulk-upload-batch-collapse-btn {
+  border: none;
+  background: transparent;
+  color: #435466;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+
+.bulk-upload-batch-grid {
+  width: 100%;
+  overflow: hidden;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+
+.bulk-upload-batch-section.is-collapsed .bulk-upload-batch-grid {
+  display: none;
+}
+
+.bulk-upload-batch-columns,
+.bulk-upload-batch-row {
+  display: grid;
+  grid-template-columns: repeat(13, minmax(0, 1fr));
+  column-gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+
+.bulk-upload-batch-columns {
+  padding: 8px 0 10px;
+}
+
+.bulk-upload-batch-col {
+  font-size: 12px;
+  font-weight: 700;
+  color: #2f3b4a;
+  white-space: normal;
+  line-height: 1.2;
+}
+
+.bulk-upload-batch-list {
+  padding: 0 0 8px;
+}
+
+.bulk-upload-batch-row {
+  padding: 8px 0;
+  border-top: 1px solid #d8e4ef;
+}
+
+.bulk-upload-batch-cell {
+  font-size: 12px;
+  color: #2f3b4a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bulk-upload-batch-empty {
+  text-align: center;
+  color: #7b8794;
+  padding: 18px 0 14px;
+}
+
+.bulk-upload-batch-delete-btn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.bulk-upload-batch-number-link {
+  border: none;
+  background: transparent;
+  color: #1d4ed8;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+  font: inherit;
+}

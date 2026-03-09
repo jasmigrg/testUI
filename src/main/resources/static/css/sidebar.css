@@ -1,0 +1,299 @@
+.sidebar {
+    width: 64px;
+    min-width: 64px;
+    max-width: 64px;
+    background-color: #007c91;
+    border-right: 1px solid #e0e0e0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-radius: 20px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    align-self: start;
+    height: calc(100vh - 64px);
+    z-index: 0;
+    padding: 12px 0;
+    transition: width 0.3s ease;
+}
+
+.sidebar::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 64px;
+    background-color: #007c91;
+    border-radius: 20px;
+    border-right: 1px solid #e0e0e0;
+    z-index: -1;
+    transition: width 0.3s ease;
+}
+
+.sidebar:hover::before {
+    width: 280px;
+}
+
+.sidebar:hover {
+    overflow: visible;
+    z-index: 30;
+}
+
+.sidebar:hover .sidebar-menu {
+    width: 280px;
+    transition: width 0.3s ease;
+}
+
+/* Expanded state (when hovering) */
+.sidebar.expanded {
+    overflow: visible;
+    z-index: 30;
+}
+
+.sidebar.collapsed {
+    z-index: 0;
+}
+
+.sidebar.expanded::before {
+    width: 280px;
+}
+
+.sidebar.expanded .sidebar-menu {
+    width: 280px;
+    transition: width 0.3s ease;
+}
+
+/* ========================================
+   Sidebar Menu
+======================================== */
+.sidebar-menu {
+    list-style: none;
+    padding: 0;
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    position: relative;
+    z-index: 1;
+    width: 64px;
+    transition: width 0.3s ease;
+}
+
+/* Custom scrollbar */
+.sidebar-menu::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidebar-menu::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sidebar-menu::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+}
+
+.sidebar-menu::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* ========================================
+   Menu Items
+======================================== */
+.menu-item {
+    position: relative;
+    margin-bottom: 4px;
+}
+
+.menu-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    color: rgba(255, 255, 255, 0.7);
+    text-decoration: none;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    white-space: nowrap;
+    position: relative;
+    border-radius: 10px;
+    margin: 0 6px;
+}
+
+.menu-link:hover {
+    background-color: #006677;
+    color: white;
+}
+
+.menu-link.active {
+    background-color: #006677;
+    color: white;
+}
+
+.menu-link .icon {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+}
+
+.menu-link .text {
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    flex: 1;
+    visibility: hidden;
+}
+
+.sidebar:hover .menu-link .text,
+.sidebar.expanded .menu-link .text {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Keep text hidden when collapsed even if submenu is open */
+.sidebar.collapsed .menu-link .text {
+    opacity: 0 !important;
+    visibility: hidden !important;
+}
+
+/* ========================================
+   Dropdown Arrow
+======================================== */
+.dropdown-arrow {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    margin-left: auto;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    opacity: 0;
+}
+
+.sidebar:hover .dropdown-arrow,
+.sidebar.expanded .dropdown-arrow,
+.menu-item.has-submenu.open .dropdown-arrow {
+    opacity: 1;
+}
+
+.menu-item.has-submenu.open .dropdown-arrow {
+    transform: rotate(180deg);
+}
+
+/* ========================================
+   Submenu
+======================================== */
+.submenu {
+    list-style: none;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease, opacity 0.3s ease, visibility 0.3s ease;
+    border-radius: 8px;
+    margin: 4px 0;
+    padding: 0;
+    opacity: 0;
+    visibility: hidden;
+}
+
+.sidebar:hover .menu-item.has-submenu.open .submenu,
+.sidebar.expanded .menu-item.has-submenu.open .submenu {
+    max-height: 500px;
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Ensure submenu is completely hidden when collapsed */
+.sidebar.collapsed .submenu {
+    max-height: 0 !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+}
+
+.submenu-item {
+    margin: 0;
+}
+
+.submenu-link {
+    display: flex;
+    align-items: flex-start;
+    padding: 8px 12px 8px 48px;
+    color: rgba(255, 255, 255, 0.6);
+    text-decoration: none;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    white-space: normal;
+    border-radius: 0;
+    font-size: 13px;
+    width: 100%;
+    margin: 0;
+    box-sizing: border-box;
+    min-height: 34px;
+}
+
+.submenu-link:hover {
+    background-color: #006677;
+    color: white;
+}
+
+.submenu-link.active {
+    background-color: #006677;
+    color: white;
+}
+
+.submenu-link .text {
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    font-size: 13px;
+    visibility: hidden;
+    line-height: 1.2;
+    max-width: 100%;
+    overflow: hidden;
+}
+
+.sidebar:hover .submenu-link .text,
+.sidebar.expanded .submenu-link .text {
+    opacity: 1;
+    visibility: visible;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    white-space: normal;
+    text-overflow: ellipsis;
+}
+
+/* Keep submenu text hidden when collapsed */
+.sidebar.collapsed .submenu-link .text {
+    opacity: 0 !important;
+    visibility: hidden !important;
+}
+
+/* ========================================
+   Remove conflicting main-content styles
+======================================== */
+.main-content {
+    /* Removed - using existing .content class */
+}
+
+.content-wrapper {
+    /* Removed - not needed */
+}
+
+/* ========================================
+   Utility Classes
+======================================== */
+.sidebar.collapsed .text {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none;
+}
+
+.sidebar.collapsed .dropdown-arrow {
+    opacity: 0 !important;
+    visibility: hidden !important;
+}
+
+.sidebar.collapsed .submenu {
+    display: none !important;
+}
+
+/* Prevent text selection during transitions */
+.sidebar {
+    user-select: none;
+}

@@ -1,0 +1,117 @@
+.app-header {
+  --app-header-height: 64px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  height: var(--app-header-height);
+  z-index: 100;
+  background: #ffffff;
+  border-bottom: 1px solid #d7dadc;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+}
+
+.app-header .header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.app-header .logo {
+  font-weight: 600;
+  padding: 6px 10px;
+  background: #e0e5e7;
+  border-radius: 6px;
+}
+
+.app-header .header-nav {
+  display: flex;
+  gap: 10px;
+}
+
+.app-header .icon-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  background: #e8ebed;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.app-header .icon-btn svg {
+  width: 18px;
+  height: 18px;
+  fill: #5c646a;
+}
+
+.app-header .header-center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+
+.app-header .search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  border: 1px solid #d7dadc;
+  border-radius: 18px;
+  padding: 6px 12px;
+  width: 260px;
+}
+
+.app-header .search svg {
+  width: 16px;
+  height: 16px;
+  fill: #7a8288;
+}
+
+.app-header .search input {
+  border: none;
+  outline: none;
+  background: transparent;
+  width: 100%;
+  font-size: 13px;
+}
+
+.app-header .header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.app-header .user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.app-header .user-meta {
+  text-align: right;
+}
+
+.app-header .user-name {
+  font-weight: 600;
+}
+
+.app-header .user-role {
+  font-size: 12px;
+  color: #6f757a;
+}
+
+.app-header .user-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #d2d8db;
+  display: grid;
+  place-items: center;
+  font-weight: 600;
+}

@@ -1,0 +1,33 @@
+.breadcrumb {
+  font-size: 12px;
+  color: #6f757a;
+}
+
+.crumb-link {
+  color: #6f757a;
+  text-decoration: none;
+}
+
+.crumb-link:hover {
+  color: #007c91;
+  text-decoration: underline;
+}
+
+.page-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.title-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: #add8e6;
+}
+
+.page-title h1 {
+  margin: 0;
+  font-size: 22px;
+}
