@@ -1,100 +1,13 @@
-class GtPageSelectHeader {
-  init(params) {
-    this.params = params;
-    this.eGui = document.createElement('div');
-    this.eGui.className = 'gt-header-select-all';
-
-    this.checkbox = document.createElement('input');
-    this.checkbox.type = 'checkbox';
-    this.checkbox.className = 'gt-header-select-checkbox';
-    this.checkbox.setAttribute('aria-label', 'Select visible rows');
-
-    this.stopEvent = (e) => e.stopPropagation();
-    this.onToggle = () => this.toggleVisibleRows();
-    this.onSync = () => this.syncState();
-
-    this.checkbox.addEventListener('click', this.stopEvent);
-    this.checkbox.addEventListener('mousedown', this.stopEvent);
-    this.checkbox.addEventListener('change', this.onToggle);
-
-    this.params.api.addEventListener('selectionChanged', this.onSync);
-    this.params.api.addEventListener('paginationChanged', this.onSync);
-    this.params.api.addEventListener('filterChanged', this.onSync);
-    this.params.api.addEventListener('sortChanged', this.onSync);
-
-    this.eGui.appendChild(this.checkbox);
-    this.syncState();
-  }
-
-  getGui() {
-    return this.eGui;
-  }
-
-  toggleVisibleRows() {
-    const shouldSelect = this.checkbox.checked;
-    const pageSize = this.params.api.paginationGetPageSize?.() || 20;
-    const currentPage = this.params.api.paginationGetCurrentPage?.() || 0;
-    const from = currentPage * pageSize;
-    const to = from + pageSize;
-
-    for (let i = from; i < to; i++) {
-      const rowNode = this.params.api.getDisplayedRowAtIndex(i);
-      if (!rowNode) continue;
-      if (rowNode.rowPinned || rowNode.group || rowNode.selectable === false) continue;
-      rowNode.setSelected(shouldSelect);
-    }
-
-    this.syncState();
-  }
-
-  syncState() {
-    if (!this.checkbox || !this.params?.api) return;
-
-    const pageSize = this.params.api.paginationGetPageSize?.() || 20;
-    const currentPage = this.params.api.paginationGetCurrentPage?.() || 0;
-    const from = currentPage * pageSize;
-    const to = from + pageSize;
-    let selectableCount = 0;
-    let selectedCount = 0;
-
-    for (let i = from; i < to; i++) {
-      const rowNode = this.params.api.getDisplayedRowAtIndex(i);
-      if (!rowNode) continue;
-      if (rowNode.rowPinned || rowNode.group || rowNode.selectable === false) continue;
-      selectableCount += 1;
-      if (rowNode.isSelected()) selectedCount += 1;
-    }
-
-    this.checkbox.indeterminate =
-      selectableCount > 0 && selectedCount > 0 && selectedCount < selectableCount;
-    this.checkbox.checked = selectableCount > 0 && selectedCount === selectableCount;
-  }
-
-  destroy() {
-    if (!this.checkbox) return;
-    this.checkbox.removeEventListener('click', this.stopEvent);
-    this.checkbox.removeEventListener('mousedown', this.stopEvent);
-    this.checkbox.removeEventListener('change', this.onToggle);
-
-    if (this.params?.api) {
-      this.params.api.removeEventListener('selectionChanged', this.onSync);
-      this.params.api.removeEventListener('paginationChanged', this.onSync);
-      this.params.api.removeEventListener('filterChanged', this.onSync);
-      this.params.api.removeEventListener('sortChanged', this.onSync);
-    }
-  }
-}
-
-const KviRecommendationLogicPage = {
+const KviMappingLogicPage = {
   activeTab: 'parameter',
   grids: {},
   toolbarScope: '.kvi-page-shell',
   gridManagerBootstrapped: false,
   gridManagerInitScheduled: false,
-  kviApiBaseUrl: '',
+  apiBaseUrl: '',
 
   init() {
-    this.kviApiBaseUrl = (window.API_BASE_URL || window.KVI_API_BASE_URL || '').replace(/\/$/, '');
+    this.apiBaseUrl = (window.API_BASE_URL || '').replace(/\/$/, '');
     this.cacheDom();
     this.bindTabs();
     this.bindToolbarActions();
@@ -108,7 +21,6 @@ const KviRecommendationLogicPage = {
 
   cacheDom() {
     this.pageShell = document.querySelector('.kvi-page-shell');
-    this.contentCard = document.querySelector('.kvi-page .content-card');
     this.tabButtons = Array.from(document.querySelectorAll('.kvi-tab-btn[data-kvi-tab]'));
     this.tabPanels = Array.from(document.querySelectorAll('.kvi-tab-panel[data-kvi-panel]'));
   },
@@ -123,27 +35,41 @@ const KviRecommendationLogicPage = {
     const scope = this.pageShell;
     if (!scope) return;
 
-    scope.querySelectorAll('.gt-action-btn[data-action="back"]').forEach((backBtn) => {
-      backBtn.addEventListener('click', () => {
+    scope.querySelectorAll('.gt-action-btn[data-action="back"]').forEach((button) => {
+      button.addEventListener('click', () => {
         window.location.assign('/');
       });
     });
 
-    scope.querySelectorAll('.gt-action-btn[data-action="add"]').forEach((addBtn) => {
-      addBtn.addEventListener('click', () => {
-        const addUrl = window.KVI_ADD_PAGE_URL || '/manage-kvi-recommendation-logic-view-output-data/add';
-        window.location.assign(addUrl);
+    scope.querySelectorAll('.gt-action-btn[data-action="add"]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const addUrl = String(window.KVI_MAPPING_ADD_PAGE_URL || '').trim();
+        if (addUrl) {
+          window.location.assign(addUrl);
+          return;
+        }
+        if (window.PageToast?.warn) {
+          window.PageToast.warn('Add page is not configured for KVI Mapping yet.');
+        }
       });
     });
 
-    scope.querySelectorAll('.gt-action-btn[data-action="refresh"]').forEach((refreshBtn) => {
-      refreshBtn.addEventListener('click', () => {
+    scope.querySelectorAll('.gt-action-btn[data-action="favorite"]').forEach((button) => {
+      button.addEventListener('click', () => {
+        if (window.PageToast?.info) {
+          window.PageToast.info('Favorites action is not configured yet.');
+        }
+      });
+    });
+
+    scope.querySelectorAll('.gt-action-btn[data-action="refresh"]').forEach((button) => {
+      button.addEventListener('click', () => {
         this.resetActiveGridState();
       });
     });
 
-    scope.querySelectorAll('.gt-action-btn[data-action="execute"]').forEach((executeBtn) => {
-      executeBtn.addEventListener('click', () => {
+    scope.querySelectorAll('.gt-action-btn[data-action="execute"]').forEach((button) => {
+      button.addEventListener('click', () => {
         const activeGrid = this.getActiveGrid();
         if (!activeGrid?.api) return;
         if (typeof activeGrid.api.applyPendingFloatingFilters === 'function') {
@@ -152,9 +78,9 @@ const KviRecommendationLogicPage = {
       });
     });
 
-    scope.querySelectorAll('.gt-view-btn[data-density]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        this.applyDensity(btn.dataset.density);
+    scope.querySelectorAll('.gt-view-btn[data-density]').forEach((button) => {
+      button.addEventListener('click', () => {
+        this.applyDensity(button.dataset.density);
       });
     });
 
@@ -164,8 +90,8 @@ const KviRecommendationLogicPage = {
       if (!activeGrid?.api || typeof activeGrid.api.exportDataAsCsv !== 'function') return;
       activeGrid.api.exportDataAsCsv({
         fileName: this.activeTab === 'parameter'
-          ? 'kvi-recommendation-parameter.csv'
-          : 'kvi-recommendation-output.csv'
+          ? 'kvi-mapping-parameter.csv'
+          : 'kvi-mapping-output.csv'
       });
     });
   },
@@ -281,9 +207,6 @@ const KviRecommendationLogicPage = {
     if (typeof activeGrid.api.paginationGoToFirstPage === 'function') {
       activeGrid.api.paginationGoToFirstPage();
     }
-    if (typeof activeGrid.api.deselectAll === 'function') {
-      activeGrid.api.deselectAll();
-    }
     this.refreshActiveGridLayout();
   },
 
@@ -292,18 +215,18 @@ const KviRecommendationLogicPage = {
 
     const configByTab = {
       parameter: {
-        gridElementId: 'kviParameterGrid',
+        gridElementId: 'kviMappingParameterGrid',
         columns: this.parameterColumns(),
-        apiEndpoint: `${this.kviApiBaseUrl}/api/v1/kviRecommendationParameter`,
-        pageSizeParam: 'size',
+        apiEndpoint: `${this.apiBaseUrl}/api/v1/kviMappingParameter`,
+        pageSizeParam: 'pageSize',
         sortFieldMap: this.parameterSortFieldMap(),
         dataTransformer: (row) => this.transformParameterRow(row)
       },
       output: {
-        gridElementId: 'kviOutputGrid',
+        gridElementId: 'kviMappingOutputGrid',
         columns: this.outputColumns(),
-        apiEndpoint: `${this.kviApiBaseUrl}/api/v1/kviRecommendationOutput`,
-        pageSizeParam: 'size',
+        apiEndpoint: `${this.apiBaseUrl}/api/v1/kviMappingOutput`,
+        pageSizeParam: 'pageSize',
         sortFieldMap: this.outputSortFieldMap(),
         dataTransformer: (row) => this.transformOutputRow(row)
       }
@@ -323,7 +246,7 @@ const KviRecommendationLogicPage = {
       dataTransformer: tabConfig.dataTransformer,
       gridOptions: {
         onGridReady: (params) => {
-          const datasource = this.buildKviDatasource(tabConfig);
+          const datasource = this.buildDatasource(tabConfig);
           params.api.setGridOption('datasource', datasource);
         },
         rowSelection: 'multiple',
@@ -335,9 +258,6 @@ const KviRecommendationLogicPage = {
             '<span class="gt-sort-icon gt-sort-icon--asc" aria-hidden="true"><svg viewBox="0 0 8 12" focusable="false"><path d="M4 1L7 4H1L4 1Z"></path></svg></span>',
           sortDescending:
             '<span class="gt-sort-icon gt-sort-icon--desc" aria-hidden="true"><svg viewBox="0 0 8 12" focusable="false"><path d="M4 11L1 8H7L4 11Z"></path></svg></span>'
-        },
-        components: {
-          gtPageSelectHeader: GtPageSelectHeader
         },
         defaultColDef: {
           sortable: true,
@@ -419,30 +339,22 @@ const KviRecommendationLogicPage = {
 
   parameterColumns() {
     return [
-      { field: 'effectiveDate', headerName: 'Effective Date', minWidth: 150 },
-      { field: 'terminationDate', headerName: 'Termination Date', minWidth: 170 },
-      { field: 'prcaMinThreshold', headerName: 'PRCA Min Threshold', minWidth: 190 },
-      { field: 'dedupMethod', headerName: 'Dedup Method', minWidth: 170 }
+      { field: 'effectiveDate', headerName: 'Effective Date', minWidth: 150, filter: 'agDateColumnFilter' },
+      { field: 'terminationDate', headerName: 'Termination Date', minWidth: 170, filter: 'agDateColumnFilter' },
+      { field: 'revenuePenetrationPctl', headerName: 'Revenue Penetration PCTL', minWidth: 230, filter: 'agNumberColumnFilter' },
+      { field: 'prcaPenetrationPctl', headerName: 'PRCA Penetration PCTL', minWidth: 210, filter: 'agNumberColumnFilter' },
+      { field: 'revenuePenetrationAdj', headerName: 'Revenue Penetration ADJ', minWidth: 220, filter: 'agNumberColumnFilter' },
+      { field: 'prcaPenetrationAdj', headerName: 'PRCA Penetration ADJ', minWidth: 200, filter: 'agNumberColumnFilter' }
     ];
   },
 
   outputColumns() {
     return [
-      { field: 'prcaNum', headerName: 'PRCA Num', minWidth: 130 },
-      { field: 'customerCluster', headerName: 'Customer Cluster', minWidth: 170 },
-      { field: 'effectiveDate', headerName: 'Effective Date', minWidth: 150 },
-      { field: 'terminationDate', headerName: 'Termination Date', minWidth: 170 },
-      { field: 'itemNum', headerName: 'Item Num', minWidth: 130 },
-      { field: 'itemFamily', headerName: 'Item Family', minWidth: 150 },
-      { field: 'itemCategory', headerName: 'Item Category', minWidth: 160 },
-      { field: 'itemGroup', headerName: 'Item Group', minWidth: 150 },
-      { field: 'itemSubCategory', headerName: 'Item Sub Category', minWidth: 190 },
-      { field: 'likeItemGroup', headerName: 'Like Item Group', minWidth: 170 },
-      { field: 'itemDescription', headerName: 'Item Description', minWidth: 210 },
-      { field: 'itemSegmentation', headerName: 'Item Segmentation', minWidth: 180 },
-      { field: 'finalBaseMargin', headerName: 'Final Base Margin', minWidth: 170 },
-      { field: 'finalTargetMargin', headerName: 'Final Target Margin', minWidth: 180 },
-      { field: 'finalPremiumMargin', headerName: 'Final Premium Margin', minWidth: 190 }
+      { field: 'itemNum', headerName: 'Item Num', minWidth: 130, filter: 'agNumberColumnFilter' },
+      { field: 'customerCluster', headerName: 'Customer Cluster', minWidth: 180 },
+      { field: 'effectiveDate', headerName: 'Effective Date', minWidth: 150, filter: 'agDateColumnFilter' },
+      { field: 'terminationDate', headerName: 'Termination Date', minWidth: 170, filter: 'agDateColumnFilter' },
+      { field: 'itemSegmentation', headerName: 'Item Segmentation', minWidth: 190 }
     ];
   },
 
@@ -450,63 +362,21 @@ const KviRecommendationLogicPage = {
     return {
       effectiveDate: 'effective_date',
       terminationDate: 'termination_date',
-      prcaMinThreshold: 'prca_min_threshold',
-      dedupMethod: 'dedup_method'
+      revenuePenetrationPctl: 'revenue_penetration_pctl',
+      prcaPenetrationPctl: 'prca_penetration_pctl',
+      revenuePenetrationAdj: 'revenue_penetration_adj',
+      prcaPenetrationAdj: 'prca_penetration_adj'
     };
   },
 
   outputSortFieldMap() {
     return {
-      prcaNum: 'prca_num',
+      itemNum: 'item_num',
       customerCluster: 'customer_cluster',
       effectiveDate: 'effective_date',
       terminationDate: 'termination_date',
-      itemNum: 'item_num',
-      itemFamily: 'item_family',
-      itemCategory: 'item_category',
-      itemGroup: 'item_group',
-      itemSubCategory: 'item_sub_category',
-      likeItemGroup: 'like_item_group',
-      itemDescription: 'item_description',
-      itemSegmentation: 'item_segmentation',
-      finalBaseMargin: 'final_base_margin',
-      finalTargetMargin: 'final_target_margin',
-      finalPremiumMargin: 'final_premium_margin'
+      itemSegmentation: 'item_segmentation'
     };
-  },
-
-  buildParameterRows(count) {
-    const methods = ['Highest PRCA', 'Lowest PRCA', 'Latest Effective', 'Manual Override'];
-    return Array.from({ length: count }, (_, index) => ({
-      effectiveDate: `0${(index % 9) + 1}/01/2026`,
-      terminationDate: `12/${String(20 + (index % 8)).padStart(2, '0')}/2026`,
-      prcaMinThreshold: (5 + index * 0.75).toFixed(2),
-      dedupMethod: methods[index % methods.length]
-    }));
-  },
-
-  buildOutputRows(count) {
-    const categories = ['Surgical', 'Lab', 'Office', 'Pharma'];
-    const groups = ['Group A', 'Group B', 'Group C'];
-    const segments = ['Core', 'Value', 'Strategic'];
-
-    return Array.from({ length: count }, (_, index) => ({
-      prcaNum: `PRCA-${1200 + index}`,
-      customerCluster: `Cluster ${String.fromCharCode(65 + (index % 5))}`,
-      effectiveDate: `01/${String((index % 27) + 1).padStart(2, '0')}/2026`,
-      terminationDate: `12/${String((index % 27) + 1).padStart(2, '0')}/2026`,
-      itemNum: `${500000 + index}`,
-      itemFamily: `Family ${1 + (index % 7)}`,
-      itemCategory: categories[index % categories.length],
-      itemGroup: groups[index % groups.length],
-      itemSubCategory: `SubCat ${1 + (index % 6)}`,
-      likeItemGroup: `Like Group ${1 + (index % 4)}`,
-      itemDescription: `KVI Recommended Item ${index + 1}`,
-      itemSegmentation: segments[index % segments.length],
-      finalBaseMargin: `${(12 + (index % 9) * 0.9).toFixed(2)}%`,
-      finalTargetMargin: `${(15 + (index % 10) * 0.8).toFixed(2)}%`,
-      finalPremiumMargin: `${(18 + (index % 11) * 0.85).toFixed(2)}%`
-    }));
   },
 
   formatIsoDate(value) {
@@ -573,8 +443,6 @@ const KviRecommendationLogicPage = {
     if (normalizedOp === 'notequal' || normalizedOp === 'neq' || normalizedOp === 'ne') return 'neq';
     if (normalizedOp === 'blank' || normalizedOp === 'notblank') return null;
 
-    // Backend contract for KVI output supports eq/gt/gte/ls/lte/like/neq.
-    // Fall back by field type when AG Grid sends unknown operator names.
     if (field === 'effective_date' || field === 'termination_date') return 'eq';
     return 'like';
   },
@@ -582,24 +450,27 @@ const KviRecommendationLogicPage = {
   transformParameterRow(row) {
     if (!row || typeof row !== 'object') return row;
     return {
-      ...row,
       effectiveDate: this.formatDateValue(row.effectiveDate || row.effective_date),
       terminationDate: this.formatDateValue(row.terminationDate || row.termination_date),
-      prcaMinThreshold: row.prcaMinThreshold ?? row.prca_min_threshold,
-      dedupMethod: row.dedupMethod ?? row.dedup_method
+      revenuePenetrationPctl: row.revenuePenetrationPctl ?? row.revenue_penetration_pctl,
+      prcaPenetrationPctl: row.prcaPenetrationPctl ?? row.prca_penetration_pctl,
+      revenuePenetrationAdj: row.revenuePenetrationAdj ?? row.revenue_penetration_adj,
+      prcaPenetrationAdj: row.prcaPenetrationAdj ?? row.prca_penetration_adj
     };
   },
 
   transformOutputRow(row) {
     if (!row || typeof row !== 'object') return row;
     return {
-      ...row,
-      effectiveDate: this.formatIsoDate(row.effectiveDate),
-      terminationDate: this.formatIsoDate(row.terminationDate)
+      itemNum: row.itemNum ?? row.item_num,
+      customerCluster: row.customerCluster ?? row.customer_cluster,
+      effectiveDate: this.formatDateValue(row.effectiveDate || row.effective_date),
+      terminationDate: this.formatDateValue(row.terminationDate || row.termination_date),
+      itemSegmentation: row.itemSegmentation ?? row.item_segmentation
     };
   },
 
-  buildKviDatasource(tabConfig) {
+  buildDatasource(tabConfig) {
     return {
       rowCount: null,
       getRows: (params) => {
@@ -608,7 +479,7 @@ const KviRecommendationLogicPage = {
         const urlParams = new URLSearchParams();
 
         urlParams.append('page', String(pageNum));
-        urlParams.append(tabConfig.pageSizeParam || 'size', String(pageSize));
+        urlParams.append(tabConfig.pageSizeParam || 'pageSize', String(pageSize));
 
         if (params.sortModel && params.sortModel.length > 0) {
           const sortModel = params.sortModel[0];
@@ -657,7 +528,7 @@ const KviRecommendationLogicPage = {
             params.successCallback(rows, lastRow);
           })
           .catch((error) => {
-            console.error('KVI datasource fetch failed:', error);
+            console.error('KVI mapping datasource fetch failed:', error);
             params.failCallback();
           });
       }
@@ -686,5 +557,5 @@ const KviRecommendationLogicPage = {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
-  KviRecommendationLogicPage.init();
+  KviMappingLogicPage.init();
 });
