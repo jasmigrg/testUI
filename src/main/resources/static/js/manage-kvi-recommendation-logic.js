@@ -562,16 +562,16 @@ const KviRecommendationLogicPage = {
   mapOperatorToApi(operator, field) {
     const op = String(operator || '').trim();
     if (!op) return null;
-    const normalizedOp = op.toLowerCase().replace(/[\s_-]/g, '');
 
-    if (normalizedOp === 'equals' || normalizedOp === 'eq') return 'eq';
-    if (normalizedOp === 'greaterthan' || normalizedOp === 'gt') return 'gt';
-    if (normalizedOp === 'greaterthanorequal' || normalizedOp === 'gte') return 'gte';
-    if (normalizedOp === 'lessthan' || normalizedOp === 'ls') return 'ls';
-    if (normalizedOp === 'lessthanorequal' || normalizedOp === 'lte') return 'lte';
-    if (normalizedOp === 'contains' || normalizedOp === 'startswith' || normalizedOp === 'endswith' || normalizedOp === 'like') return 'like';
-    if (normalizedOp === 'notequal' || normalizedOp === 'neq' || normalizedOp === 'ne') return 'neq';
-    if (normalizedOp === 'blank' || normalizedOp === 'notblank') return null;
+    if (op === 'equals') return 'eq';
+    if (op === 'greaterThan') return 'gt';
+    if (op === 'greaterThanOrEqual') return 'gte';
+    if (op === 'lessThan') return 'ls';
+    if (op === 'lessThanOrEqual') return 'lte';
+    if (op === 'contains') return 'like';
+    if (op === 'startsWith' || op === 'endsWith') return 'like';
+    if (op === 'notEqual') return 'neq';
+    if (op === 'blank' || op === 'notBlank') return null;
 
     // Backend contract for KVI output supports eq/gt/gte/ls/lte/like/neq.
     // Fall back by field type when AG Grid sends unknown operator names.

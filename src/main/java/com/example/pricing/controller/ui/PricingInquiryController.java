@@ -42,12 +42,6 @@ public class PricingInquiryController {
     return "guidance-model-management/manage-kvi-recommendation-logic-add";
   }
 
-  @GetMapping("/manage-kvi-mapping-logic-view-output-data")
-  public String manageKviMappingLogicViewOutputData(Model model) {
-    model.addAttribute("apiBaseUrl", apiBaseUrl);
-    return "guidance-model-management/manage-kvi-mapping-logic-view-output-data";
-  }
-
   @GetMapping("/manage-mck-brand-logic")
   public String manageMckBrandLogic(Model model) {
     model.addAttribute("apiBaseUrl", apiBaseUrl);
