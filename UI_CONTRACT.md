@@ -277,12 +277,9 @@ Do not copy/paste bulk upload engine code into each screen JS.
 For KVI output API filtering, UI must map AG Grid/filter-input operators to backend short codes:
 
 - `equals` -> `eq`
-- `greaterThan` -> `gt`
-- `greaterThanOrEqual` -> `gte`
-- `lessThan` -> `ls`
-- `lessThanOrEqual` -> `lte`
+- `greaterThan` / `greaterThanOrEqual` -> `gt`
+- `lessThan` / `lessThanOrEqual` -> `ls`
 - `contains` -> `like`
-- `notEqual` -> `neq`
 
 Date values should be sent as `YYYY-MM-DD` to API even if UI input is `MM/DD/YYYY`.
 
