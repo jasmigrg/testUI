@@ -66,6 +66,12 @@ public class PricingInquiryController {
     return "manage-kvi-mapping-logic-add";
   }
 
+  @GetMapping("/manageKVIInputAndViewInputData")
+  public String manageKviInputAndViewInputData(Model model) {
+    model.addAttribute("apiBaseUrl", apiBaseUrl);
+    return "manage-kvi-input-and-view-input-data";
+  }
+
   @GetMapping("/price-rules-reason-codes")
   public String priceRulesReasonCodes() {
     return "pricing/price-rules-reason-codes";

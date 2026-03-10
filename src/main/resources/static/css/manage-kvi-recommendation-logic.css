@@ -69,6 +69,13 @@
   min-width: 0;
 }
 
+.kvi-panel-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: #32414d;
+}
+
 .kvi-filter-card {
   display: grid;
   grid-template-columns: minmax(220px, 340px) minmax(240px, 420px);
