@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="${ctx}/css/grid-manager.css">
   <link rel="stylesheet" href="${ctx}/css/grid-page.css">
   <link rel="stylesheet" href="${ctx}/css/action-toolbar.css">
-  <link rel="stylesheet" href="${ctx}/css/manage-kvi-recommendation-logic.css">
+  <link rel="stylesheet" href="${ctx}/css/screen-shared.css">
   <link rel="stylesheet" href="${ctx}/css/bulk-upload-modal.css">
   <link rel="stylesheet" href="${ctx}/css/bulk-upload-flow.css">
   <link rel="stylesheet" href="${ctx}/css/manage-kvi-recommendation-logic-add.css">
@@ -43,7 +43,7 @@
   <script src="${ctx}/js/manage-kvi-recommendation-logic-add.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.1/dist/ag-grid-community.min.js"></script>
 </head>
-<body class="mfi-page kvi-page kvi-add-page">
+<body class="mfi-page screen-page screen-add-page">
   <#include "/components/header.ftl">
   <#import "/components/sidebar.ftl" as sidebar>
   <#import "/components/page-header.ftl" as pageHeader>

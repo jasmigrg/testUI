@@ -49,6 +49,11 @@
                         <span class="text">Manage KVI Mapping Logic and View Output Data</span>
                     </a>
                 </li>
+                <li class="submenu-item">
+                    <a href="/manage-kvi-input-view-input-data" class="submenu-link" title="Manage KVI Input and View Input Data">
+                        <span class="text">Manage KVI Input and View Input Data</span>
+                    </a>
+                </li>
             </ul>
         </li>
     </ul>

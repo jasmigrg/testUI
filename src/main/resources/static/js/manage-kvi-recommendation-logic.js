@@ -88,7 +88,7 @@ class GtPageSelectHeader {
 const KviRecommendationLogicPage = {
   activeTab: 'parameter',
   grids: {},
-  toolbarScope: '.kvi-page-shell',
+  toolbarScope: '.screen-page-shell',
   gridManagerBootstrapped: false,
   gridManagerInitScheduled: false,
   kviApiBaseUrl: '',
@@ -107,10 +107,10 @@ const KviRecommendationLogicPage = {
   },
 
   cacheDom() {
-    this.pageShell = document.querySelector('.kvi-page-shell');
-    this.contentCard = document.querySelector('.kvi-page .content-card');
-    this.tabButtons = Array.from(document.querySelectorAll('.kvi-tab-btn[data-kvi-tab]'));
-    this.tabPanels = Array.from(document.querySelectorAll('.kvi-tab-panel[data-kvi-panel]'));
+    this.pageShell = document.querySelector('.screen-page-shell');
+    this.contentCard = document.querySelector('.screen-page .content-card');
+    this.tabButtons = Array.from(document.querySelectorAll('.screen-tab-btn[data-kvi-tab]'));
+    this.tabPanels = Array.from(document.querySelectorAll('.screen-tab-panel[data-kvi-panel]'));
   },
 
   bindTabs() {

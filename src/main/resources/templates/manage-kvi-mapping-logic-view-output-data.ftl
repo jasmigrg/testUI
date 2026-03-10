@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="${ctx}/css/grid-page.css">
   <link rel="stylesheet" href="${ctx}/css/action-toolbar.css">
   <link rel="stylesheet" href="${ctx}/css/page-toast.css">
-  <link rel="stylesheet" href="${ctx}/css/manage-kvi-recommendation-logic.css">
+  <link rel="stylesheet" href="${ctx}/css/screen-shared.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.1/styles/ag-grid.css">
@@ -20,7 +20,7 @@
   <script>
     window.API_BASE_URL = window.API_BASE_URL || '${(apiBaseUrl!'')?js_string}';
     window.GRID_PREF_TEST_USER_ID = window.GRID_PREF_TEST_USER_ID || '${(userId!'defaultUser')?js_string}';
-    window.KVI_MAPPING_ADD_PAGE_URL = window.KVI_MAPPING_ADD_PAGE_URL || '';
+    window.KVI_MAPPING_ADD_PAGE_URL = window.KVI_MAPPING_ADD_PAGE_URL || '${ctx}/manage-kvi-mapping-logic-view-output-data/add';
     window.GRID_PREF_SCREEN_ID_BY_GRID = Object.assign({}, window.GRID_PREF_SCREEN_ID_BY_GRID, {
       kviMappingParameterGrid: 'id_kvi_mapping_logic_parameter',
       kviMappingOutputGrid: 'id_kvi_mapping_logic_output'
@@ -36,7 +36,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.1/dist/ag-grid-community.min.js"></script>
 </head>
-<body class="mfi-page kvi-page">
+<body class="mfi-page screen-page">
 
   <#include "/components/header.ftl">
   <#import "/components/sidebar.ftl" as sidebar>
@@ -56,11 +56,11 @@
           crumbs=[{"label":"Home","href":"${ctx}/"},{"label":"Manage KVI Mapping Logic and View Output Data"}]
         />
 
-        <section class="kvi-page-shell" aria-label="Manage KVI Mapping Logic and View Output Data">
-          <div class="kvi-tabs" role="tablist" aria-label="KVI mapping tabs">
+        <section class="screen-page-shell" aria-label="Manage KVI Mapping Logic and View Output Data">
+          <div class="screen-tabs" role="tablist" aria-label="KVI mapping tabs">
             <button
               type="button"
-              class="kvi-tab-btn is-active"
+              class="screen-tab-btn is-active"
               id="kvi-mapping-tab-parameter"
               role="tab"
               aria-selected="true"
@@ -71,7 +71,7 @@
             </button>
             <button
               type="button"
-              class="kvi-tab-btn"
+              class="screen-tab-btn"
               id="kvi-mapping-tab-output"
               role="tab"
               aria-selected="false"
@@ -144,7 +144,7 @@
           </section>
 
           <section
-            class="kvi-tab-panel is-active"
+            class="screen-tab-panel is-active"
             id="kvi-mapping-panel-parameter"
             role="tabpanel"
             aria-labelledby="kvi-mapping-tab-parameter"
@@ -156,7 +156,7 @@
           </section>
 
           <section
-            class="kvi-tab-panel"
+            class="screen-tab-panel"
             id="kvi-mapping-panel-output"
             role="tabpanel"
             aria-labelledby="kvi-mapping-tab-output"
