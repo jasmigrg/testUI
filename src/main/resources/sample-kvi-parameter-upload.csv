@@ -1,0 +1,4 @@
+effectiveDate,terminationDate,prcaMinThreshold,dedupMethod
+2026-01-01,2099-12-31,3,ITEM_SUB_CATEGORY
+2026-02-15,2099-12-31,5,ITEM_GROUP
+2026-03-10,2099-12-31,8,ITEM_NUM
