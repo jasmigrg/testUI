@@ -54,6 +54,10 @@
   padding-top: 4px;
 }
 
+.screen-page [data-kvi-actions][hidden] {
+  display: none !important;
+}
+
 .screen-page .gt-action-btn.is-close {
   color: #d84b4b;
 }
