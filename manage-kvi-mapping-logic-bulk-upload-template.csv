@@ -1,0 +1,9 @@
+Effective Date,Termination Date,Revenue Penetration PCTL,PRCA Penetration PCTL,Revenue Penetration ADJ,PRCA Penetration ADJ
+01/01/2026,12/31/2026,10,15,1.5,2.0
+02/01/2026,12/31/2026,25,30,3.25,4.75
+invalid-date,12/31/2026,10,15,1.5,2.0
+03/01/2026,,10,15,1.5,2.0
+04/01/2026,12/31/2026,abc,15,1.5,2.0
+05/01/2026,12/31/2026,10,xyz,1.5,2.0
+06/01/2026,12/31/2026,10,15,bad,2.0
+07/01/2026,12/31/2026,10,15,1.5,wrong

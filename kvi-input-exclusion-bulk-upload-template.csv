@@ -1,0 +1,6 @@
+Organization,Item Discounted Flag,Sequestered Comm April Flag,Used Biomed Flag,Hist Revenue,Patient Flag
+North Region,Y,N,N,125000,Y
+South Region,N,Y,Y,98000,N
+,Y,N,N,50000,Y
+West Region,Y,,N,76000,N
+Central Region,N,Y,Y,not-a-number,Y

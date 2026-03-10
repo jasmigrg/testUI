@@ -42,10 +42,28 @@ public class PricingInquiryController {
     return "manage-kvi-recommendation-logic-add";
   }
 
+  @GetMapping("/kvi-input-exclusion")
+  public String kviInputExclusion(Model model) {
+    model.addAttribute("apiBaseUrl", apiBaseUrl);
+    return "kvi-input-exclusion-add";
+  }
+
+  @GetMapping("/kvi-input-exclusion/add")
+  public String kviInputExclusionAdd(Model model) {
+    model.addAttribute("apiBaseUrl", apiBaseUrl);
+    return "kvi-input-exclusion-add";
+  }
+
   @GetMapping("/manage-kvi-mapping-logic-view-output-data")
   public String manageKviMappingLogicViewOutputData(Model model) {
     model.addAttribute("apiBaseUrl", apiBaseUrl);
     return "manage-kvi-mapping-logic-view-output-data";
+  }
+
+  @GetMapping("/manage-kvi-mapping-logic-view-output-data/add")
+  public String manageKviMappingLogicAdd(Model model) {
+    model.addAttribute("apiBaseUrl", apiBaseUrl);
+    return "manage-kvi-mapping-logic-add";
   }
 
   @GetMapping("/price-rules-reason-codes")

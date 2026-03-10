@@ -20,7 +20,7 @@
   <script>
     window.API_BASE_URL = window.API_BASE_URL || '${(apiBaseUrl!'')?js_string}';
     window.GRID_PREF_TEST_USER_ID = window.GRID_PREF_TEST_USER_ID || '${(userId!'defaultUser')?js_string}';
-    window.KVI_MAPPING_ADD_PAGE_URL = window.KVI_MAPPING_ADD_PAGE_URL || '';
+    window.KVI_MAPPING_ADD_PAGE_URL = window.KVI_MAPPING_ADD_PAGE_URL || '${ctx}/manage-kvi-mapping-logic-view-output-data/add';
     window.GRID_PREF_SCREEN_ID_BY_GRID = Object.assign({}, window.GRID_PREF_SCREEN_ID_BY_GRID, {
       kviMappingParameterGrid: 'id_kvi_mapping_logic_parameter',
       kviMappingOutputGrid: 'id_kvi_mapping_logic_output'
