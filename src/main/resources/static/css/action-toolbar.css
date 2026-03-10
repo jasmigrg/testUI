@@ -1,0 +1,230 @@
+.gt-grid-controls {
+  padding: 8px 0;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  min-width: 0;
+  overflow: visible;
+  position: relative;
+  z-index: 20;
+}
+
+.gt-action-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 10px;
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  padding-bottom: 0;
+  scrollbar-width: thin;
+}
+
+.gt-action-btn {
+  border: none;
+  background: transparent;
+  color: #333;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.15s ease, transform 0.15s ease;
+  flex: 0 0 auto;
+}
+
+.gt-action-btn span {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.gt-action-btn svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}
+
+.gt-action-btn.icon-only {
+  width: 24px;
+  height: 24px;
+  justify-content: center;
+}
+
+.gt-action-btn.is-add {
+  color: #2f9e44;
+}
+
+.gt-action-btn:hover {
+  color: #007c91;
+  transform: translateY(-1px);
+}
+
+.gt-action-btn.is-add:hover {
+  color: #258338;
+}
+
+.gt-grid-controls .grid-manager-section {
+  padding: 0;
+  flex: 0 1 auto;
+  margin-left: 0;
+}
+
+.gt-grid-manager-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex: 1 1 auto;
+  min-width: 0;
+  justify-content: flex-end;
+  position: relative;
+  z-index: 21;
+}
+
+.gt-view-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  min-width: 0;
+  justify-content: flex-end;
+}
+
+.gt-view-btn {
+  border: none;
+  background: transparent;
+  color: #6e757a;
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: color 0.2s ease, background-color 0.2s ease;
+}
+
+.gt-view-btn svg {
+  width: 22px;
+  height: 22px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.gt-view-btn:hover {
+  color: #007c91;
+  background-color: rgba(0, 124, 145, 0.08);
+}
+
+.gt-view-btn.is-active {
+  color: #28a6b7;
+}
+
+.gt-view-divider {
+  width: 1px;
+  height: 28px;
+  background: #d7dadc;
+  margin: 0 2px;
+}
+
+.gt-grid-controls .grid-manager-row,
+.gt-grid-controls .grid-manager-title,
+.gt-grid-controls .grid-manager-label,
+.gt-grid-controls .gm-toggle {
+  white-space: nowrap;
+}
+
+.gt-grid-controls .grid-manager-row {
+  gap: 10px;
+  padding: 6px 12px;
+}
+
+.gt-grid-controls .gm-menu {
+  z-index: 3000;
+}
+
+.gt-grid-controls .gm-toggle {
+  font-size: 12px;
+  padding: 6px 24px 6px 12px;
+}
+
+.gt-grid-controls .grid-manager-title,
+.gt-grid-controls .grid-manager-label {
+  font-size: 12px;
+}
+
+@media (max-width: 1366px) {
+  .gt-grid-controls {
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+
+  .gt-action-toolbar {
+    gap: 8px;
+  }
+
+  .gt-action-btn {
+    gap: 6px;
+    font-size: 12px;
+  }
+
+  .gt-action-btn span {
+    font-size: 12px;
+  }
+
+  .gt-action-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .gt-grid-manager-tools {
+    gap: 6px;
+  }
+
+  .gt-grid-controls .grid-manager-row {
+    gap: 8px;
+    padding: 4px 8px;
+  }
+
+  .gt-grid-controls .gm-toggle {
+    font-size: 11px;
+    padding: 5px 22px 5px 10px;
+  }
+
+  .gt-grid-controls .grid-manager-title,
+  .gt-grid-controls .grid-manager-label {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 1180px) {
+  .gt-grid-controls {
+    flex-wrap: wrap;
+  }
+
+  .gt-action-toolbar,
+  .gt-grid-manager-tools {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .gt-grid-manager-tools {
+    margin-left: 0;
+    justify-content: flex-start;
+  }
+}

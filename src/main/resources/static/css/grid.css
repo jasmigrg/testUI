@@ -1,0 +1,549 @@
+.ag-theme-alpine {
+  --ag-font-size: 14px;
+  --ag-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --ag-header-background-color: #007c91;
+  --ag-header-foreground-color: #ffffff;
+  --ag-header-height: 52px;
+  --ag-row-hover-color: #f5f5f5;
+  --ag-selected-row-background-color: #e3f2fd;
+  --ag-border-color: #e0e0e0;
+  --ag-borders: solid 1px;
+  --ag-borders-side-button: solid 1px;
+  --ag-border-radius: 10px;
+}
+
+/* AG-Grid header customization - force background color */
+.ag-theme-alpine .ag-header {
+  background-color: #007c91 !important;
+  border-bottom: 2px solid #007c91;
+}
+
+.ag-theme-alpine .ag-root-wrapper {
+  border-radius: 10px !important;
+  overflow: hidden;
+}
+
+.ag-theme-alpine .ag-header-cell {
+  background-color: #007c91 !important;
+  color: #ffffff !important;
+  padding: 14px 12px;
+  font-weight: 400;
+  border-right: 1px solid rgba(255, 255, 255, 0.3) !important;
+  line-height: 1.5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ag-theme-alpine .ag-header-cell-label {
+  color: #ffffff !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible !important;
+  padding-bottom: 2px;
+  width: 100%;
+  gap: 6px;
+}
+
+.ag-theme-alpine.app-grid .ag-header-cell-text {
+  font-weight: 500;
+  text-align: center;
+  line-height: 1.2;
+}
+
+/* Keep sort/filter icons at a consistent distance from header text. */
+.ag-theme-alpine.app-grid .ag-header-cell .ag-sort-indicator-container {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  flex-shrink: 0;
+}
+
+.ag-theme-alpine.app-grid .ag-header-cell .ag-header-icon {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  flex-shrink: 0;
+}
+
+.ag-theme-alpine .ag-header-cell:hover {
+  background-color: #006a7a !important;
+}
+
+.ag-theme-alpine .ag-header-icon {
+  color: #ffffff !important;
+}
+
+/* Shared sort indicator behavior and icon color for all app grids */
+.ag-theme-alpine.app-grid .ag-header-cell .ag-sort-indicator-container {
+  opacity: 1 !important;
+  visibility: visible !important;
+  display: inline-flex !important;
+  align-items: center !important;
+}
+
+.ag-theme-alpine.app-grid .ag-header-cell .ag-sort-indicator-container .ag-icon,
+.ag-theme-alpine.app-grid .ag-header-cell .ag-sort-indicator-container .ag-icon::before,
+.ag-theme-alpine.app-grid .ag-header-cell .ag-sort-none-icon,
+.ag-theme-alpine.app-grid .ag-header-cell .ag-sort-none-icon::before,
+.ag-theme-alpine.app-grid .ag-header-cell .ag-sort-ascending-icon,
+.ag-theme-alpine.app-grid .ag-header-cell .ag-sort-ascending-icon::before,
+.ag-theme-alpine.app-grid .ag-header-cell .ag-sort-descending-icon,
+.ag-theme-alpine.app-grid .ag-header-cell .ag-sort-descending-icon::before {
+  color: #ffffff !important;
+}
+
+.ag-theme-alpine.app-grid .ag-header-cell-filtered .ag-icon-filter,
+.ag-theme-alpine.app-grid .ag-header-cell-filtered .ag-icon-filter::before,
+.ag-theme-alpine.app-grid .ag-header-cell-filtered .ag-header-icon,
+.ag-theme-alpine.app-grid .ag-header-cell-filtered .ag-header-icon .ag-icon,
+.ag-theme-alpine.app-grid .ag-header-cell-filtered .ag-header-icon .ag-icon::before,
+.ag-theme-alpine.app-grid .ag-header-cell-filtered .ag-filter-icon,
+.ag-theme-alpine.app-grid .ag-header-cell-filtered .ag-filter-icon::before,
+.ag-theme-alpine.app-grid .ag-header-cell-filtered .ag-header-icon.ag-filter-icon,
+.ag-theme-alpine.app-grid .ag-header-cell-filtered .ag-header-icon.ag-filter-icon .ag-icon,
+.ag-theme-alpine.app-grid .ag-header-cell-filtered .ag-header-icon.ag-filter-icon .ag-icon::before,
+.ag-theme-alpine.app-grid .ag-header-cell-filtered .ag-filter-icon svg,
+.ag-theme-alpine.app-grid .ag-header-cell-filtered .ag-filter-icon svg path,
+.ag-theme-alpine.app-grid .ag-header-cell-filtered .ag-filter-icon svg g {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+  fill: #ffffff !important;
+}
+
+.ag-theme-alpine.app-grid .ag-sort-none-icon:not(.ag-hidden),
+.ag-theme-alpine.app-grid .ag-sort-ascending-icon:not(.ag-hidden),
+.ag-theme-alpine.app-grid .ag-sort-descending-icon:not(.ag-hidden) {
+  display: inline-flex !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.ag-theme-alpine.app-grid .ag-sort-none-icon.ag-hidden,
+.ag-theme-alpine.app-grid .ag-sort-ascending-icon.ag-hidden,
+.ag-theme-alpine.app-grid .ag-sort-descending-icon.ag-hidden {
+  display: none !important;
+}
+
+/* Shared custom sort icon look to match UX (neutral + directional) */
+.ag-theme-alpine.app-grid .gt-sort-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 12px;
+  height: 16px;
+}
+
+.ag-theme-alpine.app-grid .gt-sort-icon svg {
+  width: 10px;
+  height: 14px;
+  display: block;
+  fill: #ffffff;
+}
+
+.ag-theme-alpine.app-grid .gt-sort-icon--none svg {
+  opacity: 0.95;
+}
+
+.ag-theme-alpine .ag-cell {
+  border-right: 1px solid #e0e0e0 !important;
+}
+
+/* Checkbox column styling for AG-Grid */
+.ag-theme-alpine .ag-checkbox-input-wrapper {
+  width: 18px;
+  height: 18px;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  display: block !important;
+  visibility: visible !important;
+  background: none !important;
+  border: none !important;
+}
+
+.ag-theme-alpine .ag-checkbox-input-wrapper input {
+  width: 18px;
+  height: 18px;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  display: block !important;
+  visibility: visible !important;
+}
+
+.ag-theme-alpine .ag-checkbox-input-wrapper:focus-within {
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.ag-theme-alpine .ag-checkbox-input-wrapper::before,
+.ag-theme-alpine .ag-checkbox-input-wrapper::after {
+  box-shadow: none !important;
+}
+
+/* Center align checkbox column cells */
+.ag-theme-alpine .ag-cell[col-id="checkbox"],
+.ag-theme-alpine .ag-cell[col-id="select"] {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+}
+
+/* Force header checkbox to be vertically centered using AG Grid's checkbox-header class */
+.ag-theme-alpine .ag-header-cell.ag-header-cell-checkbox {
+  padding: 0 !important;
+}
+
+.ag-theme-alpine .ag-header-cell.ag-header-cell-checkbox .ag-header-cell-comp-wrapper,
+.ag-theme-alpine .ag-header-cell.ag-header-cell-checkbox .ag-cell-label-container,
+.ag-theme-alpine .ag-header-cell.ag-header-cell-checkbox .ag-header-select-all {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+}
+
+.ag-theme-alpine .ag-header-cell.ag-header-cell-checkbox .ag-checkbox-input-wrapper {
+  display: block !important;
+  visibility: visible !important;
+  margin: 0 !important;
+  transform: none !important;
+  background: transparent !important;
+}
+
+/* Direct override for the first select column header cell */
+.ag-theme-alpine .ag-header-row.ag-header-row-column .ag-header-cell[col-id="select"] {
+  padding: 0 !important;
+  position: relative !important;
+}
+
+.ag-theme-alpine .ag-header-row.ag-header-row-column .ag-header-cell[col-id="select"] .ag-header-cell-comp-wrapper,
+.ag-theme-alpine .ag-header-row.ag-header-row-column .ag-header-cell[col-id="select"] .ag-cell-label-container,
+.ag-theme-alpine .ag-header-row.ag-header-row-column .ag-header-cell[col-id="select"] .ag-header-select-all {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.ag-theme-alpine .ag-header-row.ag-header-row-column .ag-header-cell[col-id="select"] .ag-header-cell-comp-wrapper {
+  display: none !important;
+}
+
+.ag-theme-alpine .ag-header-row.ag-header-row-column .ag-header-cell[col-id="select"] .ag-header-select-all {
+  position: absolute !important;
+  inset: 0 !important;
+}
+
+.ag-theme-alpine .ag-header-row.ag-header-row-column .ag-header-cell[col-id="select"] .ag-checkbox-input-wrapper {
+  width: 18px !important;
+  height: 18px !important;
+  margin: 0 !important;
+  border: 1px solid #9b9b9b !important;
+  border-radius: 3px !important;
+  background-color: #ffffff !important;
+  transform: none !important;
+}
+
+/* Use the same explicit centering for row checkboxes in select column */
+.ag-theme-alpine .ag-cell[col-id="select"] {
+  position: relative !important;
+  padding: 0 !important;
+}
+
+.ag-theme-alpine .ag-cell[col-id="select"] .ag-checkbox-input-wrapper {
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  margin: 0 !important;
+}
+
+/* Show a clear disabled state for non-selectable row checkboxes */
+.ag-theme-alpine .ag-cell[col-id="select"].is-selection-locked .ag-checkbox-input-wrapper {
+  border: 1px solid #b8c0c6 !important;
+  border-radius: 3px !important;
+  background:
+    linear-gradient(135deg, transparent 44%, #9aa4ab 45%, #9aa4ab 55%, transparent 56%),
+    #eef2f4 !important;
+  cursor: not-allowed !important;
+  opacity: 1 !important;
+}
+
+.ag-theme-alpine .ag-cell[col-id="select"].is-selection-locked .ag-checkbox-input-wrapper input {
+  cursor: not-allowed !important;
+}
+
+.ag-theme-alpine .ag-cell[col-id="select"] .ag-checkbox-input-wrapper.ag-disabled,
+.ag-theme-alpine .ag-cell[col-id="select"] .ag-checkbox-input-wrapper[aria-disabled="true"] {
+  border: 1px solid #b8c0c6 !important;
+  border-radius: 3px !important;
+  background:
+    linear-gradient(135deg, transparent 44%, #9aa4ab 45%, #9aa4ab 55%, transparent 56%),
+    #eef2f4 !important;
+  cursor: not-allowed !important;
+  opacity: 1 !important;
+}
+
+.ag-theme-alpine .ag-cell[col-id="select"] .ag-checkbox-input-wrapper.ag-disabled input,
+.ag-theme-alpine .ag-cell[col-id="select"] .ag-checkbox-input-wrapper[aria-disabled="true"] input {
+  cursor: not-allowed !important;
+}
+
+/* Floating filter styling */
+.ag-theme-alpine .ag-floating-filter {
+  background-color: #007c91 !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  display: flex !important;
+  align-items: center !important;
+  padding: 0 8px !important;
+}
+
+.ag-theme-alpine .ag-floating-filter-body {
+  background-color: #007c91 !important;
+  width: 100% !important;
+  height: 100% !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.ag-theme-alpine .ag-floating-filter-full-body {
+  background-color: #007c91 !important;
+  width: 100% !important;
+  height: 100% !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+/* Make wrappers transparent only in floating filters, not pagination */
+.ag-theme-alpine .ag-floating-filter .ag-input-wrapper,
+.ag-theme-alpine .ag-floating-filter .ag-wrapper,
+.ag-theme-alpine .ag-floating-filter-body .ag-input-wrapper,
+.ag-theme-alpine .ag-floating-filter-body .ag-wrapper {
+  background: none !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  outline: none !important;
+  width: 100% !important;
+  display: block !important;
+}
+
+.ag-theme-alpine .ag-floating-filter .ag-input-wrapper::before,
+.ag-theme-alpine .ag-floating-filter .ag-input-wrapper::after,
+.ag-theme-alpine .ag-floating-filter .ag-wrapper::before,
+.ag-theme-alpine .ag-floating-filter .ag-wrapper::after {
+  display: none !important;
+  content: none !important;
+}
+
+.ag-theme-alpine .ag-input-field-input:not(.ag-checkbox-input),
+.ag-theme-alpine .ag-text-field-input {
+  border: 1px solid #ddd !important;
+  border-radius: 8px !important;
+  padding: 6px 8px !important;
+  background-color: #fff !important;
+  color: #333 !important;
+  font-size: 13px !important;
+  height: 32px !important;
+  width: 100% !important;
+  display: block !important;
+  box-sizing: border-box !important;
+  box-shadow: none !important;
+  margin: 0 !important;
+}
+
+.ag-theme-alpine .ag-floating-filter-input {
+  background-color: #fff !important;
+  color: #333 !important;
+  font-size: 13px !important;
+  height: 25px !important;
+  width: 100% !important;
+  display: block !important;
+  border-radius: 8px !important;
+}
+
+.ag-theme-alpine .ag-floating-filter-input:focus,
+.ag-theme-alpine .ag-input-field-input:not(.ag-checkbox-input):focus,
+.ag-theme-alpine .ag-text-field-input:focus {
+  border-color: #007c91 !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.ag-theme-alpine .ag-floating-filter-input::placeholder,
+.ag-theme-alpine .ag-input-field-input:not(.ag-checkbox-input)::placeholder,
+.ag-theme-alpine .ag-text-field-input::placeholder {
+  color: #999 !important;
+  opacity: 1 !important;
+}
+
+/* Show filter button in floating filter line */
+.ag-theme-alpine .ag-floating-filter-button {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+  visibility: visible !important;
+  color: #ffffff !important;
+  margin: 0 4px 0 0 !important;
+  padding: 0 !important;
+  height: 25px !important;
+  width: 25px !important;
+}
+
+.ag-theme-alpine .ag-floating-filter-button .ag-icon,
+.ag-theme-alpine .ag-floating-filter-button .ag-icon-filter,
+.ag-theme-alpine .ag-floating-filter-button .ag-icon-filter::before {
+  color: #ffffff !important;
+  fill: #ffffff !important;
+}
+
+.ag-theme-alpine .ag-floating-filter-button:hover {
+  background-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Shared manual floating-filter visual contract used by DynamicGrid */
+.ag-theme-alpine.app-grid .ag-floating-filter,
+.ag-theme-alpine.app-grid .ag-floating-filter-body,
+.ag-theme-alpine.app-grid .ag-floating-filter-full-body {
+  height: 38px !important;
+  min-height: 38px !important;
+  padding: 0 8px !important;
+}
+
+.ag-theme-alpine.app-grid .ag-floating-filter .ag-input-wrapper,
+.ag-theme-alpine.app-grid .ag-floating-filter-body .ag-input-wrapper,
+.ag-theme-alpine.app-grid .ag-floating-filter .ag-wrapper,
+.ag-theme-alpine.app-grid .ag-floating-filter-body .ag-wrapper {
+  display: flex !important;
+  align-items: center !important;
+}
+
+.ag-theme-alpine.app-grid .ag-floating-filter-button {
+  display: none !important;
+}
+
+.ag-theme-alpine.app-grid .mfi-manual-floating-filter {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+}
+
+.ag-theme-alpine.app-grid .mfi-floating-filter-input {
+  width: 100%;
+  height: 30px;
+  border: 1px solid #cfd5da;
+  border-radius: 6px;
+  background: #fff;
+  padding: 0 10px;
+  font-size: 12px;
+  line-height: 1;
+  outline: none;
+}
+
+.ag-theme-alpine.app-grid .mfi-floating-filter-input:focus {
+  border-color: #86b7fe;
+  box-shadow: 0 0 0 1px rgba(13, 110, 253, 0.18);
+}
+
+.ag-theme-alpine.app-grid .ag-floating-filter-input,
+.ag-theme-alpine.app-grid .ag-input-field-input:not(.ag-checkbox-input),
+.ag-theme-alpine.app-grid .ag-text-field-input {
+  height: 30px !important;
+  min-height: 30px !important;
+  margin: 0 !important;
+}
+
+/* Hide header filter button */
+.ag-theme-alpine .ag-header-cell-menu-button {
+  display: none !important;
+}
+
+/* Pagination styling to match design */
+.ag-theme-alpine .ag-paging-panel {
+  border-top: 1px solid #e0e0e0;
+  background-color: #fafafa;
+  padding: 16px 24px;
+  color: #666;
+}
+
+.ag-theme-alpine .ag-paging-button {
+  color: #007c91;
+  border-radius: 4px;
+}
+
+.ag-theme-alpine .ag-paging-button:hover:not([disabled]) {
+  background-color: #e3f2fd;
+}
+
+/* Action buttons in AG-Grid cells */
+.action-btn {
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s;
+  color: #666;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-btn i {
+  font-size: 14px;
+}
+
+.action-btn:hover {
+  background-color: #f5f5f5;
+  color: #007c91;
+}
+
+.action-btn.view-btn:hover {
+  color: #1976d2;
+  background-color: #e3f2fd;
+}
+
+.action-btn.edit-btn:hover {
+  color: #f57c00;
+  background-color: #fff3e0;
+}
+
+.action-btn.delete-btn:hover {
+  color: #d32f2f;
+  background-color: #ffebee;
+}
+
+/* Actions column styling */
+.ag-theme-alpine .actions-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px;
+}
+
+.ag-theme-alpine .actions-header {
+  text-align: center;
+  justify-content: center;
+}
+
+/* Grid wrapper */
+.grid-wrapper {
+  overflow: hidden;
+  padding: 0;
+}
