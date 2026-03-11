@@ -622,7 +622,7 @@ const KviInputPage = {
   persistControlRowUpdate(rowData) {
     const payload = this.buildControlUpdatePayload(rowData);
     if (!this.controlUpdateUrl) {
-      return payload;
+      return rowData;
     }
 
     return fetch(this.controlUpdateUrl, {
@@ -647,7 +647,7 @@ const KviInputPage = {
         if (responseBody?.data && !Array.isArray(responseBody.data)) {
           return this.transformControlRow(responseBody.data);
         }
-        return payload;
+        return rowData;
       });
   },
 

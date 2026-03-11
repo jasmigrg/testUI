@@ -76,6 +76,12 @@ public class PricingInquiryController {
     return "pricing/price-rules-reason-codes-add";
   }
 
+  @GetMapping("/adjustments/customer-gpo-adjustments/add")
+  public String customerGpoAdjustmentsAdd(Model model) {
+    model.addAttribute("apiBaseUrl", apiBaseUrl);
+    return "customer-gpo-adjustments-add";
+  }
+
   @GetMapping("/")
   public String home() {
     return "home";
