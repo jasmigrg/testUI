@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="${ctx}/css/action-toolbar.css">
   <link rel="stylesheet" href="${ctx}/css/page-toast.css">
   <link rel="stylesheet" href="${ctx}/css/screen-shared.css">
+  <link rel="stylesheet" href="${ctx}/css/screen-add-shared.css">
   <link rel="stylesheet" href="${ctx}/css/bulk-upload-modal.css">
   <link rel="stylesheet" href="${ctx}/css/bulk-upload-flow.css">
   <link rel="stylesheet" href="${ctx}/css/manage-kvi-recommendation-logic-add.css">
@@ -110,20 +111,20 @@
           </div>
         </section>
 
-        <section class="kvi-add-upload-row">
-          <button type="button" class="kvi-add-bulk-upload-btn" data-action="bulk-upload">Bulk Upload</button>
+        <section class="screen-add-upload-row">
+          <button type="button" class="screen-add-bulk-upload-btn" data-action="bulk-upload">Bulk Upload</button>
         </section>
 
-        <section class="kvi-upload-status-row" id="kviUploadStatusRow" hidden>
-          <label class="kvi-upload-status-option">
+        <section class="screen-add-status-row" id="screenAddUploadStatusRow" hidden>
+          <label class="screen-add-status-option">
             <input type="radio" name="kviUploadStatus" value="all" checked />
             <span>All</span>
           </label>
-          <label class="kvi-upload-status-option">
+          <label class="screen-add-status-option">
             <input type="radio" name="kviUploadStatus" value="success" />
             <span>Success</span>
           </label>
-          <label class="kvi-upload-status-option">
+          <label class="screen-add-status-option">
             <input type="radio" name="kviUploadStatus" value="error" />
             <span>Error</span>
           </label>

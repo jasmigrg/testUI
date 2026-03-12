@@ -2,17 +2,17 @@ class KviInlineSaveCellEditor {
   init(params) {
     this.params = params;
     this.eGui = document.createElement('div');
-    this.eGui.className = 'kvi-inline-save-editor';
+    this.eGui.className = 'screen-add-inline-save-editor';
 
     this.input = document.createElement('input');
     this.input.type = 'text';
-    this.input.className = 'kvi-inline-save-input';
+    this.input.className = 'screen-add-inline-save-input';
     this.input.value = params.value == null ? '' : String(params.value);
     this.input.placeholder = '_';
 
     this.saveBtn = document.createElement('button');
     this.saveBtn.type = 'button';
-    this.saveBtn.className = 'kvi-inline-save-btn';
+    this.saveBtn.className = 'screen-add-inline-save-btn';
     this.saveBtn.textContent = 'Save';
 
     this.onInputKeyDown = (event) => {
@@ -105,7 +105,7 @@ const KviMappingLogicAddPage = {
   },
 
   cacheBulkUploadDom() {
-    this.uploadStatusRow = document.getElementById('kviUploadStatusRow');
+    this.uploadStatusRow = document.getElementById('screenAddUploadStatusRow');
     this.uploadStatusInputs = Array.from(document.querySelectorAll('input[name="kviUploadStatus"]'));
     this.batchSection = document.querySelector('.bulk-upload-batch-section');
     this.batchCollapseBtn = document.getElementById('bulkUploadBatchCollapseBtn');
@@ -239,7 +239,7 @@ const KviMappingLogicAddPage = {
 
   validationCellRules(field) {
     return {
-      'kvi-cell-error': (params) => Array.isArray(params.data?.uploadErrors) && params.data.uploadErrors.includes(field)
+      'screen-add-cell-error': (params) => Array.isArray(params.data?.uploadErrors) && params.data.uploadErrors.includes(field)
     };
   },
 

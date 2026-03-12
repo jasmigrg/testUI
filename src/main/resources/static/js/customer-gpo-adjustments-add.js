@@ -87,7 +87,7 @@ const CustomerGpoAdjustmentsAddPage = {
   },
 
   cacheDom() {
-    this.uploadStatusRow = document.getElementById('kviUploadStatusRow');
+    this.uploadStatusRow = document.getElementById('customerGpoUploadStatusRow');
     this.uploadStatusInputs = Array.from(document.querySelectorAll('input[name="customerGpoUploadStatus"]'));
     this.batchSection = document.querySelector('.bulk-upload-batch-section');
     this.batchCollapseBtn = document.getElementById('bulkUploadBatchCollapseBtn');
@@ -232,7 +232,7 @@ const CustomerGpoAdjustmentsAddPage = {
 
   validationCellRules(field) {
     return {
-      'kvi-cell-error': (params) => Array.isArray(params.data?.uploadErrors) && params.data.uploadErrors.includes(field)
+      'screen-add-cell-error': (params) => Array.isArray(params.data?.uploadErrors) && params.data.uploadErrors.includes(field)
     };
   },
 
@@ -291,6 +291,9 @@ const CustomerGpoAdjustmentsAddPage = {
       bulkUploadButton.addEventListener('click', () => this.bulkUploadModal.open());
     }
 
+    const processGridButton = document.querySelector('[data-action="process-grid-rows"]');
+    processGridButton?.addEventListener('click', () => this.processGridRows());
+
     this.uploadStatusInputs.forEach((input) => {
       input.addEventListener('change', () => {
         if (!input.checked) return;
@@ -317,7 +320,7 @@ const CustomerGpoAdjustmentsAddPage = {
           this.saveDraft();
           break;
         case 'submit':
-          this.submit();
+          this.submitToDatabase();
           break;
         case 'execute':
           this.executeFilters();
@@ -838,19 +841,20 @@ const CustomerGpoAdjustmentsAddPage = {
     });
   },
 
-  submit() {
-    const selectedRows = this.gridApi?.getSelectedRows?.() || [];
-    if (selectedRows.length === 0) {
-      this.showInfo('Select at least one row to submit.', 'error');
-      return;
-    }
+  submitToDatabase() {
+    this.showInfo('Toolbar Submit should use the direct save-to-DB API and stay separate from bulk job processing.', 'warning');
+  },
 
-    const normalizedRows = selectedRows
+  processGridRows() {
+    const selectedRows = this.gridApi?.getSelectedRows?.() || [];
+    const sourceRows = selectedRows.length > 0 ? selectedRows : this.getGridRows();
+
+    const normalizedRows = sourceRows
       .map((row) => this.normalizeRow(row))
       .filter((row) => !this.isRowEmpty(row));
 
     if (normalizedRows.length === 0) {
-      this.showInfo('Selected row(s) are empty.', 'error');
+      this.showInfo(selectedRows.length > 0 ? 'Selected row(s) are empty.' : 'Paste or enter at least one row before processing.', 'error');
       return;
     }
 
@@ -859,11 +863,11 @@ const CustomerGpoAdjustmentsAddPage = {
       return { ...row, uploadErrors: validation.errors, uploadStatus: validation.isValid ? 'success' : 'error' };
     });
     if (validatedRows.some((row) => row.uploadStatus === 'error')) {
-      this.showInfo('Some selected rows are invalid. Fix them before submitting.', 'error');
+      this.showInfo('Some grid rows are invalid. Fix them before processing.', 'error');
       return;
     }
 
-    const shouldResubmit = Boolean(this.selectedJobId) && selectedRows.some((row) => row.isBackendRow);
+    const shouldResubmit = Boolean(this.selectedJobId) && sourceRows.some((row) => row.isBackendRow);
     const mode = shouldResubmit ? 'resubmit' : 'grid';
 
     this.submitGridRows(validatedRows, mode).then((response) => {
@@ -874,10 +878,10 @@ const CustomerGpoAdjustmentsAddPage = {
         workStationId: validatedRows[0]?.workStnId || validatedRows[0]?.workStationId || ''
       });
       this.refreshStoredJobStatuses();
-      this.showInfo(response.message || `Job ${response.jobId} submitted successfully.`, 'success');
+      this.showInfo(response.message || `Job ${response.jobId} created successfully.`, 'success');
     }).catch((error) => {
-      console.error('Submit failed:', error);
-      this.showInfo(error?.message || 'Submit failed.', 'error');
+      console.error('Grid processing failed:', error);
+      this.showInfo(error?.message || 'Grid processing failed.', 'error');
     });
   },
 

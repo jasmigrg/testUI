@@ -1,3 +1,7 @@
+.screen-add-page #customerGpoAdjustmentsAddGrid .ag-cell {
+  font-size: var(--mfi-cell-font-size, 13px);
+}
+
 .screen-add-page .bulk-upload-batch-columns,
 .screen-add-page .bulk-upload-batch-row {
   grid-template-columns:
@@ -37,4 +41,20 @@
 .screen-add-page .bulk-upload-batch-col:last-child,
 .screen-add-page .bulk-upload-batch-cell:last-child {
   text-align: center;
+}
+
+.screen-add-page .screen-add-process-grid-btn {
+  border: 1px solid #0d8b99;
+  border-radius: 8px;
+  height: 36px;
+  padding: 0 18px;
+  background: #ffffff;
+  color: #0d8b99;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.screen-add-page .screen-add-process-grid-btn:hover {
+  background: #f2fbfc;
 }

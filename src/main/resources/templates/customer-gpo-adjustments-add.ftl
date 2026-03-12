@@ -12,9 +12,9 @@
   <link rel="stylesheet" href="${ctx}/css/action-toolbar.css">
   <link rel="stylesheet" href="${ctx}/css/page-toast.css">
   <link rel="stylesheet" href="${ctx}/css/screen-shared.css">
+  <link rel="stylesheet" href="${ctx}/css/screen-add-shared.css">
   <link rel="stylesheet" href="${ctx}/css/bulk-upload-modal.css">
   <link rel="stylesheet" href="${ctx}/css/bulk-upload-flow.css">
-  <link rel="stylesheet" href="${ctx}/css/manage-kvi-recommendation-logic-add.css">
   <link rel="stylesheet" href="${ctx}/css/customer-gpo-adjustments-add.css">
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.1/styles/ag-grid.css">
@@ -69,7 +69,7 @@
         <#assign actionItems=[
           {"id":"back","label":"Back","iconOnly":true,"className":"icon-only is-back","iconHtml":iconBack},
           {"id":"delete","label":"Delete","iconHtml":iconDelete},
-          {"id":"submit","label":"Submit","iconHtml":iconSubmit},
+          {"id":"submit","label":"Submit","iconHtml":iconSubmit,"disabled":true,"ariaLabel":"Submit (pending backend API)"},
           {"id":"execute","label":"Execute","iconHtml":iconExecute}
         ] />
 
@@ -103,20 +103,21 @@
           </div>
         </section>
 
-        <section class="kvi-add-upload-row">
-          <button type="button" class="kvi-add-bulk-upload-btn" data-action="bulk-upload">Bulk Upload</button>
+        <section class="screen-add-upload-row">
+          <button type="button" class="screen-add-process-grid-btn" data-action="process-grid-rows">Process Grid Rows</button>
+          <button type="button" class="screen-add-bulk-upload-btn" data-action="bulk-upload">Bulk Upload</button>
         </section>
 
-        <section class="kvi-upload-status-row" id="kviUploadStatusRow" hidden>
-          <label class="kvi-upload-status-option">
+        <section class="screen-add-status-row" id="customerGpoUploadStatusRow" hidden>
+          <label class="screen-add-status-option">
             <input type="radio" name="customerGpoUploadStatus" value="all" checked />
             <span>All</span>
           </label>
-          <label class="kvi-upload-status-option">
+          <label class="screen-add-status-option">
             <input type="radio" name="customerGpoUploadStatus" value="success" />
             <span>Success</span>
           </label>
-          <label class="kvi-upload-status-option">
+          <label class="screen-add-status-option">
             <input type="radio" name="customerGpoUploadStatus" value="error" />
             <span>Error</span>
           </label>
