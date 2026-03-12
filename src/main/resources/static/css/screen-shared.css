@@ -73,6 +73,36 @@
   min-width: 0;
 }
 
+.screen-page .grid-wrapper {
+  position: relative;
+}
+
+.screen-grid-empty-state {
+  position: absolute;
+  left: 50%;
+  top: 58%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+  color: #536775;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.screen-grid-empty-state strong {
+  color: #263845;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.screen-grid-empty-state span {
+  font-size: 13px;
+  line-height: 1.4;
+}
+
 .screen-panel-title {
   margin: 2px 0 4px;
   font-size: 14px;

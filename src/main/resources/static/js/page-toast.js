@@ -25,15 +25,21 @@
       <button type="button" class="app-page-toast-close" aria-label="Close message">×</button>
     `;
 
+    function dismiss() {
+      if (!toast.isConnected || toast.classList.contains('is-hiding')) return;
+      toast.classList.add('is-hiding');
+      setTimeout(() => toast.remove(), 180);
+    }
+
     const closeButton = toast.querySelector('.app-page-toast-close');
-    closeButton?.addEventListener('click', () => toast.remove());
+    closeButton?.addEventListener('click', dismiss);
 
     container.appendChild(toast);
     setTimeout(() => toast.classList.add('is-visible'), 20);
 
     const autoHideMs = Number.isFinite(config.autoHideMs) ? config.autoHideMs : 6000;
     if (autoHideMs > 0) {
-      setTimeout(() => toast.remove(), autoHideMs);
+      setTimeout(dismiss, autoHideMs);
     }
 
     return toast;

@@ -111,6 +111,10 @@ const KviRecommendationLogicPage = {
     this.contentCard = document.querySelector('.screen-page .content-card');
     this.tabButtons = Array.from(document.querySelectorAll('.screen-tab-btn[data-kvi-tab]'));
     this.tabPanels = Array.from(document.querySelectorAll('.screen-tab-panel[data-kvi-panel]'));
+    this.emptyStates = {
+      parameter: document.getElementById('kviRecommendationParameterEmptyState'),
+      output: document.getElementById('kviRecommendationOutputEmptyState')
+    };
   },
 
   bindTabs() {
@@ -200,6 +204,30 @@ const KviRecommendationLogicPage = {
 
   getActiveGrid() {
     return this.grids[this.activeTab] || null;
+  },
+
+  setGridEmptyState(tabKey, mode = 'hidden') {
+    const emptyState = this.emptyStates?.[tabKey];
+    if (!emptyState) return;
+
+    if (mode === 'hidden') {
+      emptyState.hidden = true;
+      return;
+    }
+
+    const title = emptyState.querySelector('strong');
+    const message = emptyState.querySelector('span');
+
+    if (title) {
+      title.textContent = mode === 'error' ? 'Unable to load rows' : 'No rows to show';
+    }
+    if (message) {
+      message.textContent = mode === 'error'
+        ? 'The grid request failed. Refresh or try again later.'
+        : 'No data was returned for the current view.';
+    }
+
+    emptyState.hidden = false;
   },
 
   syncToolbarForTab() {
@@ -655,10 +683,22 @@ const KviRecommendationLogicPage = {
               : (rows.length < pageSize ? params.startRow + rows.length : -1);
 
             params.successCallback(rows, lastRow);
+            requestAnimationFrame(() => {
+              this.setGridEmptyState(
+                tabConfig.gridElementId === 'kviParameterGrid' ? 'parameter' : 'output',
+                params.startRow === 0 && rows.length === 0 ? 'empty' : 'hidden'
+              );
+            });
           })
           .catch((error) => {
             console.error('KVI datasource fetch failed:', error);
             params.failCallback();
+            requestAnimationFrame(() => {
+              this.setGridEmptyState(
+                tabConfig.gridElementId === 'kviParameterGrid' ? 'parameter' : 'output',
+                'error'
+              );
+            });
           });
       }
     };

@@ -40,6 +40,24 @@ const CUSTOMER_GPO_NUMBER_FIELDS = new Set([
   'allOtherNonContractPercent'
 ]);
 
+const CUSTOMER_GPO_BACKEND_ALIASES = {
+  mckBrandContractPercent: ['mckBrandContractPct'],
+  mckBrandNonContractPercent: ['mckBrandNonContractPct'],
+  allOtherContractPercent: ['allOtherContractPct'],
+  allOtherNonContractPercent: ['allOtherNonContractPct'],
+  workStnId: ['workStationId'],
+  createdDate: ['createDate']
+};
+
+const CUSTOMER_GPO_BACKEND_RECORD_FIELD_MAP = {
+  mckBrandContractPercent: 'mckBrandContractPct',
+  mckBrandNonContractPercent: 'mckBrandNonContractPct',
+  allOtherContractPercent: 'allOtherContractPct',
+  allOtherNonContractPercent: 'allOtherNonContractPct',
+  workStnId: 'workStationId',
+  createdDate: 'createDate'
+};
+
 const CustomerGpoAdjustmentsAddPage = {
   entityName: '',
   gridApi: null,
@@ -535,7 +553,14 @@ const CustomerGpoAdjustmentsAddPage = {
   async fetchJson(endpoint, options = {}) {
     const response = await fetch(endpoint, options);
     const text = await response.text();
-    const payload = text ? JSON.parse(text) : {};
+    let payload = {};
+    if (text) {
+      try {
+        payload = JSON.parse(text);
+      } catch (error) {
+        payload = { message: text };
+      }
+    }
     if (!response.ok) {
       const message = payload?.message || payload?.error || `Request failed: ${response.status}`;
       const error = new Error(message);
@@ -551,7 +576,7 @@ const CustomerGpoAdjustmentsAddPage = {
       entityName: status?.entityName || this.entityName,
       sourceType: status?.sourceType || '',
       programId: status?.programId || '',
-      workStationId: status?.workStationId || '',
+      workStationId: status?.workStationId || status?.workstationId || status?.workStnId || '',
       status: status?.status || '',
       totalRows: status?.totalRows ?? '',
       successCount: status?.successCount ?? '',
@@ -563,7 +588,8 @@ const CustomerGpoAdjustmentsAddPage = {
       startedAt: status?.startedAt || '',
       completedAt: status?.completedAt || '',
       updatedAt: status?.updatedAt || '',
-      errorMessage: status?.errorMessage || ''
+      errorMessage: status?.errorMessage || '',
+      batchJobExecutionId: status?.batchJobExecutionId ?? ''
     };
   },
 
@@ -596,8 +622,68 @@ const CustomerGpoAdjustmentsAddPage = {
     return match?.field || '';
   },
 
+  getFieldValue(source, field) {
+    if (!source || typeof source !== 'object') return '';
+
+    if (source[field] != null) return source[field];
+
+    const aliases = CUSTOMER_GPO_BACKEND_ALIASES[field] || [];
+    for (const alias of aliases) {
+      if (source[alias] != null) return source[alias];
+    }
+
+    const normalizedField = this.normalizeHeader(field);
+    for (const [key, value] of Object.entries(source)) {
+      if (this.normalizeHeader(key) === normalizedField) return value;
+    }
+
+    const column = CUSTOMER_GPO_FIELD_DEFS.find((item) => item.field === field);
+    if (column) {
+      const normalizedHeader = this.normalizeHeader(column.headerName);
+      for (const [key, value] of Object.entries(source)) {
+        if (this.normalizeHeader(key) === normalizedHeader) return value;
+      }
+    }
+
+    return '';
+  },
+
+  toBackendDataShape(source) {
+    const mapped = this.createBlankRow();
+    CUSTOMER_GPO_FIELD_DEFS.forEach(({ field }) => {
+      mapped[field] = this.getFieldValue(source, field);
+    });
+    return mapped;
+  },
+
+  resolveUploadInstructions(response, file) {
+    const instructions = response?.uploadInstructions;
+    const method = String(instructions?.method || 'PUT').toUpperCase();
+    const headers = {};
+    const assignHeader = (key, value) => {
+      if (!key || value == null || value === '') return;
+      headers[key] = value;
+    };
+
+    if (instructions?.headers && typeof instructions.headers === 'object' && !Array.isArray(instructions.headers)) {
+      Object.entries(instructions.headers).forEach(([key, value]) => assignHeader(key, value));
+    }
+
+    if (Array.isArray(instructions?.headers)) {
+      instructions.headers.forEach((entry) => {
+        assignHeader(entry?.name || entry?.key, entry?.value);
+      });
+    }
+
+    if (!Object.keys(headers).some((key) => key.toLowerCase() === 'content-type')) {
+      headers['Content-Type'] = file.type || 'text/csv';
+    }
+
+    return { method, headers };
+  },
+
   normalizeResultRow(item) {
-    const baseRow = this.normalizeRow(item?.data || {});
+    const baseRow = this.normalizeRow(this.toBackendDataShape(item?.data || {}));
     const explicitErrors = Array.isArray(item?.errorFields) ? item.errorFields.map((field) => this.mapErrorField(field)).filter(Boolean) : [];
     const validation = this.validateRow(baseRow);
     const uploadErrors = explicitErrors.length > 0 ? explicitErrors : validation.errors;
@@ -690,7 +776,7 @@ const CustomerGpoAdjustmentsAddPage = {
     return {
       userId: firstPopulated.userId || this.getCurrentUser(),
       programId: firstPopulated.programId || String(window.CUSTOMER_GPO_PROGRAM_ID || ''),
-      workStationId: firstPopulated.workStnId || String(window.CUSTOMER_GPO_WORK_STATION_ID || 'WEB')
+      workStationId: firstPopulated.workStnId || firstPopulated.workStationId || String(window.CUSTOMER_GPO_WORK_STATION_ID || 'WEB')
     };
   },
 
@@ -709,10 +795,11 @@ const CustomerGpoAdjustmentsAddPage = {
     });
 
     if (!response?.signedUrl) throw new Error('Signed URL missing from response');
+    const uploadRequest = this.resolveUploadInstructions(response, file);
 
     const uploadResponse = await fetch(response.signedUrl, {
-      method: 'PUT',
-      headers: { 'Content-Type': file.type || 'text/csv' },
+      method: uploadRequest.method,
+      headers: uploadRequest.headers,
       body: file
     });
     if (!uploadResponse.ok) throw new Error(`Signed upload failed: ${uploadResponse.status}`);
@@ -721,8 +808,12 @@ const CustomerGpoAdjustmentsAddPage = {
   },
 
   async uploadCsvDirectly(file) {
+    const context = this.resolveUploadContext();
     const formData = new FormData();
     formData.append('entityName', this.entityName);
+    formData.append('userId', context.userId);
+    formData.append('programId', context.programId);
+    formData.append('workStationId', context.workStationId);
     formData.append('file', file);
     return this.fetchJson(`${this.getBulkUploadBaseUrl()}/csv`, {
       method: 'POST',
@@ -780,7 +871,7 @@ const CustomerGpoAdjustmentsAddPage = {
       this.addStoredJob(response.jobId, {
         status: 'PROCESSING',
         programId: validatedRows[0]?.programId || '',
-        workStationId: validatedRows[0]?.workStnId || ''
+        workStationId: validatedRows[0]?.workStnId || validatedRows[0]?.workStationId || ''
       });
       this.refreshStoredJobStatuses();
       this.showInfo(response.message || `Job ${response.jobId} submitted successfully.`, 'success');
@@ -791,9 +882,23 @@ const CustomerGpoAdjustmentsAddPage = {
   },
 
   toBackendRecord(row) {
+    const context = this.resolveUploadContext();
     const payload = {};
     CUSTOMER_GPO_FIELD_DEFS.forEach(({ field }) => {
-      payload[field] = row[field] == null ? '' : row[field];
+      const backendField = CUSTOMER_GPO_BACKEND_RECORD_FIELD_MAP[field] || field;
+      if (field === 'userId') {
+        payload[backendField] = row[field] == null || row[field] === '' ? context.userId : row[field];
+        return;
+      }
+      if (field === 'programId') {
+        payload[backendField] = row[field] == null || row[field] === '' ? context.programId : row[field];
+        return;
+      }
+      if (field === 'workStnId') {
+        payload[backendField] = row[field] == null || row[field] === '' ? context.workStationId : row[field];
+        return;
+      }
+      payload[backendField] = row[field] == null ? '' : row[field];
     });
     return payload;
   },
@@ -983,11 +1088,38 @@ const CustomerGpoAdjustmentsAddPage = {
   },
 
   showInfo(message, type = 'success') {
-    if (window.GridManager?.currentInstance?.showToast) {
-      window.GridManager.currentInstance.showToast(message, type, 2400);
-      return;
-    }
-    window.PageToast?.[type]?.(message);
+    if (!window.PageToast?.show) return;
+
+    const container = this.ensureToastContainer();
+    if (!container) return;
+
+    const normalizedType = ['success', 'error', 'warning'].includes(type) ? type : 'success';
+    const title = normalizedType === 'error'
+      ? 'Action required'
+      : normalizedType === 'warning'
+        ? 'Heads up'
+        : 'Success';
+    const subtitle = String(message || '').trim();
+
+    window.PageToast.show({
+      container,
+      type: normalizedType,
+      title,
+      subtitle,
+      icon: normalizedType === 'error' ? '!' : normalizedType === 'warning' ? 'i' : '✓',
+      autoHideMs: 2400
+    });
+  },
+
+  ensureToastContainer() {
+    let container = document.getElementById('customerGpoPageToastLayer');
+    if (container) return container;
+
+    container = document.createElement('div');
+    container.id = 'customerGpoPageToastLayer';
+    container.className = 'app-page-toast-layer';
+    document.body.appendChild(container);
+    return container;
   }
 };
 

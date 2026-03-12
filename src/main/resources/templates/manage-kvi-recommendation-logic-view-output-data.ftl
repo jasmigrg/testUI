@@ -145,6 +145,10 @@
           >
             <section class="grid-wrapper">
               <div id="kviParameterGrid" class="ag-theme-alpine app-grid"></div>
+              <div id="kviRecommendationParameterEmptyState" class="screen-grid-empty-state" hidden>
+                <strong>No rows to show</strong>
+                <span>No data was returned for the current view.</span>
+              </div>
             </section>
           </section>
 
@@ -158,6 +162,10 @@
           >
             <section class="grid-wrapper">
               <div id="kviOutputGrid" class="ag-theme-alpine app-grid"></div>
+              <div id="kviRecommendationOutputEmptyState" class="screen-grid-empty-state" hidden>
+                <strong>No rows to show</strong>
+                <span>No data was returned for the current view.</span>
+              </div>
             </section>
           </section>
         </section>

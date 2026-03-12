@@ -26,6 +26,11 @@ const KviInputPage = {
     this.pageShell = document.querySelector('.screen-page-shell');
     this.tabButtons = Array.from(document.querySelectorAll('.screen-tab-btn[data-kvi-tab]'));
     this.tabPanels = Array.from(document.querySelectorAll('.screen-tab-panel[data-kvi-panel]'));
+    this.emptyStates = {
+      control: document.getElementById('kviInputControlEmptyState'),
+      data: document.getElementById('kviInputDataEmptyState'),
+      exclusion: document.getElementById('kviInputExclusionEmptyState')
+    };
   },
 
   bindTabs() {
@@ -128,6 +133,30 @@ const KviInputPage = {
 
   getActiveGrid() {
     return this.grids[this.activeTab] || null;
+  },
+
+  setGridEmptyState(tabKey, mode = 'hidden') {
+    const emptyState = this.emptyStates?.[tabKey];
+    if (!emptyState) return;
+
+    if (mode === 'hidden') {
+      emptyState.hidden = true;
+      return;
+    }
+
+    const title = emptyState.querySelector('strong');
+    const message = emptyState.querySelector('span');
+
+    if (title) {
+      title.textContent = mode === 'error' ? 'Unable to load rows' : 'No rows to show';
+    }
+    if (message) {
+      message.textContent = mode === 'error'
+        ? 'The grid request failed. Refresh or try again later.'
+        : 'No data was returned for the current view.';
+    }
+
+    emptyState.hidden = false;
   },
 
   getSelectedDensityMode() {
@@ -719,10 +748,30 @@ const KviInputPage = {
               : (rows.length < pageSize ? params.startRow + rows.length : -1);
 
             params.successCallback(rows, lastRow);
+            requestAnimationFrame(() => {
+              this.setGridEmptyState(
+                tabConfig.gridElementId === 'kviInputControlGrid'
+                  ? 'control'
+                  : tabConfig.gridElementId === 'kviInputDataGrid'
+                    ? 'data'
+                    : 'exclusion',
+                params.startRow === 0 && rows.length === 0 ? 'empty' : 'hidden'
+              );
+            });
           })
           .catch((error) => {
             console.error('KVI input datasource fetch failed:', error);
             params.failCallback();
+            requestAnimationFrame(() => {
+              this.setGridEmptyState(
+                tabConfig.gridElementId === 'kviInputControlGrid'
+                  ? 'control'
+                  : tabConfig.gridElementId === 'kviInputDataGrid'
+                    ? 'data'
+                    : 'exclusion',
+                'error'
+              );
+            });
           });
       }
     };

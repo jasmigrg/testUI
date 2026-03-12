@@ -152,6 +152,10 @@
           >
             <section class="grid-wrapper">
               <div id="kviMappingParameterGrid" class="ag-theme-alpine app-grid"></div>
+              <div id="kviMappingParameterEmptyState" class="screen-grid-empty-state" hidden>
+                <strong>No rows to show</strong>
+                <span>No data was returned for the current view.</span>
+              </div>
             </section>
           </section>
 
@@ -165,6 +169,10 @@
           >
             <section class="grid-wrapper">
               <div id="kviMappingOutputGrid" class="ag-theme-alpine app-grid"></div>
+              <div id="kviMappingOutputEmptyState" class="screen-grid-empty-state" hidden>
+                <strong>No rows to show</strong>
+                <span>No data was returned for the current view.</span>
+              </div>
             </section>
           </section>
         </section>

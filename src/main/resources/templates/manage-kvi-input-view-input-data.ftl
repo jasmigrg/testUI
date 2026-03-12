@@ -189,6 +189,10 @@
             <h3 class="screen-panel-title">KVI Input Control</h3>
             <section class="grid-wrapper">
               <div id="kviInputControlGrid" class="ag-theme-alpine app-grid screen-grid"></div>
+              <div id="kviInputControlEmptyState" class="screen-grid-empty-state" hidden>
+                <strong>No rows to show</strong>
+                <span>No data was returned for the current view.</span>
+              </div>
             </section>
           </section>
 
@@ -203,6 +207,10 @@
             <h3 class="screen-panel-title">KVI Input Data</h3>
             <section class="grid-wrapper">
               <div id="kviInputDataGrid" class="ag-theme-alpine app-grid screen-grid"></div>
+              <div id="kviInputDataEmptyState" class="screen-grid-empty-state" hidden>
+                <strong>No rows to show</strong>
+                <span>No data was returned for the current view.</span>
+              </div>
             </section>
           </section>
 
@@ -217,6 +225,10 @@
             <h3 class="screen-panel-title">KVI Input Exclusion</h3>
             <section class="grid-wrapper">
               <div id="kviInputExclusionGrid" class="ag-theme-alpine app-grid screen-grid"></div>
+              <div id="kviInputExclusionEmptyState" class="screen-grid-empty-state" hidden>
+                <strong>No rows to show</strong>
+                <span>No data was returned for the current view.</span>
+              </div>
             </section>
           </section>
         </section>
