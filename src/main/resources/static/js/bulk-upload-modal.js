@@ -31,6 +31,7 @@
     const validateFile = config.validateFile || defaultFileValidator;
 
     let selectedFile = null;
+    let uploadInFlight = false;
 
     function setFileCardVisible(isVisible) {
       if (!fileCard) return;
@@ -39,6 +40,7 @@
     }
 
     function clearState() {
+      uploadInFlight = false;
       selectedFile = null;
       if (input) input.value = '';
       if (fileNameEl) fileNameEl.textContent = '';
@@ -111,11 +113,30 @@
     });
 
     nextBtn?.addEventListener('click', () => {
+      console.debug('[BulkUploadModal] upload button clicked', {
+        modalId: config.modalId,
+        hasSelectedFile: Boolean(selectedFile),
+        uploadInFlight
+      });
+      if (uploadInFlight) return;
       if (!selectedFile) {
         input?.click();
         return;
       }
-      config.onUpload?.(selectedFile, { close, clearState });
+      const uploadResult = config.onUpload?.(selectedFile, { close, clearState });
+      if (!uploadResult || typeof uploadResult.then !== 'function') return;
+
+      uploadInFlight = true;
+      nextBtn.disabled = true;
+      nextBtn.textContent = 'Uploading...';
+
+      Promise.resolve(uploadResult).finally(() => {
+        uploadInFlight = false;
+        if (!modal.hidden && nextBtn) {
+          nextBtn.disabled = false;
+          nextBtn.textContent = selectedFile ? uploadLabel : initialNextLabel;
+        }
+      });
     });
 
     closeButtons.forEach((button) => {

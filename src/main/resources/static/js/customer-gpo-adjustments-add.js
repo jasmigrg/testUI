@@ -278,8 +278,9 @@ const CustomerGpoAdjustmentsAddPage = {
       uploadLabel: 'Upload',
       validateFile: (file) => /\.csv$/i.test(file.name) || file.type === 'text/csv',
       onUpload: (file, controls) => {
-        this.processUploadedCsv(file).then((success) => {
+        return this.processUploadedCsv(file).then((success) => {
           if (success) controls.close();
+          return success;
         });
       }
     });
@@ -751,14 +752,27 @@ const CustomerGpoAdjustmentsAddPage = {
 
   async processUploadedCsv(file) {
     try {
+      console.debug('[CustomerGpoAdjustmentsAdd] processUploadedCsv:start', {
+        fileName: file?.name,
+        size: file?.size
+      });
       const response = await this.requestSignedUrlUpload(file).catch(async (error) => {
         if (error?.status === 503 || /signed url/i.test(error?.message || '')) {
+          console.debug('[CustomerGpoAdjustmentsAdd] falling back to direct CSV upload', {
+            fileName: file?.name,
+            error: error?.message || String(error)
+          });
           return this.uploadCsvDirectly(file);
         }
         throw error;
       });
 
       if (!response?.jobId) throw new Error('Job id missing from upload response');
+
+      console.debug('[CustomerGpoAdjustmentsAdd] processUploadedCsv:job-created', {
+        jobId: response.jobId,
+        fileName: response.fileName || file?.name
+      });
 
       this.addStoredJob(response.jobId, {
         status: 'PENDING_UPLOAD',
@@ -787,6 +801,13 @@ const CustomerGpoAdjustmentsAddPage = {
 
   async requestSignedUrlUpload(file) {
     const context = this.resolveUploadContext();
+    console.debug('[CustomerGpoAdjustmentsAdd] requestSignedUrlUpload:request', {
+      entityName: this.entityName,
+      fileName: file?.name,
+      userId: context.userId,
+      programId: context.programId,
+      workStationId: context.workStationId
+    });
     const response = await this.fetchJson(`${this.getBulkUploadBaseUrl()}/request-signed-url`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -800,12 +821,29 @@ const CustomerGpoAdjustmentsAddPage = {
     });
 
     if (!response?.signedUrl) throw new Error('Signed URL missing from response');
+    console.debug('[CustomerGpoAdjustmentsAdd] requestSignedUrlUpload:response', {
+      jobId: response.jobId,
+      signedUrl: response.signedUrl,
+      uploadInstructions: response.uploadInstructions
+    });
     const uploadRequest = this.resolveUploadInstructions(response, file);
+    console.debug('[CustomerGpoAdjustmentsAdd] requestSignedUrlUpload:put-start', {
+      jobId: response.jobId,
+      fileName: file?.name,
+      method: uploadRequest.method,
+      headers: uploadRequest.headers
+    });
 
     const uploadResponse = await fetch(response.signedUrl, {
       method: uploadRequest.method,
       headers: uploadRequest.headers,
       body: file
+    });
+    console.debug('[CustomerGpoAdjustmentsAdd] requestSignedUrlUpload:put-finish', {
+      jobId: response.jobId,
+      fileName: file?.name,
+      status: uploadResponse.status,
+      ok: uploadResponse.ok
     });
     if (!uploadResponse.ok) throw new Error(`Signed upload failed: ${uploadResponse.status}`);
 
