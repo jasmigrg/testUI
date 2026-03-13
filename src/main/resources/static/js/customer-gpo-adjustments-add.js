@@ -993,6 +993,23 @@ const CustomerGpoAdjustmentsAddPage = {
     }
   },
 
+  scheduleDelayedJobStatusRefresh(jobId, delayMs = 5000) {
+    if (!jobId) return;
+    window.setTimeout(async () => {
+      const currentRow = this.readStoredJobs().find((row) => String(row.jobId) === String(jobId));
+      if (!currentRow || this.isTerminalStatus(currentRow.status)) return;
+      await this.refreshSingleJobStatus(jobId);
+    }, delayMs);
+  },
+
+  async refreshSelectedJob(jobId, delayMs = 5000) {
+    if (!jobId) return;
+    const currentStatus = await this.refreshSingleJobStatus(jobId);
+    if (!this.isTerminalStatus(currentStatus?.status)) {
+      this.scheduleDelayedJobStatusRefresh(jobId, delayMs);
+    }
+  },
+
   async processUploadedCsv(file) {
     try {
       console.debug('[CustomerGpoAdjustmentsAdd] processUploadedCsv:start', {
@@ -1029,7 +1046,10 @@ const CustomerGpoAdjustmentsAddPage = {
         programId: this.resolveUploadContext().programId,
         workStationId: this.resolveUploadContext().workStationId
       });
-      await this.refreshSingleJobStatus(response.jobId);
+      const currentStatus = await this.refreshSingleJobStatus(response.jobId);
+      if (!this.isTerminalStatus(currentStatus?.status)) {
+        this.scheduleDelayedJobStatusRefresh(response.jobId, 5000);
+      }
       this.showInfo(`Upload accepted. Job ${response.jobId} created.`, 'success');
       return true;
     } catch (error) {
@@ -1166,6 +1186,19 @@ const CustomerGpoAdjustmentsAddPage = {
 
     this.submitGridRows(submitRows, mode).then(async (response) => {
       if (mode === 'resubmit') {
+        if (typeof this.gridApi?.deselectAll === 'function') {
+          this.gridApi.deselectAll();
+        }
+        submitRows.forEach((submittedRow) => {
+          const match = this.uploadedRows.find((row) => row.isBackendRow
+            && row.rowNumber === submittedRow.rowNumber
+            && row.mainTableId === submittedRow.mainTableId);
+          if (!match) return;
+          match.uploadStatus = 'processing';
+          match.wasEditedAfterError = false;
+        });
+        this.applyUploadFilter();
+        await this.refreshSelectedJob(this.selectedJobId, 5000);
         this.showInfo(response?.message || 'Selected corrected row(s) submitted successfully.', 'success');
         return;
       }
@@ -1176,7 +1209,7 @@ const CustomerGpoAdjustmentsAddPage = {
         programId: submitRows[0]?.programId || '',
         workStationId: submitRows[0]?.workStnId || submitRows[0]?.workStationId || ''
       });
-      await this.refreshSingleJobStatus(response.jobId);
+      await this.refreshSelectedJob(response.jobId, 5000);
       this.showInfo(response.message || `Job ${response.jobId} created successfully.`, 'success');
     }).catch((error) => {
       console.error('Grid processing failed:', error);
