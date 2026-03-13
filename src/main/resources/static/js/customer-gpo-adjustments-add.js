@@ -393,12 +393,14 @@ const CustomerGpoAdjustmentsAddPage = {
 
   getBulkUploadBaseUrl() {
     const baseUrl = String(window.API_BASE_URL || '').replace(/\/$/, '');
-    return baseUrl ? `${baseUrl}/api/bulk-upload` : '/api/bulk-upload';
+    return baseUrl
+      ? `${baseUrl}/api/foundational/api/bulk-upload`
+      : '/api/foundational/api/bulk-upload';
   },
 
   getCurrentUser() {
     const currentUserId = document.getElementById('currentUserId')?.value;
-    return String(currentUserId || window.GRID_PREF_TEST_USER_ID || 'defaultUser');
+    return String(currentUserId || window.GRID_PREF_TEST_USER_ID || 'test-user');
   },
 
   getStorageKey() {
@@ -778,8 +780,8 @@ const CustomerGpoAdjustmentsAddPage = {
     const firstPopulated = gridRows.find((row) => !this.isRowEmpty(row)) || {};
     return {
       userId: firstPopulated.userId || this.getCurrentUser(),
-      programId: firstPopulated.programId || String(window.CUSTOMER_GPO_PROGRAM_ID || ''),
-      workStationId: firstPopulated.workStnId || firstPopulated.workStationId || String(window.CUSTOMER_GPO_WORK_STATION_ID || 'WEB')
+      programId: firstPopulated.programId || String(window.CUSTOMER_GPO_PROGRAM_ID || 'PROG001'),
+      workStationId: firstPopulated.workStnId || firstPopulated.workStationId || String(window.CUSTOMER_GPO_WORK_STATION_ID || 'WS001')
     };
   },
 
