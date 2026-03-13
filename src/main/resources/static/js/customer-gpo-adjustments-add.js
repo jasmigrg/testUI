@@ -685,7 +685,7 @@ const CustomerGpoAdjustmentsAddPage = {
     if (!this.batchTableBody) return;
     const visibleRows = this.getVisibleBatchRows(rows);
     if (!visibleRows || visibleRows.length === 0) {
-      this.batchTableBody.innerHTML = '<div class="bulk-upload-batch-empty">No successful upload tracked yet.</div>';
+      this.batchTableBody.innerHTML = '<div class="bulk-upload-batch-empty">No upload tracked yet.</div>';
       return;
     }
 
@@ -707,8 +707,7 @@ const CustomerGpoAdjustmentsAddPage = {
 
   getVisibleBatchRows(rows) {
     if (!Array.isArray(rows) || rows.length === 0) return [];
-    const latestSuccess = rows.find((row) => this.isSuccessfulBatchStatus(row?.status));
-    return latestSuccess ? [latestSuccess] : [];
+    return rows[0] ? [rows[0]] : [];
   },
 
   isSuccessfulBatchStatus(status) {
@@ -981,6 +980,19 @@ const CustomerGpoAdjustmentsAddPage = {
     this.startPollingIfNeeded();
   },
 
+  async refreshSingleJobStatus(jobId) {
+    if (!jobId) return null;
+    try {
+      const status = await this.fetchJobStatus(jobId);
+      const normalizedStatus = this.normalizeJobRow(status);
+      this.upsertJobRow(normalizedStatus);
+      return normalizedStatus;
+    } catch (error) {
+      console.warn('Failed to refresh single job status', error);
+      return null;
+    }
+  },
+
   async processUploadedCsv(file) {
     try {
       console.debug('[CustomerGpoAdjustmentsAdd] processUploadedCsv:start', {
@@ -1017,6 +1029,7 @@ const CustomerGpoAdjustmentsAddPage = {
         programId: this.resolveUploadContext().programId,
         workStationId: this.resolveUploadContext().workStationId
       });
+      await this.refreshSingleJobStatus(response.jobId);
       this.showInfo(`Upload accepted. Job ${response.jobId} created.`, 'success');
       return true;
     } catch (error) {
@@ -1151,7 +1164,7 @@ const CustomerGpoAdjustmentsAddPage = {
     }
     const mode = shouldResubmit ? 'resubmit' : 'grid';
 
-    this.submitGridRows(submitRows, mode).then((response) => {
+    this.submitGridRows(submitRows, mode).then(async (response) => {
       if (mode === 'resubmit') {
         this.showInfo(response?.message || 'Selected corrected row(s) submitted successfully.', 'success');
         return;
@@ -1163,6 +1176,7 @@ const CustomerGpoAdjustmentsAddPage = {
         programId: submitRows[0]?.programId || '',
         workStationId: submitRows[0]?.workStnId || submitRows[0]?.workStationId || ''
       });
+      await this.refreshSingleJobStatus(response.jobId);
       this.showInfo(response.message || `Job ${response.jobId} created successfully.`, 'success');
     }).catch((error) => {
       console.error('Grid processing failed:', error);
