@@ -43,7 +43,7 @@
   border-radius: 8px;
   height: 36px;
   padding: 0 18px;
-  background: #0d8b99;
+  background: var(--color-primary, #0f8a9d);
   color: #fff;
   font-size: 13px;
   font-weight: 600;
@@ -51,7 +51,7 @@
 }
 
 .screen-add-page .screen-add-bulk-upload-btn:hover {
-  background: #0b7884;
+  background: var(--color-primary-hover, #0b7884);
 }
 
 .screen-add-page .ag-theme-alpine .ag-row.ag-row-selected,

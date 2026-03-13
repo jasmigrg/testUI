@@ -69,7 +69,7 @@
         <#assign actionItems=[
           {"id":"back","label":"Back","iconOnly":true,"className":"icon-only is-back","iconHtml":iconBack},
           {"id":"delete","label":"Delete","iconHtml":iconDelete},
-          {"id":"submit","label":"Submit","iconHtml":iconSubmit,"disabled":true,"ariaLabel":"Submit (pending backend API)"},
+          {"id":"submit","label":"Submit","iconHtml":iconSubmit,"ariaLabel":"Submit rows"},
           {"id":"execute","label":"Execute","iconHtml":iconExecute}
         ] />
 
@@ -104,7 +104,6 @@
         </section>
 
         <section class="screen-add-upload-row">
-          <button type="button" class="screen-add-process-grid-btn" data-action="process-grid-rows">Process Grid Rows</button>
           <button type="button" class="screen-add-bulk-upload-btn" data-action="bulk-upload">Bulk Upload</button>
         </section>
 

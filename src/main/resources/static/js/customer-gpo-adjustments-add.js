@@ -1,9 +1,90 @@
+class CustomerGpoInlineSaveCellEditor {
+  init(params) {
+    this.params = params;
+    this.eGui = document.createElement('div');
+    this.eGui.className = 'screen-add-inline-save-editor';
+
+    this.input = document.createElement('input');
+    this.input.type = 'text';
+    this.input.className = 'screen-add-inline-save-input';
+    this.input.value = params.value == null ? '' : String(params.value);
+    this.input.placeholder = '_';
+
+    this.saveBtn = document.createElement('button');
+    this.saveBtn.type = 'button';
+    this.saveBtn.className = 'screen-add-inline-save-btn';
+    this.saveBtn.textContent = 'Save';
+
+    this.onInputKeyDown = (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        event.stopPropagation();
+        this.onSaveClick();
+      }
+    };
+
+    this.onSaveMouseDown = (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+    };
+
+    this.onSaveClick = () => {
+      const pageRef = this.params.pageRef;
+      const field = this.params.column?.getColId?.() || this.params.colDef?.field;
+      const result = pageRef?.saveCellFromEditor
+        ? pageRef.saveCellFromEditor(this.params.node, field, this.input.value)
+        : { ok: true, value: this.input.value };
+
+      if (result?.ok) {
+        this.input.value = result.value == null ? '' : String(result.value);
+        this.params.stopEditing();
+      }
+    };
+
+    this.input.addEventListener('keydown', this.onInputKeyDown);
+    this.saveBtn.addEventListener('mousedown', this.onSaveMouseDown);
+    this.saveBtn.addEventListener('click', this.onSaveClick);
+
+    this.eGui.appendChild(this.input);
+    this.eGui.appendChild(this.saveBtn);
+  }
+
+  getGui() {
+    return this.eGui;
+  }
+
+  afterGuiAttached() {
+    if (this.input) {
+      this.input.focus();
+      this.input.select();
+    }
+  }
+
+  getValue() {
+    return this.input ? this.input.value : '';
+  }
+
+  destroy() {
+    if (this.input && this.onInputKeyDown) {
+      this.input.removeEventListener('keydown', this.onInputKeyDown);
+    }
+    if (this.saveBtn && this.onSaveMouseDown) {
+      this.saveBtn.removeEventListener('mousedown', this.onSaveMouseDown);
+    }
+    if (this.saveBtn && this.onSaveClick) {
+      this.saveBtn.removeEventListener('click', this.onSaveClick);
+    }
+  }
+}
+
 const CUSTOMER_GPO_FIELD_DEFS = [
   { field: 'uniqueKeyId', headerName: 'Unique Key ID', minWidth: 150, editable: false },
   { field: 'customerPriority', headerName: 'Customer Priority', minWidth: 160 },
   { field: 'itemPriority', headerName: 'Item Priority', minWidth: 140 },
   { field: 'accountType', headerName: 'Account Type', minWidth: 140 },
   { field: 'accountTypeDescription', headerName: 'Account Type Description (from UD 56/AT)', minWidth: 280 },
+  { field: 'customerNumber', headerName: 'Customer Number', minWidth: 160 },
+  { field: 'accountName', headerName: 'Account Name', minWidth: 180 },
   { field: 'gpoNumber', headerName: 'GPO Number', minWidth: 140 },
   { field: 'gpoName', headerName: 'GPO Name', minWidth: 150 },
   { field: 'progNum', headerName: 'Prog Num', minWidth: 130 },
@@ -49,14 +130,37 @@ const CUSTOMER_GPO_BACKEND_ALIASES = {
   createdDate: ['createDate']
 };
 
-const CUSTOMER_GPO_BACKEND_RECORD_FIELD_MAP = {
-  mckBrandContractPercent: 'mckBrandContractPct',
-  mckBrandNonContractPercent: 'mckBrandNonContractPct',
-  allOtherContractPercent: 'allOtherContractPct',
-  allOtherNonContractPercent: 'allOtherNonContractPct',
-  workStnId: 'workStationId',
-  createdDate: 'createDate'
-};
+const CUSTOMER_GPO_OUTBOUND_FIELDS = [
+  { localField: 'userId', backendField: 'userId', useContextFallback: 'userId' },
+  { localField: 'programId', backendField: 'programId', useContextFallback: 'programId' },
+  { localField: 'workStnId', backendField: 'workStationId', useContextFallback: 'workStationId' },
+  { localField: 'effectiveFrom', backendField: 'effectiveFrom' },
+  { localField: 'terminationDate', backendField: 'terminationDate' },
+  { localField: 'disableDate', backendField: 'disableDate' },
+  { localField: 'customerPriority', backendField: 'customerPriority' },
+  { localField: 'itemPriority', backendField: 'itemPriority' },
+  { localField: 'accountType', backendField: 'accountType' },
+  { localField: 'accountTypeDescription', backendField: 'accountTypeDescription' },
+  { localField: 'customerNumber', backendField: 'customerNumber' },
+  { localField: 'accountName', backendField: 'accountName' },
+  { localField: 'gpoNumber', backendField: 'gpoNumber' },
+  { localField: 'gpoName', backendField: 'gpoName' },
+  { localField: 'progNum', backendField: 'progNum' },
+  { localField: 'programType', backendField: 'programType' },
+  { localField: 'progSubNum', backendField: 'progSubNum' },
+  { localField: 'programSubType', backendField: 'programSubType' },
+  { localField: 'productFamily', backendField: 'productFamily' },
+  { localField: 'productCategory', backendField: 'productCategory' },
+  { localField: 'productGroup', backendField: 'productGroup' },
+  { localField: 'productSubCategory', backendField: 'productSubCategory' },
+  { localField: 'mckBrandContractPercent', backendField: 'mckBrandContractPct' },
+  { localField: 'mckBrandNonContractPercent', backendField: 'mckBrandNonContractPct' },
+  { localField: 'allOtherContractPercent', backendField: 'allOtherContractPct' },
+  { localField: 'allOtherNonContractPercent', backendField: 'allOtherNonContractPct' },
+  { localField: 'notes', backendField: 'notes' },
+  { localField: 'createdByUser', backendField: 'createdByUser' },
+  { localField: 'createdDate', backendField: 'createDate' }
+];
 
 const CustomerGpoAdjustmentsAddPage = {
   entityName: '',
@@ -108,6 +212,9 @@ const CustomerGpoAdjustmentsAddPage = {
     row.uploadStatus = '';
     row.uploadErrors = [];
     row.errorMessages = [];
+    row.fieldErrorMessages = {};
+    row.editedFields = [];
+    row.wasEditedAfterError = false;
     row.mainTableId = null;
     row.isBackendRow = false;
     return row;
@@ -127,11 +234,13 @@ const CustomerGpoAdjustmentsAddPage = {
       gridOptions: {
         rowData: this.initialRows(),
         rowSelection: 'multiple',
+        isRowSelectable: (node) => this.canSelectRow(node?.data),
         suppressRowClickSelection: true,
         singleClickEdit: false,
         enableRangeSelection: true,
         suppressClipboardPaste: false,
         copyHeadersToClipboard: false,
+        enableBrowserTooltips: true,
         stopEditingWhenCellsLoseFocus: true,
         onCellValueChanged: (event) => this.onCellValueChanged(event),
         icons: {
@@ -147,16 +256,21 @@ const CustomerGpoAdjustmentsAddPage = {
           unSortIcon: true,
           wrapHeaderText: true,
           autoHeaderHeight: true,
-          editable: true,
+          editable: (params) => this.isEditableCell(params),
           resizable: true
+        },
+        components: {
+          customerGpoInlineSaveCellEditor: CustomerGpoInlineSaveCellEditor
         }
       },
       columns: [
         {
           field: 'select',
           headerName: '',
-          checkboxSelection: true,
-          headerCheckboxSelection: true,
+          checkboxSelection: (params) => this.canSelectRow(params?.data),
+          headerCheckboxSelection: (params) => this.hasSelectableRows(params?.api),
+          headerCheckboxSelectionFilteredOnly: true,
+          showDisabledCheckboxes: true,
           width: 44,
           minWidth: 44,
           maxWidth: 44,
@@ -191,7 +305,7 @@ const CustomerGpoAdjustmentsAddPage = {
         showInfo: (message, type) => this.showInfo(message, type),
         ensureRowCapacity: (rowCount, startRowIndex) => this.ensureRowCapacityForPaste(rowCount, startRowIndex),
         normalizeRow: (row) => this.normalizeRow(row),
-        validateRow: (row) => this.validateRow(row),
+        validateRow: () => ({ isValid: true, errors: [] }),
         resolveHeaderField: (header) => this.resolvePasteHeaderField(header, pasteableFields),
         requireHeaderMapping: true,
         headerMatchThreshold: 3,
@@ -220,8 +334,14 @@ const CustomerGpoAdjustmentsAddPage = {
       field: column.field,
       headerName: column.headerName,
       minWidth: column.minWidth,
-      editable: column.editable !== false,
-      cellClassRules: this.validationCellRules(column.field)
+      editable: column.editable !== false ? (params) => this.isEditableCell(params, column.field) : false,
+      cellClassRules: this.validationCellRules(column.field),
+      tooltipValueGetter: (params) => this.getCellErrorTooltip(params, column.field),
+      cellEditorSelector: column.editable !== false
+        ? (params) => (this.shouldUseInlineSaveEditor(params, column.field)
+          ? { component: 'customerGpoInlineSaveCellEditor', params: { pageRef: this } }
+          : undefined)
+        : undefined
     };
 
     if (column.type === 'date') {
@@ -238,6 +358,54 @@ const CustomerGpoAdjustmentsAddPage = {
     return {
       'screen-add-cell-error': (params) => Array.isArray(params.data?.uploadErrors) && params.data.uploadErrors.includes(field)
     };
+  },
+
+  isSuccessfulUploadRow(row) {
+    return String(row?.uploadStatus || '').trim().toLowerCase() === 'success';
+  },
+
+  isErrorUploadRow(row) {
+    return String(row?.uploadStatus || '').trim().toLowerCase() === 'error';
+  },
+
+  isReadyForResubmitRow(row) {
+    return Boolean(row?.isBackendRow)
+      && !this.isSuccessfulUploadRow(row)
+      && Boolean(row?.wasEditedAfterError)
+      && (!Array.isArray(row?.uploadErrors) || row.uploadErrors.length === 0);
+  },
+
+  canSelectRow(row) {
+    if (!row) return false;
+    if (!row.isBackendRow) return true;
+    if (this.isSuccessfulUploadRow(row)) return false;
+    return this.isReadyForResubmitRow(row);
+  },
+
+  hasSelectableRows(gridApi) {
+    if (!gridApi || typeof gridApi.forEachNodeAfterFilterAndSort !== 'function') return false;
+    let hasSelectable = false;
+    gridApi.forEachNodeAfterFilterAndSort((node) => {
+      if (!hasSelectable && this.canSelectRow(node?.data)) hasSelectable = true;
+    });
+    return hasSelectable;
+  },
+
+  isEditableCell(params, fieldOverride = '') {
+    const field = fieldOverride || params?.colDef?.field;
+    const row = params?.data;
+    if (!field || !row) return false;
+    const column = CUSTOMER_GPO_FIELD_DEFS.find((item) => item.field === field);
+    if (column?.editable === false) return false;
+    if (!row.isBackendRow) return true;
+    return !this.isSuccessfulUploadRow(row);
+  },
+
+  shouldUseInlineSaveEditor(params, field) {
+    return Boolean(params?.data?.isBackendRow)
+      && this.isErrorUploadRow(params.data)
+      && Array.isArray(params.data?.uploadErrors)
+      && params.data.uploadErrors.includes(field);
   },
 
   initBatchSectionControls() {
@@ -296,9 +464,6 @@ const CustomerGpoAdjustmentsAddPage = {
       bulkUploadButton.addEventListener('click', () => this.bulkUploadModal.open());
     }
 
-    const processGridButton = document.querySelector('[data-action="process-grid-rows"]');
-    processGridButton?.addEventListener('click', () => this.processGridRows());
-
     this.uploadStatusInputs.forEach((input) => {
       input.addEventListener('change', () => {
         if (!input.checked) return;
@@ -325,7 +490,7 @@ const CustomerGpoAdjustmentsAddPage = {
           this.saveDraft();
           break;
         case 'submit':
-          this.submitToDatabase();
+          this.processGridRows();
           break;
         case 'execute':
           this.executeFilters();
@@ -380,15 +545,15 @@ const CustomerGpoAdjustmentsAddPage = {
       const rows = this.getGridRows()
         .map((row) => this.normalizeRow(row))
         .filter((row) => !this.isRowEmpty(row))
-        .map((row) => {
-          const validation = this.validateRow(row);
-          return {
-            ...row,
-            uploadStatus: validation.isValid ? 'success' : 'error',
-            uploadErrors: validation.errors,
-            errorMessages: []
-          };
-        });
+        .map((row) => ({
+          ...row,
+          uploadStatus: '',
+          uploadErrors: [],
+          errorMessages: [],
+          fieldErrorMessages: {},
+          editedFields: [],
+          wasEditedAfterError: false
+        }));
       this.uploadedRows = rows;
     }
 
@@ -445,7 +610,10 @@ const CustomerGpoAdjustmentsAddPage = {
       },
       ...existing.filter((row) => String(row.jobId) !== String(jobId))
     ];
+    this.jobRows = next;
     this.writeStoredJobs(next);
+    this.renderStoredJobs(next);
+    this.updateBatchInfoCount(this.countUnfinishedJobs(next));
   },
 
   removeStoredJob(jobId) {
@@ -467,8 +635,6 @@ const CustomerGpoAdjustmentsAddPage = {
     this.jobRows = this.readStoredJobs();
     this.renderStoredJobs(this.jobRows);
     this.updateBatchInfoCount(this.countUnfinishedJobs(this.jobRows));
-    this.refreshStoredJobStatuses();
-    this.startPollingIfNeeded();
   },
 
   countUnfinishedJobs(rows) {
@@ -476,11 +642,10 @@ const CustomerGpoAdjustmentsAddPage = {
   },
 
   startPollingIfNeeded() {
-    if (this.pollTimer) clearInterval(this.pollTimer);
-    if (this.countUnfinishedJobs(this.jobRows) === 0) return;
-    this.pollTimer = setInterval(() => {
-      this.refreshStoredJobStatuses();
-    }, 8000);
+    if (this.pollTimer) {
+      clearInterval(this.pollTimer);
+      this.pollTimer = null;
+    }
   },
 
   async refreshStoredJobStatuses() {
@@ -518,12 +683,13 @@ const CustomerGpoAdjustmentsAddPage = {
 
   renderStoredJobs(rows) {
     if (!this.batchTableBody) return;
-    if (!rows || rows.length === 0) {
-      this.batchTableBody.innerHTML = '<div class="bulk-upload-batch-empty">No uploads tracked yet.</div>';
+    const visibleRows = this.getVisibleBatchRows(rows);
+    if (!visibleRows || visibleRows.length === 0) {
+      this.batchTableBody.innerHTML = '<div class="bulk-upload-batch-empty">No successful upload tracked yet.</div>';
       return;
     }
 
-    this.batchTableBody.innerHTML = rows.map((row) => `
+    this.batchTableBody.innerHTML = visibleRows.map((row) => `
       <div class="bulk-upload-batch-row" role="listitem">
         <span class="bulk-upload-batch-cell"><button type="button" class="bulk-upload-batch-number-link" data-job-link="${this.escapeHtml(row.jobId)}">${this.escapeHtml(row.jobId)}</button></span>
         <span class="bulk-upload-batch-cell">${this.escapeHtml(row.status || '')}</span>
@@ -537,6 +703,17 @@ const CustomerGpoAdjustmentsAddPage = {
         <span class="bulk-upload-batch-cell"><button type="button" class="bulk-upload-batch-delete-btn" data-job-remove="${this.escapeHtml(row.jobId)}" aria-label="Remove job">🗑</button></span>
       </div>
     `).join('');
+  },
+
+  getVisibleBatchRows(rows) {
+    if (!Array.isArray(rows) || rows.length === 0) return [];
+    const latestSuccess = rows.find((row) => this.isSuccessfulBatchStatus(row?.status));
+    return latestSuccess ? [latestSuccess] : [];
+  },
+
+  isSuccessfulBatchStatus(status) {
+    const normalized = String(status || '').trim().toUpperCase();
+    return ['SUCCESS', 'COMPLETED', 'VALID'].includes(normalized);
   },
 
   updateBatchInfoCount(count) {
@@ -632,6 +809,50 @@ const CustomerGpoAdjustmentsAddPage = {
     return match?.field || '';
   },
 
+  extractFieldErrorMessages(item) {
+    const messagesByField = {};
+    const assignMessage = (field, message) => {
+      const mappedField = this.mapErrorField(field);
+      if (!mappedField || message == null || message === '') return;
+      messagesByField[mappedField] = String(message);
+    };
+
+    if (item?.fieldErrors && typeof item.fieldErrors === 'object' && !Array.isArray(item.fieldErrors)) {
+      Object.entries(item.fieldErrors).forEach(([field, message]) => assignMessage(field, message));
+    }
+
+    if (Array.isArray(item?.fieldErrors)) {
+      item.fieldErrors.forEach((entry) => {
+        if (!entry || typeof entry !== 'object') return;
+        assignMessage(entry.field || entry.name || entry.key, entry.message || entry.errorMessage || entry.reason);
+      });
+    }
+
+    if (Array.isArray(item?.errors)) {
+      item.errors.forEach((entry) => {
+        if (!entry || typeof entry !== 'object') return;
+        assignMessage(entry.field || entry.name || entry.key, entry.message || entry.errorMessage || entry.reason);
+      });
+    }
+
+    if (Array.isArray(item?.errorFields) && Array.isArray(item?.errorMessages) && item.errorFields.length === item.errorMessages.length) {
+      item.errorFields.forEach((field, index) => assignMessage(field, item.errorMessages[index]));
+    }
+
+    return messagesByField;
+  },
+
+  getCellErrorTooltip(params, field) {
+    const row = params?.data;
+    if (!row || !field) return '';
+    const fieldMessage = row.fieldErrorMessages?.[field];
+    if (fieldMessage) return fieldMessage;
+    if (Array.isArray(row.uploadErrors) && row.uploadErrors.includes(field) && Array.isArray(row.errorMessages) && row.errorMessages.length > 0) {
+      return row.errorMessages.join('\n');
+    }
+    return '';
+  },
+
   getFieldValue(source, field) {
     if (!source || typeof source !== 'object') return '';
 
@@ -694,16 +915,22 @@ const CustomerGpoAdjustmentsAddPage = {
 
   normalizeResultRow(item) {
     const baseRow = this.normalizeRow(this.toBackendDataShape(item?.data || {}));
-    const explicitErrors = Array.isArray(item?.errorFields) ? item.errorFields.map((field) => this.mapErrorField(field)).filter(Boolean) : [];
-    const validation = this.validateRow(baseRow);
-    const uploadErrors = explicitErrors.length > 0 ? explicitErrors : validation.errors;
-    const uploadStatus = this.toUploadStatus(item?.status) || (uploadErrors.length > 0 ? 'error' : 'success');
+    const fieldErrorMessages = this.extractFieldErrorMessages(item);
+    const uploadErrors = Array.from(new Set([
+      ...(Array.isArray(item?.errorFields) ? item.errorFields.map((field) => this.mapErrorField(field)).filter(Boolean) : []),
+      ...Object.keys(fieldErrorMessages)
+    ]));
+    const uploadStatus = this.toUploadStatus(item?.status)
+      || (uploadErrors.length > 0 || (Array.isArray(item?.errorMessages) && item.errorMessages.length > 0) ? 'error' : 'success');
 
     return {
       ...baseRow,
       uploadStatus,
       uploadErrors,
       errorMessages: Array.isArray(item?.errorMessages) ? item.errorMessages : [],
+      fieldErrorMessages,
+      editedFields: [],
+      wasEditedAfterError: false,
       rowNumber: item?.rowNumber ?? null,
       mainTableId: item?.mainTableId ?? null,
       isBackendRow: true
@@ -790,7 +1017,6 @@ const CustomerGpoAdjustmentsAddPage = {
         programId: this.resolveUploadContext().programId,
         workStationId: this.resolveUploadContext().workStationId
       });
-      await this.refreshStoredJobStatuses();
       this.showInfo(`Upload accepted. Job ${response.jobId} created.`, 'success');
       return true;
     } catch (error) {
@@ -877,23 +1103,22 @@ const CustomerGpoAdjustmentsAddPage = {
 
   async submitGridRows(rows, mode = 'grid') {
     const endpoint = mode === 'resubmit' && this.selectedJobId
-      ? `${this.getBulkUploadBaseUrl()}/jobs/resubmit?jobId=${encodeURIComponent(this.selectedJobId)}&createNewJob=true`
+      ? `${this.getBulkUploadBaseUrl()}/jobs/resubmit?jobId=${encodeURIComponent(this.selectedJobId)}&createNewJob=false`
       : `${this.getBulkUploadBaseUrl()}/grid?entityName=${encodeURIComponent(this.entityName)}`;
 
     const payload = {
-      source: mode === 'resubmit' ? 'RESUBMIT' : 'GRID',
       records: rows.map((row) => this.toBackendRecord(row))
     };
+
+    if (mode !== 'resubmit') {
+      payload.source = 'GRID';
+    }
 
     return this.fetchJson(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify(payload)
     });
-  },
-
-  submitToDatabase() {
-    this.showInfo('Toolbar Submit should use the direct save-to-DB API and stay separate from bulk job processing.', 'warning');
   },
 
   processGridRows() {
@@ -909,26 +1134,35 @@ const CustomerGpoAdjustmentsAddPage = {
       return;
     }
 
-    const validatedRows = normalizedRows.map((row) => {
-      const validation = this.validateRow(row);
-      return { ...row, uploadErrors: validation.errors, uploadStatus: validation.isValid ? 'success' : 'error' };
-    });
-    if (validatedRows.some((row) => row.uploadStatus === 'error')) {
-      this.showInfo('Some grid rows are invalid. Fix them before processing.', 'error');
-      return;
-    }
+    const submitRows = normalizedRows.map((row) => ({
+      ...row,
+      uploadStatus: '',
+      uploadErrors: [],
+      errorMessages: [],
+      fieldErrorMessages: {},
+      editedFields: [],
+      wasEditedAfterError: false
+    }));
 
     const shouldResubmit = Boolean(this.selectedJobId) && sourceRows.some((row) => row.isBackendRow);
+    if (shouldResubmit && selectedRows.length === 0) {
+      this.showInfo('You have error rows. Select the corrected row(s) and then submit.', 'warning');
+      return;
+    }
     const mode = shouldResubmit ? 'resubmit' : 'grid';
 
-    this.submitGridRows(validatedRows, mode).then((response) => {
+    this.submitGridRows(submitRows, mode).then((response) => {
+      if (mode === 'resubmit') {
+        this.showInfo(response?.message || 'Selected corrected row(s) submitted successfully.', 'success');
+        return;
+      }
+
       if (!response?.jobId) throw new Error('Job id missing from submit response');
       this.addStoredJob(response.jobId, {
         status: 'PROCESSING',
-        programId: validatedRows[0]?.programId || '',
-        workStationId: validatedRows[0]?.workStnId || validatedRows[0]?.workStationId || ''
+        programId: submitRows[0]?.programId || '',
+        workStationId: submitRows[0]?.workStnId || submitRows[0]?.workStationId || ''
       });
-      this.refreshStoredJobStatuses();
       this.showInfo(response.message || `Job ${response.jobId} created successfully.`, 'success');
     }).catch((error) => {
       console.error('Grid processing failed:', error);
@@ -939,22 +1173,15 @@ const CustomerGpoAdjustmentsAddPage = {
   toBackendRecord(row) {
     const context = this.resolveUploadContext();
     const payload = {};
-    CUSTOMER_GPO_FIELD_DEFS.forEach(({ field }) => {
-      const backendField = CUSTOMER_GPO_BACKEND_RECORD_FIELD_MAP[field] || field;
-      if (field === 'userId') {
-        payload[backendField] = row[field] == null || row[field] === '' ? context.userId : row[field];
-        return;
+
+    CUSTOMER_GPO_OUTBOUND_FIELDS.forEach(({ localField, backendField, useContextFallback }) => {
+      let value = row[localField];
+      if ((value == null || value === '') && useContextFallback) {
+        value = context[useContextFallback];
       }
-      if (field === 'programId') {
-        payload[backendField] = row[field] == null || row[field] === '' ? context.programId : row[field];
-        return;
-      }
-      if (field === 'workStnId') {
-        payload[backendField] = row[field] == null || row[field] === '' ? context.workStationId : row[field];
-        return;
-      }
-      payload[backendField] = row[field] == null ? '' : row[field];
+      payload[backendField] = value == null ? '' : value;
     });
+
     return payload;
   },
 
@@ -1028,33 +1255,62 @@ const CustomerGpoAdjustmentsAddPage = {
       .every(({ field }) => !String(row[field] || '').trim());
   },
 
-  validateRow(row) {
-    const errors = [];
-    CUSTOMER_GPO_DATE_FIELDS.forEach((field) => {
-      if (!this.isValidUsDate(row[field])) errors.push(field);
-    });
-    CUSTOMER_GPO_NUMBER_FIELDS.forEach((field) => {
-      if (!this.isNumeric(row[field])) errors.push(field);
-    });
-    return {
-      isValid: errors.length === 0,
-      errors
-    };
-  },
-
   onCellValueChanged(event) {
     const field = event?.colDef?.field;
     const rowNode = event?.node;
     if (!field || !rowNode?.data) return;
 
     const normalized = this.normalizeRow(rowNode.data);
-    const validation = this.validateRow(normalized);
-    Object.assign(rowNode.data, normalized, {
-      uploadStatus: validation.isValid ? 'success' : 'error',
-      uploadErrors: validation.errors
-    });
+    Object.assign(rowNode.data, this.buildEditedRowState(normalized, field));
     if (this.gridApi?.refreshCells) this.gridApi.refreshCells({ rowNodes: [rowNode], force: true });
-    if (!this.selectedJobId) this.syncUploadedRowsFromGrid(true);
+    if (this.selectedJobId) {
+      if (typeof this.gridApi?.deselectNode === 'function') this.gridApi.deselectNode(rowNode);
+      this.applyUploadFilter();
+      return;
+    }
+    this.syncUploadedRowsFromGrid(true);
+  },
+
+  saveCellFromEditor(rowNode, field, nextValue) {
+    if (!rowNode?.data || !field) return { ok: false, value: nextValue };
+    const normalized = this.normalizeRow({
+      ...rowNode.data,
+      [field]: nextValue
+    });
+    const nextRowState = this.buildEditedRowState(normalized, field);
+    Object.assign(rowNode.data, nextRowState);
+
+    if (this.gridApi?.refreshCells) {
+      this.gridApi.refreshCells({ rowNodes: [rowNode], force: true });
+    }
+
+    if (typeof this.gridApi?.deselectNode === 'function') this.gridApi.deselectNode(rowNode);
+    this.applyUploadFilter();
+    this.showInfo('Cell updated. Select corrected rows from All and submit.', 'success');
+    return { ok: true, value: nextRowState[field] };
+  },
+
+  buildEditedRowState(row, editedField) {
+    const nextFieldErrorMessages = { ...(row.fieldErrorMessages || {}) };
+    delete nextFieldErrorMessages[editedField];
+
+    const nextUploadErrors = Array.isArray(row.uploadErrors)
+      ? row.uploadErrors.filter((field) => field !== editedField)
+      : [];
+
+    const nextEditedFields = Array.from(new Set([...(Array.isArray(row.editedFields) ? row.editedFields : []), editedField]));
+    const nextStatus = row.isBackendRow
+      ? (nextUploadErrors.length > 0 ? 'error' : 'ready')
+      : '';
+
+    return {
+      ...row,
+      uploadStatus: nextStatus,
+      uploadErrors: nextUploadErrors,
+      fieldErrorMessages: nextFieldErrorMessages,
+      editedFields: nextEditedFields,
+      wasEditedAfterError: row.isBackendRow ? true : Boolean(row.wasEditedAfterError)
+    };
   },
 
   async parseAndMapCsvFile(file) {
