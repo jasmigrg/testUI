@@ -180,10 +180,11 @@ const CustomerGpoAdjustmentsAddPage = {
       this.detachCommunityPaste = null;
     }
     if (window.CommunityGridPaste?.attach) {
+      const pasteableFields = CUSTOMER_GPO_FIELD_DEFS.filter((column) => column.editable !== false).map((column) => column.field);
       this.detachCommunityPaste = window.CommunityGridPaste.attach({
         gridElement: this.gridElement,
         gridApi: this.gridApi,
-        editableFieldOrder: CUSTOMER_GPO_FIELD_DEFS.filter((column) => column.editable !== false).map((column) => column.field),
+        editableFieldOrder: pasteableFields,
         maxRows: this.maxPasteRows,
         maxCols: this.maxPasteCols,
         maxCells: this.maxPasteCells,
@@ -191,6 +192,9 @@ const CustomerGpoAdjustmentsAddPage = {
         ensureRowCapacity: (rowCount, startRowIndex) => this.ensureRowCapacityForPaste(rowCount, startRowIndex),
         normalizeRow: (row) => this.normalizeRow(row),
         validateRow: (row) => this.validateRow(row),
+        resolveHeaderField: (header) => this.resolvePasteHeaderField(header, pasteableFields),
+        requireHeaderMapping: true,
+        headerMatchThreshold: 3,
         onApplied: () => this.syncUploadedRowsFromGrid(true)
       });
     }
@@ -757,10 +761,17 @@ const CustomerGpoAdjustmentsAddPage = {
         size: file?.size
       });
       const response = await this.requestSignedUrlUpload(file).catch(async (error) => {
-        if (error?.status === 503 || /signed url/i.test(error?.message || '')) {
+        const message = String(error?.message || '');
+        const shouldFallbackToDirectUpload = error?.status === 503
+          || /signed url/i.test(message)
+          || /failed to fetch/i.test(message)
+          || /cors/i.test(message)
+          || error instanceof TypeError;
+
+        if (shouldFallbackToDirectUpload) {
           console.debug('[CustomerGpoAdjustmentsAdd] falling back to direct CSV upload', {
             fileName: file?.name,
-            error: error?.message || String(error)
+            error: message || String(error)
           });
           return this.uploadCsvDirectly(file);
         }
@@ -950,6 +961,21 @@ const CustomerGpoAdjustmentsAddPage = {
   normalizeHeader(header) {
     if (window.CsvUploadUtils?.normalizeHeader) return window.CsvUploadUtils.normalizeHeader(header);
     return String(header || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+  },
+
+  resolvePasteHeaderField(header, allowedFields = []) {
+    const normalizedHeader = this.normalizeHeader(header);
+    if (!normalizedHeader) return '';
+
+    const match = CUSTOMER_GPO_FIELD_DEFS.find(({ field, headerName }) => {
+      if (this.normalizeHeader(field) === normalizedHeader) return true;
+      if (this.normalizeHeader(headerName) === normalizedHeader) return true;
+      const aliases = CUSTOMER_GPO_BACKEND_ALIASES[field] || [];
+      return aliases.some((alias) => this.normalizeHeader(alias) === normalizedHeader);
+    });
+
+    if (!match) return '';
+    return allowedFields.includes(match.field) ? match.field : '';
   },
 
   toUsDate(value) {

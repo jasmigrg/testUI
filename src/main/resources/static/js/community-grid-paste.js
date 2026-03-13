@@ -22,6 +22,28 @@
     const normalizeRow = typeof config.normalizeRow === 'function' ? config.normalizeRow : ((row) => row);
     const validateRow = typeof config.validateRow === 'function' ? config.validateRow : (() => ({ isValid: true, errors: [] }));
     const onApplied = typeof config.onApplied === 'function' ? config.onApplied : null;
+    const resolveHeaderField = typeof config.resolveHeaderField === 'function' ? config.resolveHeaderField : null;
+    const requireHeaderMapping = Boolean(config.requireHeaderMapping);
+    const headerMatchThreshold = Number.isFinite(config.headerMatchThreshold) ? config.headerMatchThreshold : 1;
+
+    function resolveHeaderPaste(matrix) {
+      if (!resolveHeaderField || !Array.isArray(matrix) || matrix.length === 0) return null;
+      const headerRow = Array.isArray(matrix[0]) ? matrix[0] : [];
+      if (headerRow.length === 0) return null;
+
+      const mappedFields = headerRow.map((header) => {
+        const resolvedField = resolveHeaderField(String(header == null ? '' : header));
+        return fields.includes(resolvedField) ? resolvedField : '';
+      });
+      const matchedCount = mappedFields.filter(Boolean).length;
+      if (matchedCount < headerMatchThreshold) return null;
+
+      return {
+        mappedFields,
+        rows: matrix.slice(1),
+        matchedCount
+      };
+    }
 
     const handler = (event) => {
       const target = event.target;
@@ -30,14 +52,31 @@
       const matrix = parseClipboardTsv(event.clipboardData?.getData('text/plain') || '');
       if (!matrix.length) return;
 
+      const headerPaste = resolveHeaderPaste(matrix);
+      if (requireHeaderMapping && !headerPaste) {
+        showInfo('Paste must include the header row so columns can be mapped correctly.', 'error');
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+
+      const rowsToPaste = headerPaste ? headerPaste.rows : matrix;
+      const headerMappedFields = headerPaste?.mappedFields || null;
+      if (!rowsToPaste.length) {
+        showInfo('Paste must include at least one data row below the header row.', 'error');
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+
       const focusedCell = gridApi.getFocusedCell?.();
       if (!focusedCell) {
         showInfo('Select a grid cell before pasting.', 'error');
         return;
       }
 
-      const rowCount = matrix.length;
-      const colCount = Array.isArray(matrix[0]) ? matrix[0].length : 0;
+      const rowCount = rowsToPaste.length;
+      const colCount = Array.isArray(rowsToPaste[0]) ? rowsToPaste[0].length : 0;
       const totalCells = rowCount * colCount;
       if (colCount <= 0) return;
 
@@ -74,9 +113,9 @@
 
         let rowChanged = false;
         for (let c = 0; c < colCount; c += 1) {
-          const field = fields[startFieldIndex + c];
+          const field = headerMappedFields ? headerMappedFields[c] : fields[startFieldIndex + c];
           if (!field) continue;
-          node.data[field] = matrix[r][c] == null ? '' : String(matrix[r][c]).trim();
+          node.data[field] = rowsToPaste[r][c] == null ? '' : String(rowsToPaste[r][c]).trim();
           rowChanged = true;
         }
 

@@ -22,7 +22,7 @@
 
   <script>
     window.API_BASE_URL = window.API_BASE_URL || '${(apiBaseUrl!'')?js_string}';
-    window.GRID_PREF_TEST_USER_ID = window.GRID_PREF_TEST_USER_ID || '${(userId!'defaultUser')?js_string}';
+    window.GRID_PREF_TEST_USER_ID = window.GRID_PREF_TEST_USER_ID || '${(userId!'test-user')?js_string}';
     window.CUSTOMER_GPO_ADJUSTMENTS_LIST_PAGE_URL = window.CUSTOMER_GPO_ADJUSTMENTS_LIST_PAGE_URL || '${ctx}/adjustments';
     window.CUSTOMER_GPO_ADJUSTMENTS_ENTITY_NAME = window.CUSTOMER_GPO_ADJUSTMENTS_ENTITY_NAME || 'customer-gpo-adjustment';
     window.GRID_PREF_SCREEN_ID_BY_GRID = Object.assign({}, window.GRID_PREF_SCREEN_ID_BY_GRID, {
@@ -50,7 +50,7 @@
   <#import "/components/action-toolbar.ftl" as actionToolbar>
   <#import "/components/grid-view-actions.ftl" as gridViewActions>
 
-  <input type="hidden" id="currentUserId" value="${userId!'defaultUser'}" />
+  <input type="hidden" id="currentUserId" value="${userId!'test-user'}" />
 
   <div class="app-shell">
     <@sidebar.navigation currentPath="/adjustments" />
