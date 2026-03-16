@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="${ctx}/css/grid-manager.css">
   <link rel="stylesheet" href="${ctx}/css/grid-page.css">
   <link rel="stylesheet" href="${ctx}/css/action-toolbar.css">
+  <link rel="stylesheet" href="${ctx}/css/page-toast.css">
   <link rel="stylesheet" href="${ctx}/css/screen-shared.css">
   <link rel="stylesheet" href="${ctx}/css/screen-add-shared.css">
   <link rel="stylesheet" href="${ctx}/css/bulk-upload-modal.css">

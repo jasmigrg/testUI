@@ -129,7 +129,7 @@ const KviMappingLogicPage = {
 
     scope.querySelectorAll('.gt-action-btn[data-action="back"]').forEach((backBtn) => {
       backBtn.addEventListener('click', () => {
-        window.location.assign('/');
+        this.showInfo('Main navigation for this screen is still being worked on.', 'warning');
       });
     });
 
@@ -140,13 +140,13 @@ const KviMappingLogicPage = {
           window.location.assign(addUrl);
           return;
         }
-        window.PageToast?.info?.('KVI Mapping add screen is not configured yet.');
+        this.showInfo('KVI Mapping add screen is not configured yet.', 'warning');
       });
     });
 
     scope.querySelectorAll('.gt-action-btn[data-action="favorite"]').forEach((favBtn) => {
       favBtn.addEventListener('click', () => {
-        window.PageToast?.info?.('Favorite action is not configured yet.');
+        this.showInfo('Favorite action is not configured yet.', 'warning');
       });
     });
 
@@ -184,6 +184,41 @@ const KviMappingLogicPage = {
     });
   },
 
+  showInfo(message, type = 'success') {
+    if (!window.PageToast?.show) return;
+
+    const container = this.ensureToastContainer();
+    if (!container) return;
+
+    const normalizedType = ['success', 'error', 'warning'].includes(type) ? type : 'success';
+    const title = normalizedType === 'error'
+      ? 'Action required'
+      : normalizedType === 'warning'
+        ? 'Heads up'
+        : 'Success';
+    const subtitle = String(message || '').trim();
+
+    window.PageToast.show({
+      container,
+      type: normalizedType,
+      title,
+      subtitle,
+      icon: normalizedType === 'error' ? '!' : normalizedType === 'warning' ? 'i' : '✓',
+      autoHideMs: 2400
+    });
+  },
+
+  ensureToastContainer() {
+    let container = document.getElementById('kviMappingMainPageToastLayer');
+    if (container) return container;
+
+    container = document.createElement('div');
+    container.id = 'kviMappingMainPageToastLayer';
+    container.className = 'app-page-toast-layer';
+    document.body.appendChild(container);
+    return container;
+  },
+
   activateTab(tabKey) {
     if (!tabKey || tabKey === this.activeTab) return;
 
@@ -217,27 +252,7 @@ const KviMappingLogicPage = {
   },
 
   setGridEmptyState(tabKey, mode = 'hidden') {
-    const emptyState = this.emptyStates?.[tabKey];
-    if (!emptyState) return;
-
-    if (mode === 'hidden') {
-      emptyState.hidden = true;
-      return;
-    }
-
-    const title = emptyState.querySelector('strong');
-    const message = emptyState.querySelector('span');
-
-    if (title) {
-      title.textContent = mode === 'error' ? 'Unable to load rows' : 'No rows to show';
-    }
-    if (message) {
-      message.textContent = mode === 'error'
-        ? 'The grid request failed. Refresh or try again later.'
-        : 'No data was returned for the current view.';
-    }
-
-    emptyState.hidden = false;
+    return;
   },
 
   syncToolbarForTab() {

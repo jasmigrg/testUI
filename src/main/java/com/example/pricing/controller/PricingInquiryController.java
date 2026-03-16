@@ -54,6 +54,12 @@ public class PricingInquiryController {
     return "manage-kvi-mapping-logic-add";
   }
 
+  @GetMapping("/manage-mck-brand-logic")
+  public String manageMckBrandLogic(Model model) {
+    model.addAttribute("apiBaseUrl", apiBaseUrl);
+    return "manage-mck-brand-logic";
+  }
+
   @GetMapping({"/manage-kvi-input-view-input-data", "/manageKVIInputAndViewInputData"})
   public String manageKviInputViewInputData(Model model) {
     model.addAttribute("apiBaseUrl", apiBaseUrl);

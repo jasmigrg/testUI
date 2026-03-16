@@ -1,0 +1,41 @@
+.mck-brand-logic-shell {
+  gap: 14px;
+}
+
+.mck-brand-logic-tabs {
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 6px;
+  border-bottom: none;
+}
+
+.mck-brand-logic-tabs .screen-tab-btn {
+  flex: 1 1 240px;
+  min-height: 48px;
+  text-align: left;
+  line-height: 1.25;
+  border-bottom: 1px solid #d8dde3;
+}
+
+.mck-brand-logic-tabs .screen-tab-btn.is-active {
+  top: 0;
+}
+
+.mck-brand-logic-title-card {
+  padding: 2px 0 0;
+}
+
+.mck-brand-logic-title {
+  margin: 0;
+  font-size: 15px;
+}
+
+.mck-brand-logic-page .mck-tab-action-toolbar {
+  flex-wrap: wrap;
+}
+
+@media (max-width: 900px) {
+  .mck-brand-logic-tabs .screen-tab-btn {
+    flex-basis: 100%;
+  }
+}

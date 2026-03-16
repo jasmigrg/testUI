@@ -45,13 +45,13 @@ const KviInputPage = {
 
     scope.querySelectorAll('.gt-action-btn[data-action="back"]').forEach((button) => {
       button.addEventListener('click', () => {
-        window.location.assign('/');
+        this.showInfo('Main navigation for this screen is still being worked on.', 'warning');
       });
     });
 
     scope.querySelectorAll('.gt-action-btn[data-action="favorite"]').forEach((button) => {
       button.addEventListener('click', () => {
-        window.PageToast?.info?.('Favorite action is not configured yet.');
+        this.showInfo('Favorite action is not configured yet.', 'warning');
       });
     });
 
@@ -62,7 +62,7 @@ const KviInputPage = {
           window.location.assign(addUrl);
           return;
         }
-        window.PageToast?.info?.('KVI Input Exclusion add screen is not configured yet.');
+        this.showInfo('KVI Input Exclusion add screen is not configured yet.', 'warning');
       });
     });
 
@@ -136,27 +136,7 @@ const KviInputPage = {
   },
 
   setGridEmptyState(tabKey, mode = 'hidden') {
-    const emptyState = this.emptyStates?.[tabKey];
-    if (!emptyState) return;
-
-    if (mode === 'hidden') {
-      emptyState.hidden = true;
-      return;
-    }
-
-    const title = emptyState.querySelector('strong');
-    const message = emptyState.querySelector('span');
-
-    if (title) {
-      title.textContent = mode === 'error' ? 'Unable to load rows' : 'No rows to show';
-    }
-    if (message) {
-      message.textContent = mode === 'error'
-        ? 'The grid request failed. Refresh or try again later.'
-        : 'No data was returned for the current view.';
-    }
-
-    emptyState.hidden = false;
+    return;
   },
 
   getSelectedDensityMode() {
@@ -631,12 +611,47 @@ const KviInputPage = {
             ...event.data,
             kviInputIncludeMonth: previousValue
           });
-          window.PageToast?.error?.('Failed to save KVI Input Include Month.');
+          this.showInfo('Failed to save KVI Input Include Month.', 'error');
         });
       return;
     }
 
     this.applyControlRowUpdate(event.node, persistResult || updatedRow);
+  },
+
+  showInfo(message, type = 'success') {
+    if (!window.PageToast?.show) return;
+
+    const container = this.ensureToastContainer();
+    if (!container) return;
+
+    const normalizedType = ['success', 'error', 'warning'].includes(type) ? type : 'success';
+    const title = normalizedType === 'error'
+      ? 'Action required'
+      : normalizedType === 'warning'
+        ? 'Heads up'
+        : 'Success';
+    const subtitle = String(message || '').trim();
+
+    window.PageToast.show({
+      container,
+      type: normalizedType,
+      title,
+      subtitle,
+      icon: normalizedType === 'error' ? '!' : normalizedType === 'warning' ? 'i' : '✓',
+      autoHideMs: 2400
+    });
+  },
+
+  ensureToastContainer() {
+    let container = document.getElementById('kviInputMainPageToastLayer');
+    if (container) return container;
+
+    container = document.createElement('div');
+    container.id = 'kviInputMainPageToastLayer';
+    container.className = 'app-page-toast-layer';
+    document.body.appendChild(container);
+    return container;
   },
 
   applyControlRowUpdate(rowNode, rowData) {

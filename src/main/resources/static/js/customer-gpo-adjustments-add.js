@@ -635,6 +635,7 @@ const CustomerGpoAdjustmentsAddPage = {
     this.jobRows = this.readStoredJobs();
     this.renderStoredJobs(this.jobRows);
     this.updateBatchInfoCount(this.countUnfinishedJobs(this.jobRows));
+    this.refreshStoredJobStatuses();
   },
 
   countUnfinishedJobs(rows) {
@@ -914,6 +915,10 @@ const CustomerGpoAdjustmentsAddPage = {
 
   normalizeResultRow(item) {
     const baseRow = this.normalizeRow(this.toBackendDataShape(item?.data || {}));
+    const mainTableId = item?.mainTableId ?? null;
+    const createTime = item?.data?.createTime ?? item?.createTime ?? '';
+    const updatedAt = String(item?.data?.updatedAt ?? item?.updatedAt ?? '').trim();
+    const [updatedDatePart = '', updatedTimePart = ''] = updatedAt ? updatedAt.split(/\s+/, 2) : [];
     const fieldErrorMessages = this.extractFieldErrorMessages(item);
     const uploadErrors = Array.from(new Set([
       ...(Array.isArray(item?.errorFields) ? item.errorFields.map((field) => this.mapErrorField(field)).filter(Boolean) : []),
@@ -924,6 +929,10 @@ const CustomerGpoAdjustmentsAddPage = {
 
     return {
       ...baseRow,
+      uniqueKeyId: baseRow.uniqueKeyId || (mainTableId == null ? '' : String(mainTableId)),
+      createTime: baseRow.createTime || String(createTime || '').trim(),
+      dateUpdated: baseRow.dateUpdated || updatedDatePart,
+      timeUpdated: baseRow.timeUpdated || updatedTimePart,
       uploadStatus,
       uploadErrors,
       errorMessages: Array.isArray(item?.errorMessages) ? item.errorMessages : [],
@@ -931,7 +940,7 @@ const CustomerGpoAdjustmentsAddPage = {
       editedFields: [],
       wasEditedAfterError: false,
       rowNumber: item?.rowNumber ?? null,
-      mainTableId: item?.mainTableId ?? null,
+      mainTableId,
       isBackendRow: true
     };
   },
@@ -993,23 +1002,6 @@ const CustomerGpoAdjustmentsAddPage = {
     }
   },
 
-  scheduleDelayedJobStatusRefresh(jobId, delayMs = 5000) {
-    if (!jobId) return;
-    window.setTimeout(async () => {
-      const currentRow = this.readStoredJobs().find((row) => String(row.jobId) === String(jobId));
-      if (!currentRow || this.isTerminalStatus(currentRow.status)) return;
-      await this.refreshSingleJobStatus(jobId);
-    }, delayMs);
-  },
-
-  async refreshSelectedJob(jobId, delayMs = 5000) {
-    if (!jobId) return;
-    const currentStatus = await this.refreshSingleJobStatus(jobId);
-    if (!this.isTerminalStatus(currentStatus?.status)) {
-      this.scheduleDelayedJobStatusRefresh(jobId, delayMs);
-    }
-  },
-
   async processUploadedCsv(file) {
     try {
       console.debug('[CustomerGpoAdjustmentsAdd] processUploadedCsv:start', {
@@ -1046,10 +1038,7 @@ const CustomerGpoAdjustmentsAddPage = {
         programId: this.resolveUploadContext().programId,
         workStationId: this.resolveUploadContext().workStationId
       });
-      const currentStatus = await this.refreshSingleJobStatus(response.jobId);
-      if (!this.isTerminalStatus(currentStatus?.status)) {
-        this.scheduleDelayedJobStatusRefresh(response.jobId, 5000);
-      }
+      await this.refreshSingleJobStatus(response.jobId);
       this.showInfo(`Upload accepted. Job ${response.jobId} created.`, 'success');
       return true;
     } catch (error) {
@@ -1198,8 +1187,8 @@ const CustomerGpoAdjustmentsAddPage = {
           match.wasEditedAfterError = false;
         });
         this.applyUploadFilter();
-        await this.refreshSelectedJob(this.selectedJobId, 5000);
         this.showInfo(response?.message || 'Selected corrected row(s) submitted successfully.', 'success');
+        window.location.reload();
         return;
       }
 
@@ -1209,7 +1198,7 @@ const CustomerGpoAdjustmentsAddPage = {
         programId: submitRows[0]?.programId || '',
         workStationId: submitRows[0]?.workStnId || submitRows[0]?.workStationId || ''
       });
-      await this.refreshSelectedJob(response.jobId, 5000);
+      await this.refreshSingleJobStatus(response.jobId);
       this.showInfo(response.message || `Job ${response.jobId} created successfully.`, 'success');
     }).catch((error) => {
       console.error('Grid processing failed:', error);
@@ -1346,9 +1335,7 @@ const CustomerGpoAdjustmentsAddPage = {
       : [];
 
     const nextEditedFields = Array.from(new Set([...(Array.isArray(row.editedFields) ? row.editedFields : []), editedField]));
-    const nextStatus = row.isBackendRow
-      ? (nextUploadErrors.length > 0 ? 'error' : 'ready')
-      : '';
+    const nextStatus = row.isBackendRow ? 'error' : '';
 
     return {
       ...row,

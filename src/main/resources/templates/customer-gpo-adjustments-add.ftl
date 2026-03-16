@@ -89,7 +89,22 @@
           <div id="bulkUploadBatchGrid" class="bulk-upload-batch-grid">
             <div class="bulk-upload-batch-columns" aria-hidden="true">
               <span class="bulk-upload-batch-col">Job ID</span>
-              <span class="bulk-upload-batch-col">Status</span>
+              <span class="bulk-upload-batch-col">
+                <span class="bulk-upload-batch-header-help">
+                  <span>Status</span>
+                  <span class="bulk-upload-batch-help">
+                    <button
+                      type="button"
+                      class="bulk-upload-batch-help-btn"
+                      aria-label="Status refresh help"
+                      aria-describedby="customerGpoBatchRefreshHelp"
+                    >?</button>
+                    <span id="customerGpoBatchRefreshHelp" class="bulk-upload-batch-help-tooltip" role="tooltip">
+                      Job status does not refresh automatically. Refresh the page to see the latest status.
+                    </span>
+                  </span>
+                </span>
+              </span>
               <span class="bulk-upload-batch-col">Total Rows</span>
               <span class="bulk-upload-batch-col">Processed</span>
               <span class="bulk-upload-batch-col">Success</span>
