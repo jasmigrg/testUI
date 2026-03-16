@@ -3,18 +3,25 @@
 }
 
 .mck-brand-logic-tabs {
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: stretch;
-  gap: 6px;
+  gap: 8px;
   border-bottom: none;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
 }
 
 .mck-brand-logic-tabs .screen-tab-btn {
-  flex: 1 1 240px;
-  min-height: 48px;
-  text-align: left;
-  line-height: 1.25;
+  flex: 1 1 0;
+  min-width: 220px;
+  min-height: 0;
+  padding: 14px 20px 16px;
+  text-align: center;
+  line-height: 1.2;
   border-bottom: 1px solid #d8dde3;
+  border-top-left-radius: 18px;
+  border-top-right-radius: 18px;
 }
 
 .mck-brand-logic-tabs .screen-tab-btn.is-active {
@@ -30,12 +37,16 @@
   font-size: 15px;
 }
 
+.mck-brand-logic-page .screen-grid-empty-state[hidden] {
+  display: none !important;
+}
+
 .mck-brand-logic-page .mck-tab-action-toolbar {
   flex-wrap: wrap;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1200px) {
   .mck-brand-logic-tabs .screen-tab-btn {
-    flex-basis: 100%;
+    min-width: 260px;
   }
 }
