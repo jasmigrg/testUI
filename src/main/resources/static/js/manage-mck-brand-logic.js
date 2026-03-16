@@ -180,6 +180,9 @@ const MckBrandLogicPage = {
     this.tabButtons = Array.from(document.querySelectorAll('.screen-tab-btn[data-mck-tab]'));
     this.tabPanels = Array.from(document.querySelectorAll('.screen-tab-panel[data-mck-panel]'));
     this.activeTabTitle = document.getElementById('mckActiveTabTitle');
+    this.emptyStates = {
+      weighting: document.getElementById('mckWeightingEmptyState')
+    };
   },
 
   bindTabs() {
@@ -556,14 +559,30 @@ const MckBrandLogicPage = {
             ? payload.content.map((row) => this.transformWeightingRow(row))
             : [];
           const totalRows = Number.isFinite(payload?.totalElements) ? payload.totalElements : rows.length;
+          this.syncNoRowsOverlay(params.api, rows.length);
           params.successCallback(rows, totalRows);
         } catch (error) {
           console.error(`Failed to load ${tabConfig.gridElementId}:`, error);
-          this.showInfo(`Failed to load ${tabConfig.title}.`, 'error');
-          params.failCallback();
+          this.syncNoRowsOverlay(params.api, 0);
+          params.successCallback([], 0);
         }
       }
     };
+  },
+
+  syncNoRowsOverlay(gridApi, rowCount) {
+    const emptyState = this.emptyStates?.weighting;
+    if (emptyState) {
+      emptyState.hidden = rowCount > 0;
+    }
+    if (!gridApi) return;
+    if (rowCount > 0) {
+      if (typeof gridApi.hideOverlay === 'function') gridApi.hideOverlay();
+      return;
+    }
+    if (typeof gridApi.showNoRowsOverlay === 'function') {
+      gridApi.showNoRowsOverlay();
+    }
   },
 
   resolveApiUrl(path) {

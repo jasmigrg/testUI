@@ -183,6 +183,9 @@
             data-mck-panel="weighting"
           >
             <section class="grid-wrapper">
+              <div class="screen-grid-empty-state" id="mckWeightingEmptyState" hidden>
+                <strong>No rows to show</strong>
+              </div>
               <div id="mckWeightingGrid" class="ag-theme-alpine app-grid screen-grid"></div>
             </section>
           </section>
