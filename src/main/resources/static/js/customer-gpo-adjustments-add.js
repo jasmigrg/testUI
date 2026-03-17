@@ -562,7 +562,8 @@ const CustomerGpoAdjustmentsAddPage = {
   },
 
   getBulkUploadBaseUrl() {
-    const baseUrl = String(window.API_BASE_URL || '').replace(/\/$/, '');
+    const overrideBaseUrl = String(window.CUSTOMER_GPO_BULK_UPLOAD_BASE_URL || '').trim().replace(/\/$/, '');
+    const baseUrl = String(overrideBaseUrl || window.API_BASE_URL || '').replace(/\/$/, '');
     return baseUrl
       ? `${baseUrl}/api/foundational/api/bulk-upload`
       : '/api/foundational/api/bulk-upload';
@@ -916,9 +917,10 @@ const CustomerGpoAdjustmentsAddPage = {
   normalizeResultRow(item) {
     const baseRow = this.normalizeRow(this.toBackendDataShape(item?.data || {}));
     const mainTableId = item?.mainTableId ?? null;
-    const createTime = item?.data?.createTime ?? item?.createTime ?? '';
+    const createTime = String(item?.data?.createTime ?? item?.createTime ?? '').trim();
     const updatedAt = String(item?.data?.updatedAt ?? item?.updatedAt ?? '').trim();
-    const [updatedDatePart = '', updatedTimePart = ''] = updatedAt ? updatedAt.split(/\s+/, 2) : [];
+    const { datePart: createdDatePart, timePart: createTimePart } = this.splitBackendDateTime(createTime);
+    const { datePart: updatedDatePart, timePart: updatedTimePart } = this.splitBackendDateTime(updatedAt);
     const fieldErrorMessages = this.extractFieldErrorMessages(item);
     const uploadErrors = Array.from(new Set([
       ...(Array.isArray(item?.errorFields) ? item.errorFields.map((field) => this.mapErrorField(field)).filter(Boolean) : []),
@@ -930,7 +932,8 @@ const CustomerGpoAdjustmentsAddPage = {
     return {
       ...baseRow,
       uniqueKeyId: baseRow.uniqueKeyId || (mainTableId == null ? '' : String(mainTableId)),
-      createTime: baseRow.createTime || String(createTime || '').trim(),
+      createdDate: baseRow.createdDate || createdDatePart,
+      createTime: baseRow.createTime || createTimePart,
       dateUpdated: baseRow.dateUpdated || updatedDatePart,
       timeUpdated: baseRow.timeUpdated || updatedTimePart,
       uploadStatus,
@@ -942,6 +945,16 @@ const CustomerGpoAdjustmentsAddPage = {
       rowNumber: item?.rowNumber ?? null,
       mainTableId,
       isBackendRow: true
+    };
+  },
+
+  splitBackendDateTime(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return { datePart: '', timePart: '' };
+    const [dateToken = '', timeToken = ''] = raw.split(/\s+/, 2);
+    return {
+      datePart: this.toUsDate(dateToken),
+      timePart: timeToken
     };
   },
 

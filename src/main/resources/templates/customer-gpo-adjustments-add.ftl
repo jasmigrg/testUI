@@ -22,6 +22,7 @@
 
   <script>
     window.API_BASE_URL = window.API_BASE_URL || '${(apiBaseUrl!'')?js_string}';
+    window.CUSTOMER_GPO_BULK_UPLOAD_BASE_URL = window.CUSTOMER_GPO_BULK_UPLOAD_BASE_URL || '${(customerGpoBulkUploadBaseUrl!'')?js_string}';
     window.GRID_PREF_TEST_USER_ID = window.GRID_PREF_TEST_USER_ID || '${(userId!'test-user')?js_string}';
     window.CUSTOMER_GPO_ADJUSTMENTS_LIST_PAGE_URL = window.CUSTOMER_GPO_ADJUSTMENTS_LIST_PAGE_URL || '${ctx}/adjustments';
     window.CUSTOMER_GPO_ADJUSTMENTS_ENTITY_NAME = window.CUSTOMER_GPO_ADJUSTMENTS_ENTITY_NAME || 'customer-gpo-adjustment';
