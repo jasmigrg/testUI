@@ -88,7 +88,7 @@ class GtPageSelectHeader {
 const KviMappingLogicPage = {
   activeTab: 'parameter',
   grids: {},
-  toolbarScope: '.kvi-page-shell',
+  toolbarScope: '.screen-page-shell',
   gridManagerBootstrapped: false,
   gridManagerInitScheduled: false,
   apiBaseUrl: '',
@@ -107,10 +107,14 @@ const KviMappingLogicPage = {
   },
 
   cacheDom() {
-    this.pageShell = document.querySelector('.kvi-page-shell');
-    this.contentCard = document.querySelector('.kvi-page .content-card');
-    this.tabButtons = Array.from(document.querySelectorAll('.kvi-tab-btn[data-kvi-tab]'));
-    this.tabPanels = Array.from(document.querySelectorAll('.kvi-tab-panel[data-kvi-panel]'));
+    this.pageShell = document.querySelector('.screen-page-shell');
+    this.contentCard = document.querySelector('.screen-page .content-card');
+    this.tabButtons = Array.from(document.querySelectorAll('.screen-tab-btn[data-kvi-tab]'));
+    this.tabPanels = Array.from(document.querySelectorAll('.screen-tab-panel[data-kvi-panel]'));
+    this.emptyStates = {
+      parameter: document.getElementById('kviMappingParameterEmptyState'),
+      output: document.getElementById('kviMappingOutputEmptyState')
+    };
   },
 
   bindTabs() {
@@ -125,7 +129,7 @@ const KviMappingLogicPage = {
 
     scope.querySelectorAll('.gt-action-btn[data-action="back"]').forEach((backBtn) => {
       backBtn.addEventListener('click', () => {
-        window.location.assign('/');
+        this.showInfo('Main navigation for this screen is still being worked on.', 'warning');
       });
     });
 
@@ -136,13 +140,13 @@ const KviMappingLogicPage = {
           window.location.assign(addUrl);
           return;
         }
-        window.PageToast?.info?.('KVI Mapping add screen is not configured yet.');
+        this.showInfo('KVI Mapping add screen is not configured yet.', 'warning');
       });
     });
 
     scope.querySelectorAll('.gt-action-btn[data-action="favorite"]').forEach((favBtn) => {
       favBtn.addEventListener('click', () => {
-        window.PageToast?.info?.('Favorite action is not configured yet.');
+        this.showInfo('Favorite action is not configured yet.', 'warning');
       });
     });
 
@@ -180,6 +184,41 @@ const KviMappingLogicPage = {
     });
   },
 
+  showInfo(message, type = 'success') {
+    if (!window.PageToast?.show) return;
+
+    const container = this.ensureToastContainer();
+    if (!container) return;
+
+    const normalizedType = ['success', 'error', 'warning'].includes(type) ? type : 'success';
+    const title = normalizedType === 'error'
+      ? 'Action required'
+      : normalizedType === 'warning'
+        ? 'Heads up'
+        : 'Success';
+    const subtitle = String(message || '').trim();
+
+    window.PageToast.show({
+      container,
+      type: normalizedType,
+      title,
+      subtitle,
+      icon: normalizedType === 'error' ? '!' : normalizedType === 'warning' ? 'i' : '✓',
+      autoHideMs: 2400
+    });
+  },
+
+  ensureToastContainer() {
+    let container = document.getElementById('kviMappingMainPageToastLayer');
+    if (container) return container;
+
+    container = document.createElement('div');
+    container.id = 'kviMappingMainPageToastLayer';
+    container.className = 'app-page-toast-layer';
+    document.body.appendChild(container);
+    return container;
+  },
+
   activateTab(tabKey) {
     if (!tabKey || tabKey === this.activeTab) return;
 
@@ -210,6 +249,10 @@ const KviMappingLogicPage = {
 
   getActiveGrid() {
     return this.grids[this.activeTab] || null;
+  },
+
+  setGridEmptyState(tabKey, mode = 'hidden') {
+    return;
   },
 
   syncToolbarForTab() {
@@ -616,10 +659,22 @@ const KviMappingLogicPage = {
               : (rows.length < pageSize ? params.startRow + rows.length : -1);
 
             params.successCallback(rows, lastRow);
+            requestAnimationFrame(() => {
+              this.setGridEmptyState(
+                tabConfig.gridElementId === 'kviMappingParameterGrid' ? 'parameter' : 'output',
+                params.startRow === 0 && rows.length === 0 ? 'empty' : 'hidden'
+              );
+            });
           })
           .catch((error) => {
             console.error('KVI mapping datasource fetch failed:', error);
             params.failCallback();
+            requestAnimationFrame(() => {
+              this.setGridEmptyState(
+                tabConfig.gridElementId === 'kviMappingParameterGrid' ? 'parameter' : 'output',
+                'error'
+              );
+            });
           });
       }
     };

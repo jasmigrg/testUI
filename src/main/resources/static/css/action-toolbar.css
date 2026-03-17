@@ -71,6 +71,18 @@
   transform: translateY(-1px);
 }
 
+.gt-action-btn:disabled {
+  color: #9aa4ab;
+  cursor: not-allowed;
+  transform: none;
+  opacity: 0.7;
+}
+
+.gt-action-btn:disabled:hover {
+  color: #9aa4ab;
+  transform: none;
+}
+
 .gt-action-btn.is-add:hover {
   color: #258338;
 }

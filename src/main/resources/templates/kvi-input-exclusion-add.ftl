@@ -10,7 +10,9 @@
   <link rel="stylesheet" href="${ctx}/css/grid-manager.css">
   <link rel="stylesheet" href="${ctx}/css/grid-page.css">
   <link rel="stylesheet" href="${ctx}/css/action-toolbar.css">
-  <link rel="stylesheet" href="${ctx}/css/manage-kvi-recommendation-logic.css">
+  <link rel="stylesheet" href="${ctx}/css/page-toast.css">
+  <link rel="stylesheet" href="${ctx}/css/screen-shared.css">
+  <link rel="stylesheet" href="${ctx}/css/screen-add-shared.css">
   <link rel="stylesheet" href="${ctx}/css/bulk-upload-modal.css">
   <link rel="stylesheet" href="${ctx}/css/bulk-upload-flow.css">
   <link rel="stylesheet" href="${ctx}/css/manage-kvi-recommendation-logic-add.css">
@@ -22,7 +24,7 @@
   <script>
     window.API_BASE_URL = window.API_BASE_URL || '${(apiBaseUrl!'')?js_string}';
     window.GRID_PREF_TEST_USER_ID = window.GRID_PREF_TEST_USER_ID || '${(userId!'defaultUser')?js_string}';
-    window.KVI_LIST_PAGE_URL = window.KVI_LIST_PAGE_URL || '${ctx}/kvi-input-exclusion';
+    window.KVI_LIST_PAGE_URL = window.KVI_LIST_PAGE_URL || '${ctx}/manage-kvi-input-view-input-data';
     window.BULK_UPLOAD_SCREEN_CODE = window.BULK_UPLOAD_SCREEN_CODE || 'KVI_INPUT_EXCLUSION';
     window.BULK_UPLOAD_USE_MOCK = window.BULK_UPLOAD_USE_MOCK ?? true;
     window.GRID_PREF_SCREEN_ID_BY_GRID = Object.assign({}, window.GRID_PREF_SCREEN_ID_BY_GRID, {
@@ -43,7 +45,7 @@
   <script src="${ctx}/js/kvi-input-exclusion-add.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.1/dist/ag-grid-community.min.js"></script>
 </head>
-<body class="mfi-page kvi-page kvi-add-page">
+<body class="mfi-page screen-page screen-add-page">
   <#include "/components/header.ftl">
   <#import "/components/sidebar.ftl" as sidebar>
   <#import "/components/page-header.ftl" as pageHeader>
@@ -109,27 +111,27 @@
           </div>
         </section>
 
-        <section class="kvi-add-upload-row">
-          <button type="button" class="kvi-add-bulk-upload-btn" data-action="bulk-upload">Bulk Upload</button>
+        <section class="screen-add-upload-row">
+          <button type="button" class="screen-add-bulk-upload-btn" data-action="bulk-upload">Bulk Upload</button>
         </section>
 
-        <section class="kvi-upload-status-row" id="kviUploadStatusRow" hidden>
-          <label class="kvi-upload-status-option">
+        <section class="screen-add-status-row" id="screenAddUploadStatusRow" hidden>
+          <label class="screen-add-status-option">
             <input type="radio" name="kviUploadStatus" value="all" checked />
             <span>All</span>
           </label>
-          <label class="kvi-upload-status-option">
+          <label class="screen-add-status-option">
             <input type="radio" name="kviUploadStatus" value="success" />
             <span>Success</span>
           </label>
-          <label class="kvi-upload-status-option">
+          <label class="screen-add-status-option">
             <input type="radio" name="kviUploadStatus" value="error" />
             <span>Error</span>
           </label>
         </section>
 
         <section class="grid-wrapper">
-          <div id="kviInputExclusionAddGrid" class="ag-theme-alpine app-grid"></div>
+          <div id="kviInputExclusionAddGrid" class="ag-theme-alpine app-grid screen-grid"></div>
         </section>
       </div>
     </main>

@@ -42,18 +42,6 @@ public class PricingInquiryController {
     return "manage-kvi-recommendation-logic-add";
   }
 
-  @GetMapping("/kvi-input-exclusion")
-  public String kviInputExclusion(Model model) {
-    model.addAttribute("apiBaseUrl", apiBaseUrl);
-    return "kvi-input-exclusion-add";
-  }
-
-  @GetMapping("/kvi-input-exclusion/add")
-  public String kviInputExclusionAdd(Model model) {
-    model.addAttribute("apiBaseUrl", apiBaseUrl);
-    return "kvi-input-exclusion-add";
-  }
-
   @GetMapping("/manage-kvi-mapping-logic-view-output-data")
   public String manageKviMappingLogicViewOutputData(Model model) {
     model.addAttribute("apiBaseUrl", apiBaseUrl);
@@ -66,10 +54,22 @@ public class PricingInquiryController {
     return "manage-kvi-mapping-logic-add";
   }
 
-  @GetMapping("/manageKVIInputAndViewInputData")
-  public String manageKviInputAndViewInputData(Model model) {
+  @GetMapping("/manage-mck-brand-logic")
+  public String manageMckBrandLogic(Model model) {
     model.addAttribute("apiBaseUrl", apiBaseUrl);
-    return "manage-kvi-input-and-view-input-data";
+    return "manage-mck-brand-logic";
+  }
+
+  @GetMapping({"/manage-kvi-input-view-input-data", "/manageKVIInputAndViewInputData"})
+  public String manageKviInputViewInputData(Model model) {
+    model.addAttribute("apiBaseUrl", apiBaseUrl);
+    return "manage-kvi-input-view-input-data";
+  }
+
+  @GetMapping("/kvi-input-exclusion/add")
+  public String kviInputExclusionAdd(Model model) {
+    model.addAttribute("apiBaseUrl", apiBaseUrl);
+    return "kvi-input-exclusion-add";
   }
 
   @GetMapping("/price-rules-reason-codes")
@@ -80,6 +80,12 @@ public class PricingInquiryController {
   @GetMapping("/price-rules-reason-codes/add")
   public String priceRulesReasonCodesAdd() {
     return "pricing/price-rules-reason-codes-add";
+  }
+
+  @GetMapping("/adjustments/customer-gpo-adjustments/add")
+  public String customerGpoAdjustmentsAdd(Model model) {
+    model.addAttribute("apiBaseUrl", apiBaseUrl);
+    return "customer-gpo-adjustments-add";
   }
 
   @GetMapping("/")

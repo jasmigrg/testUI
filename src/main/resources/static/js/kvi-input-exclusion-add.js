@@ -2,17 +2,17 @@ class KviInlineSaveCellEditor {
   init(params) {
     this.params = params;
     this.eGui = document.createElement('div');
-    this.eGui.className = 'kvi-inline-save-editor';
+    this.eGui.className = 'screen-add-inline-save-editor';
 
     this.input = document.createElement('input');
     this.input.type = 'text';
-    this.input.className = 'kvi-inline-save-input';
+    this.input.className = 'screen-add-inline-save-input';
     this.input.value = params.value == null ? '' : String(params.value);
     this.input.placeholder = '_';
 
     this.saveBtn = document.createElement('button');
     this.saveBtn.type = 'button';
-    this.saveBtn.className = 'kvi-inline-save-btn';
+    this.saveBtn.className = 'screen-add-inline-save-btn';
     this.saveBtn.textContent = 'Save';
 
     this.onInputKeyDown = (event) => {
@@ -105,7 +105,7 @@ const KviInputExclusionAddPage = {
   },
 
   cacheBulkUploadDom() {
-    this.uploadStatusRow = document.getElementById('kviUploadStatusRow');
+    this.uploadStatusRow = document.getElementById('screenAddUploadStatusRow');
     this.uploadStatusInputs = Array.from(document.querySelectorAll('input[name="kviUploadStatus"]'));
     this.batchSection = document.querySelector('.bulk-upload-batch-section');
     this.batchCollapseBtn = document.getElementById('bulkUploadBatchCollapseBtn');
@@ -130,7 +130,6 @@ const KviInputExclusionAddPage = {
 
   initBulkUploadFlow() {
     if (!window.BulkUploadFlow?.create) {
-      // Fallback to legacy local implementation when shared module is unavailable.
       this.initBatchSectionControls();
       this.initBatchGrid();
       return;
@@ -178,9 +177,9 @@ const KviInputExclusionAddPage = {
     return [
       {
         organization: '',
-        itemDiscountedFlag: '',
-        sequesteredCommAprilFlag: '',
-        usedBiomedFlag: '',
+        itemDiscontinuedFlag: '',
+        itemSequesteredCommApriaFlag: '',
+        itemUsedBiomedFlag: '',
         histRevenue: '',
         patientFlag: ''
       }
@@ -191,9 +190,9 @@ const KviInputExclusionAddPage = {
     if (!this.gridApi || !Number.isInteger(count) || count <= 0) return;
     const rows = Array.from({ length: count }, () => ({
       organization: '',
-      itemDiscountedFlag: '',
-      sequesteredCommAprilFlag: '',
-      usedBiomedFlag: '',
+      itemDiscontinuedFlag: '',
+      itemSequesteredCommApriaFlag: '',
+      itemUsedBiomedFlag: '',
       histRevenue: '',
       patientFlag: '',
       uploadStatus: '',
@@ -240,7 +239,7 @@ const KviInputExclusionAddPage = {
 
   validationCellRules(field) {
     return {
-      'kvi-cell-error': (params) => Array.isArray(params.data?.uploadErrors) && params.data.uploadErrors.includes(field)
+      'screen-add-cell-error': (params) => Array.isArray(params.data?.uploadErrors) && params.data.uploadErrors.includes(field)
     };
   },
 
@@ -312,46 +311,41 @@ const KviInputExclusionAddPage = {
           cellClassRules: this.validationCellRules('organization')
         },
         {
-          field: 'itemDiscountedFlag',
-          headerName: 'Item Discounted Flag',
+          field: 'itemDiscontinuedFlag',
+          headerName: 'Item Discontinued Flag',
           minWidth: 210,
           filter: 'agTextColumnFilter',
-          cellEditorSelector: (params) => (this.isErrorCell(params, 'itemDiscountedFlag')
+          cellEditorSelector: (params) => (this.isErrorCell(params, 'itemDiscontinuedFlag')
             ? { component: 'kviInlineSaveCellEditor', params: { pageRef: this } }
             : undefined),
-          cellClassRules: this.validationCellRules('itemDiscountedFlag')
+          cellClassRules: this.validationCellRules('itemDiscontinuedFlag')
         },
         {
-          field: 'sequesteredCommAprilFlag',
-          headerName: 'Sequestered Comm April Flag',
+          field: 'itemSequesteredCommApriaFlag',
+          headerName: 'Sequestered Comm Apria Flag',
           minWidth: 250,
           filter: 'agTextColumnFilter',
-          cellEditorSelector: (params) => (this.isErrorCell(params, 'sequesteredCommAprilFlag')
+          cellEditorSelector: (params) => (this.isErrorCell(params, 'itemSequesteredCommApriaFlag')
             ? { component: 'kviInlineSaveCellEditor', params: { pageRef: this } }
             : undefined),
-          cellClassRules: this.validationCellRules('sequesteredCommAprilFlag')
+          cellClassRules: this.validationCellRules('itemSequesteredCommApriaFlag')
         },
         {
-          field: 'usedBiomedFlag',
+          field: 'itemUsedBiomedFlag',
           headerName: 'Used Biomed Flag',
           minWidth: 190,
           filter: 'agTextColumnFilter',
-          cellEditorSelector: (params) => (this.isErrorCell(params, 'usedBiomedFlag')
+          cellEditorSelector: (params) => (this.isErrorCell(params, 'itemUsedBiomedFlag')
             ? { component: 'kviInlineSaveCellEditor', params: { pageRef: this } }
             : undefined),
-          cellClassRules: this.validationCellRules('usedBiomedFlag')
+          cellClassRules: this.validationCellRules('itemUsedBiomedFlag')
         },
         {
           field: 'histRevenue',
           headerName: 'Hist Revenue',
           minWidth: 170,
           filter: 'agNumberColumnFilter',
-          filterValueGetter: (params) => {
-            const raw = String(params?.data?.histRevenue ?? '').replace(/,/g, '').trim();
-            if (!raw) return null;
-            const numeric = Number(raw);
-            return Number.isFinite(numeric) ? numeric : null;
-          },
+          filterValueGetter: (params) => this.numberFilterValue(params?.data?.histRevenue),
           cellEditorSelector: (params) => (this.isErrorCell(params, 'histRevenue')
             ? { component: 'kviInlineSaveCellEditor', params: { pageRef: this } }
             : undefined),
@@ -382,9 +376,9 @@ const KviInputExclusionAddPage = {
         gridApi: this.gridApi,
         editableFieldOrder: [
           'organization',
-          'itemDiscountedFlag',
-          'sequesteredCommAprilFlag',
-          'usedBiomedFlag',
+          'itemDiscontinuedFlag',
+          'itemSequesteredCommApriaFlag',
+          'itemUsedBiomedFlag',
           'histRevenue',
           'patientFlag'
         ],
@@ -400,8 +394,6 @@ const KviInputExclusionAddPage = {
     }
 
     window.gridApi = this.gridApi;
-
-    // Override default pending apply to support typed operators in add-screen textboxes.
     this.gridApi.applyPendingFloatingFilters = () => this.applyAdvancedFilters();
 
     if (typeof this.gridApi.addEventListener === 'function') {
@@ -421,6 +413,13 @@ const KviInputExclusionAddPage = {
     }, 300);
   },
 
+  numberFilterValue(value) {
+    const raw = String(value ?? '').replace(/,/g, '').trim();
+    if (!raw) return null;
+    const numeric = Number(raw);
+    return Number.isFinite(numeric) ? numeric : null;
+  },
+
   formatUsDateFromIso(value) {
     if (!value) return '';
     const date = new Date(value);
@@ -429,7 +428,7 @@ const KviInputExclusionAddPage = {
   },
 
   getScreenCode() {
-    return String(window.BULK_UPLOAD_SCREEN_CODE || 'KVI').trim() || 'KVI';
+    return String(window.BULK_UPLOAD_SCREEN_CODE || 'KVI_INPUT_EXCLUSION').trim() || 'KVI_INPUT_EXCLUSION';
   },
 
   getBulkUploadBaseUrl() {
@@ -495,9 +494,9 @@ const KviInputExclusionAddPage = {
   normalizeBatchDataRow(item) {
     const normalized = this.normalizeRow({
       organization: item.organization || '',
-      itemDiscountedFlag: item.itemDiscountedFlag || item.item_discounted_flag || '',
-      sequesteredCommAprilFlag: item.sequesteredCommAprilFlag || item.sequestered_comm_april_flag || '',
-      usedBiomedFlag: item.usedBiomedFlag || item.used_biomed_flag || '',
+      itemDiscontinuedFlag: item.itemDiscontinuedFlag || item.item_discontinued_flag || '',
+      itemSequesteredCommApriaFlag: item.itemSequesteredCommApriaFlag || item.itemSequesteredCoramApriaFlag || item.item_sequestered_coram_apria_flag || '',
+      itemUsedBiomedFlag: item.itemUsedBiomedFlag || item.item_used_biomed_flag || '',
       histRevenue: item.histRevenue || item.hist_revenue || '',
       patientFlag: item.patientFlag || item.patient_flag || ''
     });
@@ -507,18 +506,16 @@ const KviInputExclusionAddPage = {
       : Array.isArray(item.errorFields)
         ? item.errorFields
         : Array.isArray(item.errors)
-          ? item.errors
-            .map((entry) => entry?.field || entry?.column || '')
-            .filter(Boolean)
+          ? item.errors.map((entry) => entry?.field || entry?.column || '').filter(Boolean)
           : [];
 
     const mappedErrors = rowErrors
       .map((field) => this.normalizeHeader(field))
       .map((field) => {
         if (field === 'organization') return 'organization';
-        if (field === 'itemdiscountedflag') return 'itemDiscountedFlag';
-        if (field === 'sequesteredcommaprilflag') return 'sequesteredCommAprilFlag';
-        if (field === 'usedbiomedflag') return 'usedBiomedFlag';
+        if (field === 'itemdiscontinuedflag') return 'itemDiscontinuedFlag';
+        if (field === 'itemsequesteredcommapriaflag' || field === 'itemsequesteredcoramapriaflag') return 'itemSequesteredCommApriaFlag';
+        if (field === 'itemusedbiomedflag') return 'itemUsedBiomedFlag';
         if (field === 'histrevenue') return 'histRevenue';
         if (field === 'patientflag') return 'patientFlag';
         return '';
@@ -541,14 +538,12 @@ const KviInputExclusionAddPage = {
     this.batchTableBody.addEventListener('click', (event) => {
       const deleteBtn = event.target.closest('[data-batch-delete]');
       if (deleteBtn) {
-        const batchId = deleteBtn.getAttribute('data-batch-id');
-        this.deleteBatchRow(batchId);
+        this.deleteBatchRow(deleteBtn.getAttribute('data-batch-id'));
         return;
       }
       const link = event.target.closest('[data-batch-link]');
       if (link) {
-        const batchId = link.getAttribute('data-batch-id');
-        this.loadBatchData(batchId);
+        this.loadBatchData(link.getAttribute('data-batch-id'));
       }
     });
     this.loadBatchRows();
@@ -595,8 +590,7 @@ const KviInputExclusionAddPage = {
     }
     const endpoint = `${this.getBulkUploadBaseUrl()}/batches?screenCode=${encodeURIComponent(this.getScreenCode())}`;
     const json = await this.fetchJson(endpoint, { method: 'GET', headers: { Accept: 'application/json' } });
-    const records = this.getApiDataArray(json);
-    return records.map((item, index) => this.normalizeBatchRow(item, index));
+    return this.getApiDataArray(json).map((item, index) => this.normalizeBatchRow(item, index));
   },
 
   defaultBatchRows() {
@@ -624,8 +618,7 @@ const KviInputExclusionAddPage = {
     }
     const endpoint = `${this.getBulkUploadBaseUrl()}/batches/${encodeURIComponent(batchId)}/rows?screenCode=${encodeURIComponent(this.getScreenCode())}&view=all`;
     const json = await this.fetchJson(endpoint, { method: 'GET', headers: { Accept: 'application/json' } });
-    const records = this.getApiDataArray(json);
-    return records.map((item) => this.normalizeBatchDataRow(item));
+    return this.getApiDataArray(json).map((item) => this.normalizeBatchDataRow(item));
   },
 
   async loadBatchData(batchId) {
@@ -663,6 +656,7 @@ const KviInputExclusionAddPage = {
         return;
       }
     }
+
     this.batchRows = this.batchRows.filter((row) => String(row.id || row.batchNumber) !== String(batchId));
     this.renderBatchRows(this.batchRows);
     this.updateBatchInfoCount(this.batchRows.length);
@@ -743,10 +737,7 @@ const KviInputExclusionAddPage = {
     if (window.CsvUploadUtils?.normalizeHeader) {
       return window.CsvUploadUtils.normalizeHeader(header);
     }
-    return String(header || '')
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, '');
+    return String(header || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
   },
 
   normalizeText(value) {
@@ -767,9 +758,9 @@ const KviInputExclusionAddPage = {
   applyAdvancedFilters() {
     const kindByField = {
       organization: 'text',
-      itemDiscountedFlag: 'text',
-      sequesteredCommAprilFlag: 'text',
-      usedBiomedFlag: 'text',
+      itemDiscontinuedFlag: 'text',
+      itemSequesteredCommApriaFlag: 'text',
+      itemUsedBiomedFlag: 'text',
       histRevenue: 'number',
       patientFlag: 'text'
     };
@@ -810,9 +801,9 @@ const KviInputExclusionAddPage = {
   normalizeRow(row) {
     return {
       organization: this.normalizeText(row.organization || ''),
-      itemDiscountedFlag: this.normalizeText(row.itemDiscountedFlag || ''),
-      sequesteredCommAprilFlag: this.normalizeText(row.sequesteredCommAprilFlag || ''),
-      usedBiomedFlag: this.normalizeText(row.usedBiomedFlag || ''),
+      itemDiscontinuedFlag: this.normalizeText(row.itemDiscontinuedFlag || ''),
+      itemSequesteredCommApriaFlag: this.normalizeText(row.itemSequesteredCommApriaFlag || ''),
+      itemUsedBiomedFlag: this.normalizeText(row.itemUsedBiomedFlag || ''),
       histRevenue: this.normalizeText(row.histRevenue || ''),
       patientFlag: this.normalizeText(row.patientFlag || '')
     };
@@ -820,9 +811,9 @@ const KviInputExclusionAddPage = {
 
   isRowEmpty(row) {
     return !row.organization
-      && !row.itemDiscountedFlag
-      && !row.sequesteredCommAprilFlag
-      && !row.usedBiomedFlag
+      && !row.itemDiscontinuedFlag
+      && !row.itemSequesteredCommApriaFlag
+      && !row.itemUsedBiomedFlag
       && !row.histRevenue
       && !row.patientFlag;
   },
@@ -830,9 +821,9 @@ const KviInputExclusionAddPage = {
   validateRow(row) {
     const errors = [];
     if (!this.isValidRequiredText(row.organization)) errors.push('organization');
-    if (!this.isValidRequiredText(row.itemDiscountedFlag)) errors.push('itemDiscountedFlag');
-    if (!this.isValidRequiredText(row.sequesteredCommAprilFlag)) errors.push('sequesteredCommAprilFlag');
-    if (!this.isValidRequiredText(row.usedBiomedFlag)) errors.push('usedBiomedFlag');
+    if (!this.isValidRequiredText(row.itemDiscontinuedFlag)) errors.push('itemDiscontinuedFlag');
+    if (!this.isValidRequiredText(row.itemSequesteredCommApriaFlag)) errors.push('itemSequesteredCommApriaFlag');
+    if (!this.isValidRequiredText(row.itemUsedBiomedFlag)) errors.push('itemUsedBiomedFlag');
     if (!this.isValidNumeric(row.histRevenue)) errors.push('histRevenue');
     if (!this.isValidRequiredText(row.patientFlag)) errors.push('patientFlag');
     return {
@@ -847,9 +838,9 @@ const KviInputExclusionAddPage = {
     }
     if ([
       'organization',
-      'itemDiscountedFlag',
-      'sequesteredCommAprilFlag',
-      'usedBiomedFlag',
+      'itemDiscontinuedFlag',
+      'itemSequesteredCommApriaFlag',
+      'itemUsedBiomedFlag',
       'patientFlag'
     ].includes(field)) {
       return this.isValidRequiredText(value);
@@ -917,13 +908,6 @@ const KviInputExclusionAddPage = {
     return { ok: true, value };
   },
 
-  parseCsvLine(line) {
-    if (window.CsvUploadUtils?.parseCsvLine) {
-      return window.CsvUploadUtils.parseCsvLine(line);
-    }
-    return [];
-  },
-
   async parseAndMapCsvFile(file) {
     const csvText = await file.text();
     const parsed = window.CsvUploadUtils?.parseCsvText
@@ -942,9 +926,9 @@ const KviInputExclusionAddPage = {
     return parsed.rows.map((cells) => {
       const row = this.normalizeRow({
         organization: cells[indexByHeader.organization] || '',
-        itemDiscountedFlag: cells[indexByHeader.itemdiscountedflag] || '',
-        sequesteredCommAprilFlag: cells[indexByHeader.sequesteredcommaprilflag] || '',
-        usedBiomedFlag: cells[indexByHeader.usedbiomedflag] || '',
+        itemDiscontinuedFlag: cells[indexByHeader.itemdiscontinuedflag] || '',
+        itemSequesteredCommApriaFlag: cells[indexByHeader.itemsequesteredcommapriaflag] || cells[indexByHeader.itemsequesteredcoramapriaflag] || '',
+        itemUsedBiomedFlag: cells[indexByHeader.itemusedbiomedflag] || '',
         histRevenue: cells[indexByHeader.histrevenue] || '',
         patientFlag: cells[indexByHeader.patientflag] || ''
       });
@@ -1083,14 +1067,11 @@ const KviInputExclusionAddPage = {
     if (typeof this.gridApi.setFilterModel === 'function') {
       this.gridApi.setFilterModel(null);
     }
-
     if (typeof this.gridApi.onFilterChanged === 'function') {
       this.gridApi.onFilterChanged();
     }
-
     if (this.gridElement) {
-      const inputs = this.gridElement.querySelectorAll('.mfi-floating-filter-input');
-      inputs.forEach((input) => {
+      this.gridElement.querySelectorAll('.mfi-floating-filter-input').forEach((input) => {
         input.value = '';
       });
     }
@@ -1110,8 +1091,7 @@ const KviInputExclusionAddPage = {
     const rows = [];
     if (!this.gridApi) return rows;
     this.gridApi.forEachNode((node) => {
-      if (!node?.data) return;
-      rows.push(node.data);
+      if (node?.data) rows.push(node.data);
     });
     return rows;
   },
@@ -1145,30 +1125,11 @@ const KviInputExclusionAddPage = {
       };
     });
 
-    const invalidSelectedCount = validatedSelectedRows.filter((row) => row.uploadStatus === 'error').length;
-    if (invalidSelectedCount > 0) {
+    if (validatedSelectedRows.some((row) => row.uploadStatus === 'error')) {
       this.showInfo('Some selected rows are invalid. Fix or unselect them before submitting.', 'error');
       return;
     }
 
-    const submittedRows = validatedSelectedRows
-      .filter((row) => row.uploadStatus === 'success')
-      .map((row) => ({
-        organization: row.organization,
-        itemDiscountedFlag: row.itemDiscountedFlag,
-        sequesteredCommAprilFlag: row.sequesteredCommAprilFlag,
-        usedBiomedFlag: row.usedBiomedFlag,
-        histRevenue: row.histRevenue,
-        patientFlag: row.patientFlag
-      }));
-
-    if (submittedRows.length === 0) {
-      this.showInfo('No valid selected rows to submit.', 'error');
-      return;
-    }
-
-    // UI behavior until backend submit API contract is finalized:
-    // remove submitted selections and keep remaining rows (including errors) for further correction.
     const selectedSet = new Set(selectedRows);
     const sourceRows = this.uploadedRows.length > 0 ? this.uploadedRows : this.getGridRows();
     const remainingRows = sourceRows.filter((row) => !selectedSet.has(row));
@@ -1189,12 +1150,11 @@ const KviInputExclusionAddPage = {
       this.mockBatchRowsById[this.selectedBatchId] = remainingRows;
     }
 
-    this.showInfo(`${submittedRows.length} selected row(s) submitted. Remaining rows stay available for correction/submission.`, 'success');
+    this.showInfo('Selected row(s) submitted. Remaining rows stay available for correction/submission.', 'success');
   },
 
   executeFilters() {
-    if (!this.gridApi) return;
-    this.applyAdvancedFilters();
+    if (this.gridApi) this.applyAdvancedFilters();
   },
 
   bindToolbarActions() {
@@ -1204,7 +1164,7 @@ const KviInputExclusionAddPage = {
 
       switch (actionButton.dataset.action) {
         case 'back':
-          window.location.href = window.KVI_LIST_PAGE_URL || '/kvi-input-exclusion';
+          window.location.href = window.KVI_LIST_PAGE_URL || '/manage-kvi-input-view-input-data';
           break;
         case 'delete':
           this.deleteSelectedRows();
@@ -1225,11 +1185,38 @@ const KviInputExclusionAddPage = {
   },
 
   showInfo(message, type = 'success') {
-    if (window.GridManager?.currentInstance?.showToast) {
-      window.GridManager.currentInstance.showToast(message, type, 2200);
-      return;
-    }
-    console.log(message);
+    if (!window.PageToast?.show) return;
+
+    const container = this.ensureToastContainer();
+    if (!container) return;
+
+    const normalizedType = ['success', 'error', 'warning'].includes(type) ? type : 'success';
+    const title = normalizedType === 'error'
+      ? 'Action required'
+      : normalizedType === 'warning'
+        ? 'Heads up'
+        : 'Success';
+    const subtitle = String(message || '').trim();
+
+    window.PageToast.show({
+      container,
+      type: normalizedType,
+      title,
+      subtitle,
+      icon: normalizedType === 'error' ? '!' : normalizedType === 'warning' ? 'i' : '✓',
+      autoHideMs: 2400
+    });
+  },
+
+  ensureToastContainer() {
+    let container = document.getElementById('kviInputExclusionPageToastLayer');
+    if (container) return container;
+
+    container = document.createElement('div');
+    container.id = 'kviInputExclusionPageToastLayer';
+    container.className = 'app-page-toast-layer';
+    document.body.appendChild(container);
+    return container;
   }
 };
 

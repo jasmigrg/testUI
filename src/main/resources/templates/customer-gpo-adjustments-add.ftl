@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Manage KVI Mapping Logic and View Output Data - Add</title>
+  <title>Customer GPO Adjustments - Add</title>
   <#assign ctx = (request.contextPath)!"" />
   <link rel="stylesheet" href="${ctx}/css/app.css">
   <link rel="stylesheet" href="${ctx}/css/grid.css">
@@ -15,20 +15,19 @@
   <link rel="stylesheet" href="${ctx}/css/screen-add-shared.css">
   <link rel="stylesheet" href="${ctx}/css/bulk-upload-modal.css">
   <link rel="stylesheet" href="${ctx}/css/bulk-upload-flow.css">
-  <link rel="stylesheet" href="${ctx}/css/manage-kvi-recommendation-logic-add.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="${ctx}/css/customer-gpo-adjustments-add.css">
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.1/styles/ag-grid.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.1/styles/ag-theme-alpine.css">
 
   <script>
     window.API_BASE_URL = window.API_BASE_URL || '${(apiBaseUrl!'')?js_string}';
-    window.GRID_PREF_TEST_USER_ID = window.GRID_PREF_TEST_USER_ID || '${(userId!'defaultUser')?js_string}';
-    window.KVI_LIST_PAGE_URL = window.KVI_LIST_PAGE_URL || '${ctx}/manage-kvi-mapping-logic-view-output-data';
-    window.BULK_UPLOAD_SCREEN_CODE = window.BULK_UPLOAD_SCREEN_CODE || 'KVI_MAPPING_PARAMETER';
-    window.BULK_UPLOAD_USE_MOCK = window.BULK_UPLOAD_USE_MOCK ?? true;
+    window.CUSTOMER_GPO_BULK_UPLOAD_BASE_URL = window.CUSTOMER_GPO_BULK_UPLOAD_BASE_URL || '${(customerGpoBulkUploadBaseUrl!'')?js_string}';
+    window.GRID_PREF_TEST_USER_ID = window.GRID_PREF_TEST_USER_ID || '${(userId!'test-user')?js_string}';
+    window.CUSTOMER_GPO_ADJUSTMENTS_LIST_PAGE_URL = window.CUSTOMER_GPO_ADJUSTMENTS_LIST_PAGE_URL || '${ctx}/adjustments';
+    window.CUSTOMER_GPO_ADJUSTMENTS_ENTITY_NAME = window.CUSTOMER_GPO_ADJUSTMENTS_ENTITY_NAME || 'customer-gpo-adjustment';
     window.GRID_PREF_SCREEN_ID_BY_GRID = Object.assign({}, window.GRID_PREF_SCREEN_ID_BY_GRID, {
-      kviMappingParameterAddGrid: 'id_kvi_mapping_logic_parameter_add'
+      customerGpoAdjustmentsAddGrid: 'id_customer_gpo_adjustments_add'
     });
   </script>
 
@@ -39,10 +38,9 @@
   <script src="${ctx}/js/grid-toolbar.js" defer></script>
   <script src="${ctx}/js/page-toast.js" defer></script>
   <script src="${ctx}/js/bulk-upload-modal.js" defer></script>
-  <script src="${ctx}/js/bulk-upload-flow.js" defer></script>
   <script src="${ctx}/js/csv-upload-utils.js" defer></script>
   <script src="${ctx}/js/grid-filter-operator-utils.js" defer></script>
-  <script src="${ctx}/js/manage-kvi-mapping-logic-add.js" defer></script>
+  <script src="${ctx}/js/customer-gpo-adjustments-add.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.1/dist/ag-grid-community.min.js"></script>
 </head>
 <body class="mfi-page screen-page screen-add-page">
@@ -53,61 +51,71 @@
   <#import "/components/action-toolbar.ftl" as actionToolbar>
   <#import "/components/grid-view-actions.ftl" as gridViewActions>
 
-  <input type="hidden" id="currentUserId" value="${userId!'defaultUser'}" />
+  <input type="hidden" id="currentUserId" value="${userId!'test-user'}" />
 
   <div class="app-shell">
-    <@sidebar.navigation currentPath="/manage-kvi-mapping-logic-view-output-data/add" />
+    <@sidebar.navigation currentPath="/adjustments" />
 
     <main class="content">
       <div class="content-card">
         <@pageHeader.render
-          title="Manage KVI Mapping Logic and View Output Data"
-          crumbs=[{"label":"Home","href":"${ctx}/"},{"label":"Manage KVI Mapping Logic and View Output Data"}]
+          title="Customer GPO Adjustments"
+          crumbs=[{"label":"Home","href":"${ctx}/"},{"label":"Adjustments","href":"${ctx}/adjustments"},{"label":"Customer GPO Adjustments"}]
         />
 
         <#assign iconBack><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6L9 12L15 18" /></svg></#assign>
         <#assign iconDelete><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6H19M9 6V4H15V6M8 6V19H16V6" /></svg></#assign>
-        <#assign iconSave><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4H17L20 7V20H5Z" /><path d="M8 4V10H16V4" /></svg></#assign>
         <#assign iconSubmit><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5 12L12 5L19 12" /></svg></#assign>
         <#assign iconExecute><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20L16.5 16.5" /></svg></#assign>
         <#assign actionItems=[
           {"id":"back","label":"Back","iconOnly":true,"className":"icon-only is-back","iconHtml":iconBack},
           {"id":"delete","label":"Delete","iconHtml":iconDelete},
-          {"id":"saveDraft","label":"Save Draft","iconHtml":iconSave},
-          {"id":"submit","label":"Submit","iconHtml":iconSubmit},
+          {"id":"submit","label":"Submit","iconHtml":iconSubmit,"ariaLabel":"Submit rows"},
           {"id":"execute","label":"Execute","iconHtml":iconExecute}
         ] />
 
-        <@actionToolbar.render actions=actionItems toolbarLabel="KVI mapping parameter add actions" rightSectionLabel="Grid manager view actions">
+        <@actionToolbar.render actions=actionItems toolbarLabel="Customer GPO adjustments add actions" rightSectionLabel="Grid manager view actions">
           <@gridManager.gridManager />
           <@gridViewActions.render defaultDensity="compact" showDownload=false />
         </@actionToolbar.render>
 
-        <section class="bulk-upload-batch-section" aria-label="KVI mapping upload batches">
+        <section class="bulk-upload-batch-section" aria-label="Customer GPO adjustment jobs">
           <div class="bulk-upload-batch-info-row">
             <div class="bulk-upload-batch-info-left">
               <span class="bulk-upload-batch-info-icon" aria-hidden="true">i</span>
-              <span class="bulk-upload-batch-info-text">You Have [X] Unfinished Uploads.</span>
+              <span class="bulk-upload-batch-info-text">You Have [0] Unfinished Uploads.</span>
             </div>
             <button type="button" class="bulk-upload-batch-collapse-btn" id="bulkUploadBatchCollapseBtn" aria-label="Collapse unfinished uploads" aria-expanded="true">⌃</button>
           </div>
           <div id="bulkUploadBatchGrid" class="bulk-upload-batch-grid">
             <div class="bulk-upload-batch-columns" aria-hidden="true">
-              <span class="bulk-upload-batch-col">Batch Number</span>
-              <span class="bulk-upload-batch-col">Batch Status</span>
-              <span class="bulk-upload-batch-col">Records Count</span>
-              <span class="bulk-upload-batch-col">Error Count</span>
-              <span class="bulk-upload-batch-col">Created By</span>
-              <span class="bulk-upload-batch-col">Price Rule Level</span>
-              <span class="bulk-upload-batch-col">Start Date</span>
-              <span class="bulk-upload-batch-col">End Date</span>
+              <span class="bulk-upload-batch-col">Job ID</span>
+              <span class="bulk-upload-batch-col">
+                <span class="bulk-upload-batch-header-help">
+                  <span>Status</span>
+                  <span class="bulk-upload-batch-help">
+                    <button
+                      type="button"
+                      class="bulk-upload-batch-help-btn"
+                      aria-label="Status refresh help"
+                      aria-describedby="customerGpoBatchRefreshHelp"
+                    >?</button>
+                    <span id="customerGpoBatchRefreshHelp" class="bulk-upload-batch-help-tooltip" role="tooltip">
+                      Job status does not refresh automatically. Refresh the page to see the latest status.
+                    </span>
+                  </span>
+                </span>
+              </span>
+              <span class="bulk-upload-batch-col">Total Rows</span>
+              <span class="bulk-upload-batch-col">Processed</span>
+              <span class="bulk-upload-batch-col">Success</span>
+              <span class="bulk-upload-batch-col">Error</span>
               <span class="bulk-upload-batch-col">Program ID</span>
-              <span class="bulk-upload-batch-col">User ID</span>
-              <span class="bulk-upload-batch-col">Workstation ID</span>
-              <span class="bulk-upload-batch-col">Date Updated</span>
-              <span class="bulk-upload-batch-col">Delete</span>
+              <span class="bulk-upload-batch-col">Work Stn ID</span>
+              <span class="bulk-upload-batch-col">Updated</span>
+              <span class="bulk-upload-batch-col">Remove</span>
             </div>
-            <div id="bulkUploadBatchTableBody" class="bulk-upload-batch-list" role="list" aria-label="Unfinished upload batches"></div>
+            <div id="bulkUploadBatchTableBody" class="bulk-upload-batch-list" role="list" aria-label="Bulk upload jobs"></div>
           </div>
         </section>
 
@@ -115,23 +123,23 @@
           <button type="button" class="screen-add-bulk-upload-btn" data-action="bulk-upload">Bulk Upload</button>
         </section>
 
-        <section class="screen-add-status-row" id="screenAddUploadStatusRow" hidden>
+        <section class="screen-add-status-row" id="customerGpoUploadStatusRow" hidden>
           <label class="screen-add-status-option">
-            <input type="radio" name="kviUploadStatus" value="all" checked />
+            <input type="radio" name="customerGpoUploadStatus" value="all" checked />
             <span>All</span>
           </label>
           <label class="screen-add-status-option">
-            <input type="radio" name="kviUploadStatus" value="success" />
+            <input type="radio" name="customerGpoUploadStatus" value="success" />
             <span>Success</span>
           </label>
           <label class="screen-add-status-option">
-            <input type="radio" name="kviUploadStatus" value="error" />
+            <input type="radio" name="customerGpoUploadStatus" value="error" />
             <span>Error</span>
           </label>
         </section>
 
         <section class="grid-wrapper">
-          <div id="kviMappingParameterAddGrid" class="ag-theme-alpine app-grid screen-grid"></div>
+          <div id="customerGpoAdjustmentsAddGrid" class="ag-theme-alpine app-grid screen-grid"></div>
         </section>
       </div>
     </main>
@@ -170,7 +178,7 @@
 
       <footer class="bulk-upload-footer">
         <button type="button" class="bulk-upload-cancel-btn" data-bulk-close>Cancel</button>
-        <button type="button" class="bulk-upload-next-btn" id="bulkUploadNextBtn">Next</button>
+        <button type="button" class="bulk-upload-next-btn" id="bulkUploadNextBtn">Upload</button>
       </footer>
     </section>
   </div>

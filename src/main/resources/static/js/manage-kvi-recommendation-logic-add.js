@@ -2,17 +2,17 @@ class KviInlineSaveCellEditor {
   init(params) {
     this.params = params;
     this.eGui = document.createElement('div');
-    this.eGui.className = 'kvi-inline-save-editor';
+    this.eGui.className = 'screen-add-inline-save-editor';
 
     this.input = document.createElement('input');
     this.input.type = 'text';
-    this.input.className = 'kvi-inline-save-input';
+    this.input.className = 'screen-add-inline-save-input';
     this.input.value = params.value == null ? '' : String(params.value);
     this.input.placeholder = '_';
 
     this.saveBtn = document.createElement('button');
     this.saveBtn.type = 'button';
-    this.saveBtn.className = 'kvi-inline-save-btn';
+    this.saveBtn.className = 'screen-add-inline-save-btn';
     this.saveBtn.textContent = 'Save';
 
     this.onInputKeyDown = (event) => {
@@ -105,7 +105,7 @@ const KviRecommendationLogicAddPage = {
   },
 
   cacheBulkUploadDom() {
-    this.uploadStatusRow = document.getElementById('kviUploadStatusRow');
+    this.uploadStatusRow = document.getElementById('screenAddUploadStatusRow');
     this.uploadStatusInputs = Array.from(document.querySelectorAll('input[name="kviUploadStatus"]'));
     this.batchSection = document.querySelector('.bulk-upload-batch-section');
     this.batchCollapseBtn = document.getElementById('bulkUploadBatchCollapseBtn');
@@ -236,7 +236,7 @@ const KviRecommendationLogicAddPage = {
 
   validationCellRules(field) {
     return {
-      'kvi-cell-error': (params) => Array.isArray(params.data?.uploadErrors) && params.data.uploadErrors.includes(field)
+      'screen-add-cell-error': (params) => Array.isArray(params.data?.uploadErrors) && params.data.uploadErrors.includes(field)
     };
   },
 
@@ -1198,11 +1198,38 @@ const KviRecommendationLogicAddPage = {
   },
 
   showInfo(message, type = 'success') {
-    if (window.GridManager?.currentInstance?.showToast) {
-      window.GridManager.currentInstance.showToast(message, type, 2200);
-      return;
-    }
-    console.log(message);
+    if (!window.PageToast?.show) return;
+
+    const container = this.ensureToastContainer();
+    if (!container) return;
+
+    const normalizedType = ['success', 'error', 'warning'].includes(type) ? type : 'success';
+    const title = normalizedType === 'error'
+      ? 'Action required'
+      : normalizedType === 'warning'
+        ? 'Heads up'
+        : 'Success';
+    const subtitle = String(message || '').trim();
+
+    window.PageToast.show({
+      container,
+      type: normalizedType,
+      title,
+      subtitle,
+      icon: normalizedType === 'error' ? '!' : normalizedType === 'warning' ? 'i' : '✓',
+      autoHideMs: 2400
+    });
+  },
+
+  ensureToastContainer() {
+    let container = document.getElementById('kviRecommendationLogicPageToastLayer');
+    if (container) return container;
+
+    container = document.createElement('div');
+    container.id = 'kviRecommendationLogicPageToastLayer';
+    container.className = 'app-page-toast-layer';
+    document.body.appendChild(container);
+    return container;
   }
 };
 

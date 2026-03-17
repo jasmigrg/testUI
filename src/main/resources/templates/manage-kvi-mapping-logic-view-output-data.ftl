@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="${ctx}/css/grid-page.css">
   <link rel="stylesheet" href="${ctx}/css/action-toolbar.css">
   <link rel="stylesheet" href="${ctx}/css/page-toast.css">
-  <link rel="stylesheet" href="${ctx}/css/manage-kvi-recommendation-logic.css">
+  <link rel="stylesheet" href="${ctx}/css/screen-shared.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.1/styles/ag-grid.css">
@@ -36,7 +36,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.1/dist/ag-grid-community.min.js"></script>
 </head>
-<body class="mfi-page kvi-page">
+<body class="mfi-page screen-page">
 
   <#include "/components/header.ftl">
   <#import "/components/sidebar.ftl" as sidebar>
@@ -56,11 +56,11 @@
           crumbs=[{"label":"Home","href":"${ctx}/"},{"label":"Manage KVI Mapping Logic and View Output Data"}]
         />
 
-        <section class="kvi-page-shell" aria-label="Manage KVI Mapping Logic and View Output Data">
-          <div class="kvi-tabs" role="tablist" aria-label="KVI mapping tabs">
+        <section class="screen-page-shell" aria-label="Manage KVI Mapping Logic and View Output Data">
+          <div class="screen-tabs" role="tablist" aria-label="KVI mapping tabs">
             <button
               type="button"
-              class="kvi-tab-btn is-active"
+              class="screen-tab-btn is-active"
               id="kvi-mapping-tab-parameter"
               role="tab"
               aria-selected="true"
@@ -71,7 +71,7 @@
             </button>
             <button
               type="button"
-              class="kvi-tab-btn"
+              class="screen-tab-btn"
               id="kvi-mapping-tab-output"
               role="tab"
               aria-selected="false"
@@ -83,7 +83,6 @@
           </div>
 
           <#assign iconBack><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6L9 12L15 18" /></svg></#assign>
-          <#assign iconAdd><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5V19M5 12H19" /></svg></#assign>
           <#assign iconHeart><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20L4.7 12.7A4.8 4.8 0 1 1 11.5 5.9L12 6.4L12.5 5.9A4.8 4.8 0 1 1 19.3 12.7L12 20Z" /></svg></#assign>
           <#assign iconRefresh><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12A8 8 0 1 1 17.6 6.2" /><path d="M20 4V10H14" /></svg></#assign>
           <#assign iconExecute><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20L16.5 16.5" /></svg></#assign>
@@ -97,9 +96,6 @@
             >
               <button type="button" class="gt-action-btn icon-only is-back" aria-label="Back" data-action="back">
                 ${iconBack}
-              </button>
-              <button type="button" class="gt-action-btn icon-only is-add" aria-label="Add" data-action="add">
-                ${iconAdd}
               </button>
               <button type="button" class="gt-action-btn icon-only" aria-label="Favorite" data-action="favorite">
                 ${iconHeart}
@@ -144,7 +140,7 @@
           </section>
 
           <section
-            class="kvi-tab-panel is-active"
+            class="screen-tab-panel is-active"
             id="kvi-mapping-panel-parameter"
             role="tabpanel"
             aria-labelledby="kvi-mapping-tab-parameter"
@@ -156,7 +152,7 @@
           </section>
 
           <section
-            class="kvi-tab-panel"
+            class="screen-tab-panel"
             id="kvi-mapping-panel-output"
             role="tabpanel"
             aria-labelledby="kvi-mapping-tab-output"

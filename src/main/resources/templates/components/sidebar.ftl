@@ -50,7 +50,7 @@
                     </a>
                 </li>
                 <li class="submenu-item">
-                    <a href="/manageKVIInputAndViewInputData" class="submenu-link" title="Manage KVI Input and View Input Data">
+                    <a href="/manage-kvi-input-view-input-data" class="submenu-link" title="Manage KVI Input and View Input Data">
                         <span class="text">Manage KVI Input and View Input Data</span>
                     </a>
                 </li>

@@ -2,17 +2,17 @@ class KviInlineSaveCellEditor {
   init(params) {
     this.params = params;
     this.eGui = document.createElement('div');
-    this.eGui.className = 'kvi-inline-save-editor';
+    this.eGui.className = 'screen-add-inline-save-editor';
 
     this.input = document.createElement('input');
     this.input.type = 'text';
-    this.input.className = 'kvi-inline-save-input';
+    this.input.className = 'screen-add-inline-save-input';
     this.input.value = params.value == null ? '' : String(params.value);
     this.input.placeholder = '_';
 
     this.saveBtn = document.createElement('button');
     this.saveBtn.type = 'button';
-    this.saveBtn.className = 'kvi-inline-save-btn';
+    this.saveBtn.className = 'screen-add-inline-save-btn';
     this.saveBtn.textContent = 'Save';
 
     this.onInputKeyDown = (event) => {
@@ -105,7 +105,7 @@ const KviMappingLogicAddPage = {
   },
 
   cacheBulkUploadDom() {
-    this.uploadStatusRow = document.getElementById('kviUploadStatusRow');
+    this.uploadStatusRow = document.getElementById('screenAddUploadStatusRow');
     this.uploadStatusInputs = Array.from(document.querySelectorAll('input[name="kviUploadStatus"]'));
     this.batchSection = document.querySelector('.bulk-upload-batch-section');
     this.batchCollapseBtn = document.getElementById('bulkUploadBatchCollapseBtn');
@@ -130,7 +130,6 @@ const KviMappingLogicAddPage = {
 
   initBulkUploadFlow() {
     if (!window.BulkUploadFlow?.create) {
-      // Fallback to legacy local implementation when shared module is unavailable.
       this.initBatchSectionControls();
       this.initBatchGrid();
       return;
@@ -240,7 +239,7 @@ const KviMappingLogicAddPage = {
 
   validationCellRules(field) {
     return {
-      'kvi-cell-error': (params) => Array.isArray(params.data?.uploadErrors) && params.data.uploadErrors.includes(field)
+      'screen-add-cell-error': (params) => Array.isArray(params.data?.uploadErrors) && params.data.uploadErrors.includes(field)
     };
   },
 
@@ -332,12 +331,7 @@ const KviMappingLogicAddPage = {
           headerName: 'Revenue Penetration PCTL',
           minWidth: 240,
           filter: 'agNumberColumnFilter',
-          filterValueGetter: (params) => {
-            const raw = String(params?.data?.revenuePenetrationPctl ?? '').replace(/,/g, '').trim();
-            if (!raw) return null;
-            const numeric = Number(raw);
-            return Number.isFinite(numeric) ? numeric : null;
-          },
+          filterValueGetter: (params) => this.numberFilterValue(params?.data?.revenuePenetrationPctl),
           cellEditorSelector: (params) => (this.isErrorCell(params, 'revenuePenetrationPctl')
             ? { component: 'kviInlineSaveCellEditor', params: { pageRef: this } }
             : undefined),
@@ -348,12 +342,7 @@ const KviMappingLogicAddPage = {
           headerName: 'PRCA Penetration PCTL',
           minWidth: 220,
           filter: 'agNumberColumnFilter',
-          filterValueGetter: (params) => {
-            const raw = String(params?.data?.prcaPenetrationPctl ?? '').replace(/,/g, '').trim();
-            if (!raw) return null;
-            const numeric = Number(raw);
-            return Number.isFinite(numeric) ? numeric : null;
-          },
+          filterValueGetter: (params) => this.numberFilterValue(params?.data?.prcaPenetrationPctl),
           cellEditorSelector: (params) => (this.isErrorCell(params, 'prcaPenetrationPctl')
             ? { component: 'kviInlineSaveCellEditor', params: { pageRef: this } }
             : undefined),
@@ -364,12 +353,7 @@ const KviMappingLogicAddPage = {
           headerName: 'Revenue Penetration ADJ',
           minWidth: 230,
           filter: 'agNumberColumnFilter',
-          filterValueGetter: (params) => {
-            const raw = String(params?.data?.revenuePenetrationAdj ?? '').replace(/,/g, '').trim();
-            if (!raw) return null;
-            const numeric = Number(raw);
-            return Number.isFinite(numeric) ? numeric : null;
-          },
+          filterValueGetter: (params) => this.numberFilterValue(params?.data?.revenuePenetrationAdj),
           cellEditorSelector: (params) => (this.isErrorCell(params, 'revenuePenetrationAdj')
             ? { component: 'kviInlineSaveCellEditor', params: { pageRef: this } }
             : undefined),
@@ -380,12 +364,7 @@ const KviMappingLogicAddPage = {
           headerName: 'PRCA Penetration ADJ',
           minWidth: 210,
           filter: 'agNumberColumnFilter',
-          filterValueGetter: (params) => {
-            const raw = String(params?.data?.prcaPenetrationAdj ?? '').replace(/,/g, '').trim();
-            if (!raw) return null;
-            const numeric = Number(raw);
-            return Number.isFinite(numeric) ? numeric : null;
-          },
+          filterValueGetter: (params) => this.numberFilterValue(params?.data?.prcaPenetrationAdj),
           cellEditorSelector: (params) => (this.isErrorCell(params, 'prcaPenetrationAdj')
             ? { component: 'kviInlineSaveCellEditor', params: { pageRef: this } }
             : undefined),
@@ -424,8 +403,6 @@ const KviMappingLogicAddPage = {
     }
 
     window.gridApi = this.gridApi;
-
-    // Override default pending apply to support typed operators in add-screen textboxes.
     this.gridApi.applyPendingFloatingFilters = () => this.applyAdvancedFilters();
 
     if (typeof this.gridApi.addEventListener === 'function') {
@@ -443,6 +420,13 @@ const KviMappingLogicAddPage = {
         GridManager.init(window.gridApi, 'kviMappingParameterAddGrid');
       }
     }, 300);
+  },
+
+  numberFilterValue(value) {
+    const raw = String(value ?? '').replace(/,/g, '').trim();
+    if (!raw) return null;
+    const numeric = Number(raw);
+    return Number.isFinite(numeric) ? numeric : null;
   },
 
   formatUsDateFromIso(value) {
@@ -531,9 +515,7 @@ const KviMappingLogicAddPage = {
       : Array.isArray(item.errorFields)
         ? item.errorFields
         : Array.isArray(item.errors)
-          ? item.errors
-            .map((entry) => entry?.field || entry?.column || '')
-            .filter(Boolean)
+          ? item.errors.map((entry) => entry?.field || entry?.column || '').filter(Boolean)
           : [];
 
     const mappedErrors = rowErrors
@@ -565,14 +547,12 @@ const KviMappingLogicAddPage = {
     this.batchTableBody.addEventListener('click', (event) => {
       const deleteBtn = event.target.closest('[data-batch-delete]');
       if (deleteBtn) {
-        const batchId = deleteBtn.getAttribute('data-batch-id');
-        this.deleteBatchRow(batchId);
+        this.deleteBatchRow(deleteBtn.getAttribute('data-batch-id'));
         return;
       }
       const link = event.target.closest('[data-batch-link]');
       if (link) {
-        const batchId = link.getAttribute('data-batch-id');
-        this.loadBatchData(batchId);
+        this.loadBatchData(link.getAttribute('data-batch-id'));
       }
     });
     this.loadBatchRows();
@@ -619,8 +599,7 @@ const KviMappingLogicAddPage = {
     }
     const endpoint = `${this.getBulkUploadBaseUrl()}/batches?screenCode=${encodeURIComponent(this.getScreenCode())}`;
     const json = await this.fetchJson(endpoint, { method: 'GET', headers: { Accept: 'application/json' } });
-    const records = this.getApiDataArray(json);
-    return records.map((item, index) => this.normalizeBatchRow(item, index));
+    return this.getApiDataArray(json).map((item, index) => this.normalizeBatchRow(item, index));
   },
 
   defaultBatchRows() {
@@ -648,8 +627,7 @@ const KviMappingLogicAddPage = {
     }
     const endpoint = `${this.getBulkUploadBaseUrl()}/batches/${encodeURIComponent(batchId)}/rows?screenCode=${encodeURIComponent(this.getScreenCode())}&view=all`;
     const json = await this.fetchJson(endpoint, { method: 'GET', headers: { Accept: 'application/json' } });
-    const records = this.getApiDataArray(json);
-    return records.map((item) => this.normalizeBatchDataRow(item));
+    return this.getApiDataArray(json).map((item) => this.normalizeBatchDataRow(item));
   },
 
   async loadBatchData(batchId) {
@@ -687,6 +665,7 @@ const KviMappingLogicAddPage = {
         return;
       }
     }
+
     this.batchRows = this.batchRows.filter((row) => String(row.id || row.batchNumber) !== String(batchId));
     this.renderBatchRows(this.batchRows);
     this.updateBatchInfoCount(this.batchRows.length);
@@ -767,10 +746,7 @@ const KviMappingLogicAddPage = {
     if (window.CsvUploadUtils?.normalizeHeader) {
       return window.CsvUploadUtils.normalizeHeader(header);
     }
-    return String(header || '')
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, '');
+    return String(header || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
   },
 
   toUsDate(value) {
@@ -790,13 +766,6 @@ const KviMappingLogicAddPage = {
   isValidThreshold(value) {
     if (window.CsvUploadUtils?.isNumeric) {
       return window.CsvUploadUtils.isNumeric(value);
-    }
-    return false;
-  },
-
-  isValidDedupMethod(value) {
-    if (window.CsvUploadUtils?.matchesPattern) {
-      return window.CsvUploadUtils.matchesPattern(value, /^[A-Za-z0-9_ -]+$/);
     }
     return false;
   },
@@ -890,12 +859,12 @@ const KviMappingLogicAddPage = {
     if (field === 'effectiveDate' || field === 'terminationDate') {
       return this.isValidUsDate(value);
     }
-    if (
-      field === 'revenuePenetrationPctl'
-      || field === 'prcaPenetrationPctl'
-      || field === 'revenuePenetrationAdj'
-      || field === 'prcaPenetrationAdj'
-    ) {
+    if ([
+      'revenuePenetrationPctl',
+      'prcaPenetrationPctl',
+      'revenuePenetrationAdj',
+      'prcaPenetrationAdj'
+    ].includes(field)) {
       return this.isValidThreshold(value);
     }
     return true;
@@ -959,13 +928,6 @@ const KviMappingLogicAddPage = {
 
     this.showInfo('Cell saved locally.', 'success');
     return { ok: true, value };
-  },
-
-  parseCsvLine(line) {
-    if (window.CsvUploadUtils?.parseCsvLine) {
-      return window.CsvUploadUtils.parseCsvLine(line);
-    }
-    return [];
   },
 
   async parseAndMapCsvFile(file) {
@@ -1127,14 +1089,11 @@ const KviMappingLogicAddPage = {
     if (typeof this.gridApi.setFilterModel === 'function') {
       this.gridApi.setFilterModel(null);
     }
-
     if (typeof this.gridApi.onFilterChanged === 'function') {
       this.gridApi.onFilterChanged();
     }
-
     if (this.gridElement) {
-      const inputs = this.gridElement.querySelectorAll('.mfi-floating-filter-input');
-      inputs.forEach((input) => {
+      this.gridElement.querySelectorAll('.mfi-floating-filter-input').forEach((input) => {
         input.value = '';
       });
     }
@@ -1154,8 +1113,7 @@ const KviMappingLogicAddPage = {
     const rows = [];
     if (!this.gridApi) return rows;
     this.gridApi.forEachNode((node) => {
-      if (!node?.data) return;
-      rows.push(node.data);
+      if (node?.data) rows.push(node.data);
     });
     return rows;
   },
@@ -1189,30 +1147,11 @@ const KviMappingLogicAddPage = {
       };
     });
 
-    const invalidSelectedCount = validatedSelectedRows.filter((row) => row.uploadStatus === 'error').length;
-    if (invalidSelectedCount > 0) {
+    if (validatedSelectedRows.some((row) => row.uploadStatus === 'error')) {
       this.showInfo('Some selected rows are invalid. Fix or unselect them before submitting.', 'error');
       return;
     }
 
-    const submittedRows = validatedSelectedRows
-      .filter((row) => row.uploadStatus === 'success')
-      .map((row) => ({
-        effectiveDate: row.effectiveDate,
-        terminationDate: row.terminationDate,
-        revenuePenetrationPctl: row.revenuePenetrationPctl,
-        prcaPenetrationPctl: row.prcaPenetrationPctl,
-        revenuePenetrationAdj: row.revenuePenetrationAdj,
-        prcaPenetrationAdj: row.prcaPenetrationAdj
-      }));
-
-    if (submittedRows.length === 0) {
-      this.showInfo('No valid selected rows to submit.', 'error');
-      return;
-    }
-
-    // UI behavior until backend submit API contract is finalized:
-    // remove submitted selections and keep remaining rows (including errors) for further correction.
     const selectedSet = new Set(selectedRows);
     const sourceRows = this.uploadedRows.length > 0 ? this.uploadedRows : this.getGridRows();
     const remainingRows = sourceRows.filter((row) => !selectedSet.has(row));
@@ -1233,12 +1172,11 @@ const KviMappingLogicAddPage = {
       this.mockBatchRowsById[this.selectedBatchId] = remainingRows;
     }
 
-    this.showInfo(`${submittedRows.length} selected row(s) submitted. Remaining rows stay available for correction/submission.`, 'success');
+    this.showInfo('Selected row(s) submitted. Remaining rows stay available for correction/submission.', 'success');
   },
 
   executeFilters() {
-    if (!this.gridApi) return;
-    this.applyAdvancedFilters();
+    if (this.gridApi) this.applyAdvancedFilters();
   },
 
   bindToolbarActions() {
@@ -1248,7 +1186,7 @@ const KviMappingLogicAddPage = {
 
       switch (actionButton.dataset.action) {
         case 'back':
-          window.location.href = window.KVI_LIST_PAGE_URL || '/manage-kvi-recommendation-logic-view-output-data';
+          window.location.href = window.KVI_LIST_PAGE_URL || '/manage-kvi-mapping-logic-view-output-data';
           break;
         case 'delete':
           this.deleteSelectedRows();
@@ -1269,11 +1207,38 @@ const KviMappingLogicAddPage = {
   },
 
   showInfo(message, type = 'success') {
-    if (window.GridManager?.currentInstance?.showToast) {
-      window.GridManager.currentInstance.showToast(message, type, 2200);
-      return;
-    }
-    console.log(message);
+    if (!window.PageToast?.show) return;
+
+    const container = this.ensureToastContainer();
+    if (!container) return;
+
+    const normalizedType = ['success', 'error', 'warning'].includes(type) ? type : 'success';
+    const title = normalizedType === 'error'
+      ? 'Action required'
+      : normalizedType === 'warning'
+        ? 'Heads up'
+        : 'Success';
+    const subtitle = String(message || '').trim();
+
+    window.PageToast.show({
+      container,
+      type: normalizedType,
+      title,
+      subtitle,
+      icon: normalizedType === 'error' ? '!' : normalizedType === 'warning' ? 'i' : '✓',
+      autoHideMs: 2400
+    });
+  },
+
+  ensureToastContainer() {
+    let container = document.getElementById('kviMappingLogicPageToastLayer');
+    if (container) return container;
+
+    container = document.createElement('div');
+    container.id = 'kviMappingLogicPageToastLayer';
+    container.className = 'app-page-toast-layer';
+    document.body.appendChild(container);
+    return container;
   }
 };
 
