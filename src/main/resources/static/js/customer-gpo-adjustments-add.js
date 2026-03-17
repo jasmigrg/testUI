@@ -1021,23 +1021,7 @@ const CustomerGpoAdjustmentsAddPage = {
         fileName: file?.name,
         size: file?.size
       });
-      const response = await this.requestSignedUrlUpload(file).catch(async (error) => {
-        const message = String(error?.message || '');
-        const shouldFallbackToDirectUpload = error?.status === 503
-          || /signed url/i.test(message)
-          || /failed to fetch/i.test(message)
-          || /cors/i.test(message)
-          || error instanceof TypeError;
-
-        if (shouldFallbackToDirectUpload) {
-          console.debug('[CustomerGpoAdjustmentsAdd] falling back to direct CSV upload', {
-            fileName: file?.name,
-            error: message || String(error)
-          });
-          return this.uploadCsvDirectly(file);
-        }
-        throw error;
-      });
+      const response = await this.requestSignedUrlUpload(file);
 
       if (!response?.jobId) throw new Error('Job id missing from upload response');
 
@@ -1071,11 +1055,19 @@ const CustomerGpoAdjustmentsAddPage = {
     };
   },
 
+  getBulkUploadFileName(file) {
+    const rawExtension = String(file?.name || '').trim().split('.').pop();
+    const hasExtension = rawExtension && rawExtension !== String(file?.name || '').trim();
+    const extension = hasExtension ? `.${rawExtension}` : '.csv';
+    return `${this.entityName}${extension}`;
+  },
+
   async requestSignedUrlUpload(file) {
     const context = this.resolveUploadContext();
+    const uploadFileName = this.getBulkUploadFileName(file);
     console.debug('[CustomerGpoAdjustmentsAdd] requestSignedUrlUpload:request', {
       entityName: this.entityName,
-      fileName: file?.name,
+      fileName: uploadFileName,
       userId: context.userId,
       programId: context.programId,
       workStationId: context.workStationId
@@ -1088,7 +1080,7 @@ const CustomerGpoAdjustmentsAddPage = {
         userId: context.userId,
         programId: context.programId,
         workStationId: context.workStationId,
-        fileName: file.name
+        fileName: uploadFileName
       })
     });
 
@@ -1124,12 +1116,13 @@ const CustomerGpoAdjustmentsAddPage = {
 
   async uploadCsvDirectly(file) {
     const context = this.resolveUploadContext();
+    const uploadFileName = this.getBulkUploadFileName(file);
     const formData = new FormData();
     formData.append('entityName', this.entityName);
     formData.append('userId', context.userId);
     formData.append('programId', context.programId);
     formData.append('workStationId', context.workStationId);
-    formData.append('file', file);
+    formData.append('file', file, uploadFileName);
     return this.fetchJson(`${this.getBulkUploadBaseUrl()}/csv`, {
       method: 'POST',
       body: formData
