@@ -562,8 +562,7 @@ const CustomerGpoAdjustmentsAddPage = {
   },
 
   getBulkUploadBaseUrl() {
-    const overrideBaseUrl = String(window.CUSTOMER_GPO_BULK_UPLOAD_BASE_URL || '').trim().replace(/\/$/, '');
-    const baseUrl = String(overrideBaseUrl || window.API_BASE_URL || '').replace(/\/$/, '');
+    const baseUrl = String(window.API_BASE_URL || '').replace(/\/$/, '');
     return baseUrl
       ? `${baseUrl}/api/foundational/api/bulk-upload`
       : '/api/foundational/api/bulk-upload';
