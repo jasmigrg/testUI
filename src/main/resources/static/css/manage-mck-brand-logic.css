@@ -41,6 +41,52 @@
   display: none !important;
 }
 
+.mck-brand-logic-page .ag-theme-alpine.app-grid .ag-floating-filter-button {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  min-width: 28px;
+  height: 30px;
+  margin-left: 6px;
+}
+
+.mck-brand-logic-page .ag-theme-alpine.app-grid .ag-floating-filter-button .ag-icon,
+.mck-brand-logic-page .ag-theme-alpine.app-grid .ag-floating-filter-button .ag-icon-filter,
+.mck-brand-logic-page .ag-theme-alpine.app-grid .ag-floating-filter-button .ag-icon-filter::before {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+  fill: #ffffff !important;
+}
+
+.mck-brand-logic-page .ag-theme-alpine .ag-filter-apply-panel .ag-button,
+.mck-brand-logic-page .ag-theme-alpine .ag-filter-apply-panel .ag-standard-button {
+  border-radius: 8px;
+  font-weight: 600;
+  min-height: 34px;
+}
+
+.mck-brand-logic-page .ag-theme-alpine .ag-filter-apply-panel .ag-standard-button:first-child {
+  background: #007c91;
+  color: #ffffff;
+  border: 1px solid #007c91;
+}
+
+.mck-brand-logic-page .ag-theme-alpine .ag-filter-apply-panel .ag-standard-button:first-child:hover {
+  background: #006d7f;
+  border-color: #006d7f;
+}
+
+.mck-brand-logic-page .ag-theme-alpine .ag-filter-apply-panel .ag-standard-button:last-child {
+  background: #ffffff;
+  color: #007c91;
+  border: 1px solid #007c91;
+}
+
+.mck-brand-logic-page .ag-theme-alpine .ag-filter-apply-panel .ag-standard-button:last-child:hover {
+  background: #eef8fa;
+}
+
 .mck-brand-logic-page .mck-tab-action-toolbar {
   flex-wrap: wrap;
 }
