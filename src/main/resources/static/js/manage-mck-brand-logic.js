@@ -342,37 +342,62 @@ const MckBrandLogicPage = {
       title: 'GM Core Paramter MCKB Relative Price Delta',
       gridElementId: 'mckRelativeDeltaGrid',
       exportName: 'gm-core-paramter-mckb-relative-price-delta.csv',
+      apiEndpoint: '/api/v1/relative-price-delta/paginated',
+      updateEndpoint: '/api/v1/relative-price-delta/updateRelativePriceDelta',
+      exportEndpoint: '/api/v1/relative-price-delta/export-csv',
+      paginationType: 'server',
       columns: [
+        { field: 'uniqueId', headerName: 'Unique ID', minWidth: 140 },
         { field: 'effectiveDate', headerName: 'Effective Date', minWidth: 150 },
         { field: 'terminationDate', headerName: 'Termination Date', minWidth: 170 },
         { field: 'itemCategory', headerName: 'Item Category', minWidth: 170 },
         { field: 'relativeAllowableMinPrice', headerName: 'Relative Allowable Min Price', minWidth: 230 },
-        { field: 'relativeAllowableMaxPrice', headerName: 'Relative Allowable Max Price', minWidth: 230 }
+        { field: 'relativeAllowableMaxPrice', headerName: 'Relative Allowable Max Price', minWidth: 230 },
+        { field: 'notes', headerName: 'Notes', minWidth: 220 },
+        { field: 'disableDate', headerName: 'Disable Date', minWidth: 150 },
+        { field: 'status', headerName: 'Status', minWidth: 140 }
       ]
     },
     'price-cap': {
       title: 'GM Core Parameter MCKB Price Change CAP',
       gridElementId: 'mckPriceCapGrid',
       exportName: 'gm-core-parameter-mckb-price-change-cap.csv',
+      apiEndpoint: '/api/v1/price-change-cap/paginated',
+      updateEndpoint: '/api/v1/price-change-cap/updatePriceChangeCap',
+      exportEndpoint: '/api/v1/price-change-cap/export-csv',
+      paginationType: 'server',
       columns: [
+        { field: 'uniqueId', headerName: 'Unique ID', minWidth: 140 },
         { field: 'effectiveDate', headerName: 'Effective Date', minWidth: 150 },
         { field: 'terminationDate', headerName: 'Termination Date', minWidth: 170 },
         { field: 'itemCategory', headerName: 'Item Category', minWidth: 170 },
-        { field: 'mckBrandPriceChangeCap', headerName: 'MCK Brand Price Change Cap', minWidth: 230 }
+        { field: 'mckBrandPriceChangeCap', headerName: 'MCK Brand Price Change Cap', minWidth: 230 },
+        { field: 'notes', headerName: 'Notes', minWidth: 220 },
+        { field: 'disableDate', headerName: 'Disable Date', minWidth: 150 },
+        { field: 'status', headerName: 'Status', minWidth: 140 }
       ]
     },
     'brand-multiplier': {
       title: 'GM Core Output Brand Multiplier',
       gridElementId: 'mckBrandMultiplierGrid',
       exportName: 'gm-core-output-brand-multiplier.csv',
+      apiEndpoint: '/api/v1/brand-multiplier/paginated',
+      exportEndpoint: '/api/v1/brand-multiplier/export-csv',
+      paginationType: 'server',
       columns: [
         { field: 'uniqueId', headerName: 'Unique ID', minWidth: 140 },
         { field: 'mainLevel', headerName: 'Main Level', minWidth: 160 },
         { field: 'nbMainLevel', headerName: 'NB Main Level', minWidth: 170 },
         { field: 'effectiveDate', headerName: 'Effective Date', minWidth: 150 },
         { field: 'terminationDate', headerName: 'Termination Date', minWidth: 170 },
+        { field: 'brandMultiplier', headerName: 'Brand Multiplier', minWidth: 170 },
         { field: 'customerLevel', headerName: 'Customer Level', minWidth: 180 },
-        { field: 'customerAttribute', headerName: 'Customer Attribute', minWidth: 190 }
+        { field: 'customerAttr', headerName: 'Customer Attribute', minWidth: 190 },
+        { field: 'nbCustomerAttr', headerName: 'NB Customer Attribute', minWidth: 210 },
+        { field: 'itemLevel', headerName: 'Item Level', minWidth: 150 },
+        { field: 'itemAttr', headerName: 'Item Attribute', minWidth: 170 },
+        { field: 'nbItemAttr', headerName: 'NB Item Attribute', minWidth: 190 },
+        { field: 'qualityTier', headerName: 'Quality Tier', minWidth: 150 }
       ]
     }
   },
@@ -1133,6 +1158,9 @@ const MckBrandLogicPage = {
     if (
       [
         'uniqueId',
+        'mainLevel',
+        'nbMainLevel',
+        'brandMultiplier',
         'itemNum',
         'relativeProfitabilityWeighting',
         'relativeShareWeighting',
@@ -1385,10 +1413,11 @@ const MckBrandLogicPage = {
           }
 
           const payload = await response.json();
-          const rows = Array.isArray(payload?.content)
-            ? payload.content.map((row) => this.transformRowForTab(tabConfig, row))
+          const pagePayload = this.extractPagePayload(payload);
+          const rows = Array.isArray(pagePayload?.content)
+            ? pagePayload.content.map((row) => this.transformRowForTab(tabConfig, row))
             : [];
-          const totalRows = Number.isFinite(payload?.totalElements) ? payload.totalElements : rows.length;
+          const totalRows = Number.isFinite(pagePayload?.totalElements) ? pagePayload.totalElements : rows.length;
           this.syncNoRowsOverlay(params.api, rows.length);
           params.successCallback(rows, totalRows);
         } catch (error) {
@@ -1420,6 +1449,13 @@ const MckBrandLogicPage = {
     if (!normalizedPath) return this.apiBaseUrl;
     if (/^https?:\/\//i.test(normalizedPath)) return normalizedPath;
     return `${this.apiBaseUrl}${normalizedPath.startsWith('/') ? normalizedPath : `/${normalizedPath}`}`;
+  },
+
+  extractPagePayload(payload) {
+    if (payload?.data && typeof payload.data === 'object') {
+      return payload.data;
+    }
+    return payload;
   },
 
   appendFilterParams(urlParams, filterModel) {
@@ -1503,7 +1539,7 @@ const MckBrandLogicPage = {
       startsWith: 'startsWith',
       endsWith: 'endsWith',
       equals: 'equals',
-      notEqual: 'doesNotEqual',
+      notEqual: 'notEqual',
       greaterThan: 'greaterThan',
       lessThan: 'lessThan',
       greaterThanOrEqual: 'greaterThanOrEqual',
@@ -1513,19 +1549,29 @@ const MckBrandLogicPage = {
     return operatorMap[normalized] || null;
   },
 
+  formatDateForDisplay(value) {
+    const raw = String(value == null ? '' : value).trim();
+    if (!raw) return '';
+
+    const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ].*)?$/);
+    if (!isoMatch) return raw;
+
+    return `${isoMatch[2]}/${isoMatch[3]}/${isoMatch[1]}`;
+  },
+
   transformWeightingRow(row) {
     if (!row || typeof row !== 'object') return row;
 
     return {
       uniqueId: row.uniqueId ?? '',
-      effectiveDate: row.effectiveDate ?? '',
-      terminationDate: row.terminationDate ?? '',
+      effectiveDate: this.formatDateForDisplay(row.effectiveDate),
+      terminationDate: this.formatDateForDisplay(row.terminationDate),
       itemCategory: row.itemCategory ?? '',
       itemNum: row.itemNum ?? '',
       relativeProfitabilityWeighting: row.relativeProfitabilityWeighting ?? '',
       relativeShareWeighting: row.relativeShareWeighting ?? '',
       relativeQualityWeighting: row.relativeQualityWeighting ?? '',
-      disableDate: row.disableDate ?? '',
+      disableDate: this.formatDateForDisplay(row.disableDate),
       notes: row.notes ?? '',
       status: row.status ?? ''
     };
@@ -1536,9 +1582,9 @@ const MckBrandLogicPage = {
 
     return {
       uniqueId: row.uniqueId ?? '',
-      effectiveDate: row.effectiveDate ?? '',
-      disableDate: row.disableDate ?? '',
-      terminationDate: row.terminationDate ?? '',
+      effectiveDate: this.formatDateForDisplay(row.effectiveDate),
+      disableDate: this.formatDateForDisplay(row.disableDate),
+      terminationDate: this.formatDateForDisplay(row.terminationDate),
       itemSubCategory: row.itemSubCategory ?? '',
       itemNum: row.itemNum ?? '',
       qualityScore: row.qualityScore ?? '',
@@ -1548,8 +1594,65 @@ const MckBrandLogicPage = {
     };
   },
 
+  transformRelativeDeltaRow(row) {
+    if (!row || typeof row !== 'object') return row;
+
+    return {
+      uniqueId: row.uniqueId ?? '',
+      effectiveDate: this.formatDateForDisplay(row.effectiveDate),
+      terminationDate: this.formatDateForDisplay(row.terminationDate),
+      itemCategory: row.itemCategory ?? '',
+      relativeAllowableMinPrice: row.relativeAllowableMinPrice ?? '',
+      relativeAllowableMaxPrice: row.relativeAllowableMaxPrice ?? '',
+      notes: row.notes ?? '',
+      disableDate: this.formatDateForDisplay(row.disableDate),
+      status: row.status ?? ''
+    };
+  },
+
+  transformPriceCapRow(row) {
+    if (!row || typeof row !== 'object') return row;
+
+    return {
+      uniqueId: row.uniqueId ?? '',
+      effectiveDate: this.formatDateForDisplay(row.effectiveDate),
+      terminationDate: this.formatDateForDisplay(row.terminationDate),
+      itemCategory: row.itemCategory ?? '',
+      mckBrandPriceChangeCap: row.mckBrandPriceChangeCap ?? '',
+      notes: row.notes ?? '',
+      disableDate: this.formatDateForDisplay(row.disableDate),
+      status: row.status ?? ''
+    };
+  },
+
+  transformBrandMultiplierRow(row) {
+    if (!row || typeof row !== 'object') return row;
+
+    return {
+      uniqueId: row.uniqueId ?? '',
+      mainLevel: row.mainLevel ?? '',
+      nbMainLevel: row.nbMainLevel ?? '',
+      effectiveDate: this.formatDateForDisplay(row.effectiveDate),
+      terminationDate: this.formatDateForDisplay(row.terminationDate),
+      brandMultiplier: row.brandMultiplier ?? '',
+      customerLevel: row.customerLevel ?? '',
+      customerAttr: row.customerAttr ?? '',
+      nbCustomerAttr: row.nbCustomerAttr ?? '',
+      itemLevel: row.itemLevel ?? '',
+      itemAttr: row.itemAttr ?? '',
+      nbItemAttr: row.nbItemAttr ?? '',
+      qualityTier: row.qualityTier ?? ''
+    };
+  },
+
   transformRowForTab(tabConfig, row) {
     switch (tabConfig?.gridElementId) {
+      case 'mckBrandMultiplierGrid':
+        return this.transformBrandMultiplierRow(row);
+      case 'mckPriceCapGrid':
+        return this.transformPriceCapRow(row);
+      case 'mckRelativeDeltaGrid':
+        return this.transformRelativeDeltaRow(row);
       case 'mckQualityTierGrid':
         return this.transformQualityTierRow(row);
       case 'mckWeightingGrid':
