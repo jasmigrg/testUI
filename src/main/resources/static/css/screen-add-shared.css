@@ -54,6 +54,66 @@
   background: var(--color-primary-hover, #0b7884);
 }
 
+.screen-add-page .bulk-upload-batch-columns,
+.screen-add-page .bulk-upload-batch-row {
+  grid-template-columns:
+    1.1fr
+    1fr
+    0.95fr
+    0.95fr
+    0.85fr
+    0.8fr
+    0.95fr
+    1fr
+    1.1fr
+    0.8fr;
+  column-gap: 16px;
+}
+
+.screen-add-page .bulk-upload-batch-columns {
+  padding: 6px 4px 8px;
+}
+
+.screen-add-page .bulk-upload-batch-list {
+  min-height: 96px;
+  padding: 0 4px 6px;
+}
+
+.screen-add-page .bulk-upload-batch-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 12px 0 8px;
+}
+
+.screen-add-page .bulk-upload-batch-col,
+.screen-add-page .bulk-upload-batch-cell {
+  white-space: nowrap;
+}
+
+.screen-add-page .bulk-upload-batch-col:last-child,
+.screen-add-page .bulk-upload-batch-cell:last-child {
+  text-align: center;
+}
+
+.screen-add-page .bulk-upload-batch-collapse-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  color: #516274;
+  padding: 0;
+}
+
+.screen-add-page .bulk-upload-batch-collapse-btn:focus,
+.screen-add-page .bulk-upload-batch-collapse-btn:active {
+  outline: none;
+  box-shadow: none;
+}
+
+.screen-add-page .bulk-upload-batch-collapse-btn:focus-visible {
+  outline: 2px solid #9fd7ea;
+  outline-offset: 2px;
+}
+
 .screen-add-page .ag-theme-alpine .ag-row.ag-row-selected,
 .screen-add-page .ag-theme-alpine .ag-row.ag-row-selected.ag-row-hover {
   background-color: var(--ag-background-color, #fff) !important;

@@ -1,82 +1,3 @@
-class CustomerGpoInlineSaveCellEditor {
-  init(params) {
-    this.params = params;
-    this.eGui = document.createElement('div');
-    this.eGui.className = 'screen-add-inline-save-editor';
-
-    this.input = document.createElement('input');
-    this.input.type = 'text';
-    this.input.className = 'screen-add-inline-save-input';
-    this.input.value = params.value == null ? '' : String(params.value);
-    this.input.placeholder = '_';
-
-    this.saveBtn = document.createElement('button');
-    this.saveBtn.type = 'button';
-    this.saveBtn.className = 'screen-add-inline-save-btn';
-    this.saveBtn.textContent = 'Save';
-
-    this.onInputKeyDown = (event) => {
-      if (event.key === 'Enter') {
-        event.preventDefault();
-        event.stopPropagation();
-        this.onSaveClick();
-      }
-    };
-
-    this.onSaveMouseDown = (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-    };
-
-    this.onSaveClick = () => {
-      const pageRef = this.params.pageRef;
-      const field = this.params.column?.getColId?.() || this.params.colDef?.field;
-      const result = pageRef?.saveCellFromEditor
-        ? pageRef.saveCellFromEditor(this.params.node, field, this.input.value)
-        : { ok: true, value: this.input.value };
-
-      if (result?.ok) {
-        this.input.value = result.value == null ? '' : String(result.value);
-        this.params.stopEditing();
-      }
-    };
-
-    this.input.addEventListener('keydown', this.onInputKeyDown);
-    this.saveBtn.addEventListener('mousedown', this.onSaveMouseDown);
-    this.saveBtn.addEventListener('click', this.onSaveClick);
-
-    this.eGui.appendChild(this.input);
-    this.eGui.appendChild(this.saveBtn);
-  }
-
-  getGui() {
-    return this.eGui;
-  }
-
-  afterGuiAttached() {
-    if (this.input) {
-      this.input.focus();
-      this.input.select();
-    }
-  }
-
-  getValue() {
-    return this.input ? this.input.value : '';
-  }
-
-  destroy() {
-    if (this.input && this.onInputKeyDown) {
-      this.input.removeEventListener('keydown', this.onInputKeyDown);
-    }
-    if (this.saveBtn && this.onSaveMouseDown) {
-      this.saveBtn.removeEventListener('mousedown', this.onSaveMouseDown);
-    }
-    if (this.saveBtn && this.onSaveClick) {
-      this.saveBtn.removeEventListener('click', this.onSaveClick);
-    }
-  }
-}
-
 const CUSTOMER_GPO_FIELD_DEFS = [
   { field: 'uniqueKeyId', headerName: 'Unique Key ID', minWidth: 150, editable: false },
   { field: 'customerPriority', headerName: 'Customer Priority', minWidth: 160 },
@@ -259,9 +180,6 @@ const CustomerGpoAdjustmentsAddPage = {
           editable: (params) => this.isEditableCell(params),
           resizable: true
         },
-        components: {
-          customerGpoInlineSaveCellEditor: CustomerGpoInlineSaveCellEditor
-        }
       },
       columns: [
         {
@@ -336,12 +254,7 @@ const CustomerGpoAdjustmentsAddPage = {
       minWidth: column.minWidth,
       editable: column.editable !== false ? (params) => this.isEditableCell(params, column.field) : false,
       cellClassRules: this.validationCellRules(column.field),
-      tooltipValueGetter: (params) => this.getCellErrorTooltip(params, column.field),
-      cellEditorSelector: column.editable !== false
-        ? (params) => (this.shouldUseInlineSaveEditor(params, column.field)
-          ? { component: 'customerGpoInlineSaveCellEditor', params: { pageRef: this } }
-          : undefined)
-        : undefined
+      tooltipValueGetter: (params) => this.getCellErrorTooltip(params, column.field)
     };
 
     if (column.type === 'date') {
@@ -401,20 +314,20 @@ const CustomerGpoAdjustmentsAddPage = {
     return !this.isSuccessfulUploadRow(row);
   },
 
-  shouldUseInlineSaveEditor(params, field) {
-    return Boolean(params?.data?.isBackendRow)
-      && this.isErrorUploadRow(params.data)
-      && Array.isArray(params.data?.uploadErrors)
-      && params.data.uploadErrors.includes(field);
-  },
-
   initBatchSectionControls() {
     if (!this.batchSection || !this.batchCollapseBtn) return;
+    this.setBatchSectionCollapsed(true);
     this.batchCollapseBtn.addEventListener('click', () => {
-      const isCollapsed = this.batchSection.classList.toggle('is-collapsed');
-      this.batchCollapseBtn.setAttribute('aria-expanded', String(!isCollapsed));
-      this.batchCollapseBtn.textContent = isCollapsed ? '⌄' : '⌃';
+      const isCollapsed = !this.batchSection.classList.contains('is-collapsed');
+      this.setBatchSectionCollapsed(isCollapsed);
     });
+  },
+
+  setBatchSectionCollapsed(isCollapsed) {
+    if (!this.batchSection || !this.batchCollapseBtn) return;
+    this.batchSection.classList.toggle('is-collapsed', isCollapsed);
+    this.batchCollapseBtn.setAttribute('aria-expanded', String(!isCollapsed));
+    this.batchCollapseBtn.setAttribute('aria-label', isCollapsed ? 'Expand unfinished uploads' : 'Collapse unfinished uploads');
   },
 
   initBatchTable() {
@@ -562,8 +475,7 @@ const CustomerGpoAdjustmentsAddPage = {
   },
 
   getBulkUploadBaseUrl() {
-    const overrideBaseUrl = String(window.CUSTOMER_GPO_BULK_UPLOAD_BASE_URL || '').trim().replace(/\/$/, '');
-    const baseUrl = String(overrideBaseUrl || window.API_BASE_URL || '').replace(/\/$/, '');
+    const baseUrl = String(window.API_BASE_URL || '').trim().replace(/\/$/, '');
     return baseUrl
       ? `${baseUrl}/api/foundational/api/bulk-upload`
       : '/api/foundational/api/bulk-upload';
@@ -1311,25 +1223,6 @@ const CustomerGpoAdjustmentsAddPage = {
       return;
     }
     this.syncUploadedRowsFromGrid(true);
-  },
-
-  saveCellFromEditor(rowNode, field, nextValue) {
-    if (!rowNode?.data || !field) return { ok: false, value: nextValue };
-    const normalized = this.normalizeRow({
-      ...rowNode.data,
-      [field]: nextValue
-    });
-    const nextRowState = this.buildEditedRowState(normalized, field);
-    Object.assign(rowNode.data, nextRowState);
-
-    if (this.gridApi?.refreshCells) {
-      this.gridApi.refreshCells({ rowNodes: [rowNode], force: true });
-    }
-
-    if (typeof this.gridApi?.deselectNode === 'function') this.gridApi.deselectNode(rowNode);
-    this.applyUploadFilter();
-    this.showInfo('Cell updated. Select corrected rows from All and submit.', 'success');
-    return { ok: true, value: nextRowState[field] };
   },
 
   buildEditedRowState(row, editedField) {

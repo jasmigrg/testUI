@@ -126,6 +126,9 @@
 }
 
 .bulk-upload-batch-collapse-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: none;
   background: transparent;
   color: #435466;
@@ -133,6 +136,16 @@
   line-height: 1;
   cursor: pointer;
   padding: 2px 4px;
+}
+
+.bulk-upload-batch-chevron {
+  width: 18px;
+  height: 18px;
+  transition: transform 160ms ease;
+}
+
+.bulk-upload-batch-collapse-btn[aria-expanded="true"] .bulk-upload-batch-chevron {
+  transform: rotate(180deg);
 }
 
 .bulk-upload-batch-grid {

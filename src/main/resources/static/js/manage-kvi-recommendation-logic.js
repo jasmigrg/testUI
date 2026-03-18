@@ -209,6 +209,10 @@ const KviRecommendationLogicPage = {
     return container;
   },
 
+  showFilterValidationMessage(message) {
+    this.showInfo(String(message || '').trim(), 'error');
+  },
+
   activateTab(tabKey) {
     if (!tabKey || tabKey === this.activeTab) return;
 
@@ -242,7 +246,9 @@ const KviRecommendationLogicPage = {
   },
 
   setGridEmptyState(tabKey, mode = 'hidden') {
-    return;
+    const emptyState = this.emptyStates?.[tabKey];
+    if (!emptyState) return;
+    emptyState.hidden = mode !== 'empty';
   },
 
   syncToolbarForTab() {
@@ -382,6 +388,20 @@ const KviRecommendationLogicPage = {
         components: {
           gtPageSelectHeader: GtPageSelectHeader
         },
+        localeText: {
+          equals: 'Equals',
+          notEqual: 'Does not equal',
+          greaterThan: 'Greater than',
+          lessThan: 'Less than',
+          after: 'Greater than',
+          before: 'Less than',
+          greaterThanOrEqual: 'Greater than or equal',
+          lessThanOrEqual: 'Less than or equal',
+          contains: 'Contains',
+          notContains: 'Does not contain',
+          startsWith: 'Begins with',
+          endsWith: 'Ends with'
+        },
         defaultColDef: {
           sortable: true,
           unSortIcon: true,
@@ -389,7 +409,9 @@ const KviRecommendationLogicPage = {
           autoHeaderHeight: true,
           filterParams: {
             buttons: ['apply', 'reset'],
-            closeOnApply: true
+            closeOnApply: true,
+            maxNumConditions: 1,
+            numAlwaysVisibleConditions: 1
           }
         }
       },
@@ -402,6 +424,10 @@ const KviRecommendationLogicPage = {
       element: gridElement,
       gridElementId: tabConfig.gridElementId
     };
+
+    if (gridApi) {
+      gridApi.applyPendingFloatingFilters = () => this.applyPendingFilters();
+    }
 
     if (
       !this.gridManagerBootstrapped &&
@@ -466,7 +492,7 @@ const KviRecommendationLogicPage = {
       { field: 'terminationDate', headerName: 'Termination Date', minWidth: 170 },
       { field: 'prcaMinThreshold', headerName: 'PRCA Min Threshold', minWidth: 190 },
       { field: 'dedupMethod', headerName: 'Dedup Method', minWidth: 170 }
-    ];
+    ].map((column) => this.buildFilterableColumn(column));
   },
 
   outputColumns() {
@@ -486,7 +512,7 @@ const KviRecommendationLogicPage = {
       { field: 'finalBaseMargin', headerName: 'Final Base Margin', minWidth: 170 },
       { field: 'finalTargetMargin', headerName: 'Final Target Margin', minWidth: 180 },
       { field: 'finalPremiumMargin', headerName: 'Final Premium Margin', minWidth: 190 }
-    ];
+    ].map((column) => this.buildFilterableColumn(column));
   },
 
   parameterSortFieldMap() {
@@ -580,6 +606,56 @@ const KviRecommendationLogicPage = {
     return trimmed;
   },
 
+  applyPendingFilters() {
+    const activeGrid = this.getActiveGrid();
+    const gridApi = activeGrid?.api;
+    if (!gridApi || typeof gridApi.getFilterModel !== 'function' || typeof gridApi.setFilterModel !== 'function') {
+      return;
+    }
+
+    const nextModel = { ...(gridApi.getFilterModel() || {}) };
+    const pendingFilters = Array.isArray(gridApi.__manualFloatingFilters)
+      ? [...gridApi.__manualFloatingFilters]
+      : [];
+
+    for (const floatingFilter of pendingFilters) {
+      const field = String(
+        floatingFilter?.input?.dataset?.colId ||
+          floatingFilter?.params?.column?.getColId?.() ||
+          ''
+      ).trim();
+
+      if (!field || field === 'select') continue;
+
+      const rawInput = String(floatingFilter?.input?.value || '').trim();
+      const builtModel = this.buildManualFilterModel(field, rawInput);
+
+      if (builtModel?.isInvalid) {
+        this.showFilterValidationMessage(`${field}: ${builtModel.invalidReason}`);
+        return;
+      }
+
+      if (!builtModel) {
+        delete nextModel[field];
+        continue;
+      }
+
+      nextModel[field] = builtModel;
+    }
+
+    const previousSerialized = JSON.stringify(gridApi.getFilterModel() || {});
+    const nextSerialized = JSON.stringify(nextModel);
+
+    if (previousSerialized === nextSerialized) {
+      if (typeof gridApi.refreshInfiniteCache === 'function') {
+        gridApi.refreshInfiniteCache();
+      }
+      return;
+    }
+
+    gridApi.setFilterModel(nextModel);
+  },
+
   parseInlineFilterExpression(rawValue, defaultType) {
     const raw = String(rawValue ?? '').trim();
     if (!raw) return { value: '', type: defaultType || 'contains' };
@@ -600,6 +676,71 @@ const KviRecommendationLogicPage = {
     else if (token === '!=' || token === '<>') type = 'notEqual';
 
     return { value, type };
+  },
+
+  buildManualFilterModel(field, rawInput) {
+    if (!rawInput) return null;
+
+    const kind = this.getFieldFilterKind(field);
+    const parsed = this.parseInlineFilterExpression(rawInput, kind === 'text' ? 'contains' : 'equals');
+    const value = String(parsed.value || '').trim();
+
+    if (!value) {
+      return {
+        isInvalid: true,
+        invalidReason: 'Enter a value after the operator.'
+      };
+    }
+
+    if (
+      kind === 'text' &&
+      ['greaterThan', 'lessThan', 'greaterThanOrEqual', 'lessThanOrEqual'].includes(parsed.type)
+    ) {
+      return {
+        isInvalid: true,
+        invalidReason: 'Text filters support contains, =, and != only.'
+      };
+    }
+
+    if (kind === 'date') {
+      const apiDate = this.toApiDate(value);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(apiDate)) {
+        return {
+          isInvalid: true,
+          invalidReason: 'Enter a valid date in MM/DD/YYYY format.'
+        };
+      }
+      return {
+        filterType: 'date',
+        type: parsed.type || 'equals',
+        dateFrom: apiDate,
+        dateTo: null,
+        rawInput
+      };
+    }
+
+    if (kind === 'number') {
+      const normalizedNumber = value.replace(/[%,$\s]/g, '').replace(/,/g, '');
+      if (normalizedNumber === '' || Number.isNaN(Number(normalizedNumber))) {
+        return {
+          isInvalid: true,
+          invalidReason: 'Enter a valid number.'
+        };
+      }
+      return {
+        filterType: 'number',
+        type: parsed.type || 'equals',
+        filter: normalizedNumber,
+        rawInput
+      };
+    }
+
+    return {
+      filterType: 'text',
+      type: parsed.type || 'contains',
+      filter: value,
+      rawInput
+    };
   },
 
   mapOperatorToApi(operator, field) {
@@ -639,6 +780,89 @@ const KviRecommendationLogicPage = {
       ...row,
       effectiveDate: this.formatIsoDate(row.effectiveDate),
       terminationDate: this.formatIsoDate(row.terminationDate)
+    };
+  },
+
+  getFieldFilterKind(field) {
+    const normalizedField = String(field || '').trim();
+
+    if (['effectiveDate', 'terminationDate'].includes(normalizedField)) {
+      return 'date';
+    }
+
+    if (
+      [
+        'prcaMinThreshold',
+        'itemNum',
+        'finalBaseMargin',
+        'finalTargetMargin',
+        'finalPremiumMargin'
+      ].includes(normalizedField)
+    ) {
+      return 'number';
+    }
+
+    return 'text';
+  },
+
+  buildFilterableColumn(column) {
+    const field = String(column?.field || '').trim();
+    if (!field) return column;
+
+    const kind = this.getFieldFilterKind(field);
+
+    if (kind === 'date') {
+      return {
+        ...column,
+        filter: 'agDateColumnFilter',
+        filterParams: {
+          buttons: ['apply', 'reset'],
+          closeOnApply: true,
+          maxNumConditions: 1,
+          numAlwaysVisibleConditions: 1,
+          filterOptions: [
+            'equals',
+            'notEqual',
+            'greaterThan',
+            'lessThan',
+            'greaterThanOrEqual',
+            'lessThanOrEqual'
+          ]
+        }
+      };
+    }
+
+    if (kind === 'number') {
+      return {
+        ...column,
+        filter: 'agNumberColumnFilter',
+        filterParams: {
+          buttons: ['apply', 'reset'],
+          closeOnApply: true,
+          maxNumConditions: 1,
+          numAlwaysVisibleConditions: 1,
+          filterOptions: [
+            'equals',
+            'notEqual',
+            'greaterThan',
+            'lessThan',
+            'greaterThanOrEqual',
+            'lessThanOrEqual'
+          ]
+        }
+      };
+    }
+
+    return {
+      ...column,
+      filter: 'agTextColumnFilter',
+      filterParams: {
+        buttons: ['apply', 'reset'],
+        closeOnApply: true,
+        maxNumConditions: 1,
+        numAlwaysVisibleConditions: 1,
+        filterOptions: ['contains', 'equals', 'notEqual']
+      }
     };
   },
 
@@ -698,6 +922,11 @@ const KviRecommendationLogicPage = {
               : (rows.length < pageSize ? params.startRow + rows.length : -1);
 
             params.successCallback(rows, lastRow);
+            this.syncNoRowsOverlay(
+              params.api,
+              tabConfig.gridElementId === 'kviParameterGrid' ? 'parameter' : 'output',
+              rows.length
+            );
             requestAnimationFrame(() => {
               this.setGridEmptyState(
                 tabConfig.gridElementId === 'kviParameterGrid' ? 'parameter' : 'output',
@@ -708,6 +937,11 @@ const KviRecommendationLogicPage = {
           .catch((error) => {
             console.error('KVI datasource fetch failed:', error);
             params.failCallback();
+            this.syncNoRowsOverlay(
+              params.api,
+              tabConfig.gridElementId === 'kviParameterGrid' ? 'parameter' : 'output',
+              0
+            );
             requestAnimationFrame(() => {
               this.setGridEmptyState(
                 tabConfig.gridElementId === 'kviParameterGrid' ? 'parameter' : 'output',
@@ -717,6 +951,18 @@ const KviRecommendationLogicPage = {
           });
       }
     };
+  },
+
+  syncNoRowsOverlay(gridApi, tabKey, rowCount) {
+    this.setGridEmptyState(tabKey, rowCount > 0 ? 'hidden' : 'empty');
+    if (!gridApi) return;
+    if (rowCount > 0) {
+      if (typeof gridApi.hideOverlay === 'function') gridApi.hideOverlay();
+      return;
+    }
+    if (typeof gridApi.showNoRowsOverlay === 'function') {
+      gridApi.showNoRowsOverlay();
+    }
   },
 
   extractRowsFromResponse(responseBody) {

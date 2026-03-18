@@ -15,14 +15,12 @@
   <link rel="stylesheet" href="${ctx}/css/screen-add-shared.css">
   <link rel="stylesheet" href="${ctx}/css/bulk-upload-modal.css">
   <link rel="stylesheet" href="${ctx}/css/bulk-upload-flow.css">
-  <link rel="stylesheet" href="${ctx}/css/customer-gpo-adjustments-add.css">
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.1/styles/ag-grid.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.1/styles/ag-theme-alpine.css">
 
   <script>
     window.API_BASE_URL = window.API_BASE_URL || '${(apiBaseUrl!'')?js_string}';
-    window.CUSTOMER_GPO_BULK_UPLOAD_BASE_URL = window.CUSTOMER_GPO_BULK_UPLOAD_BASE_URL || '${(customerGpoBulkUploadBaseUrl!'')?js_string}';
     window.GRID_PREF_TEST_USER_ID = window.GRID_PREF_TEST_USER_ID || '${(userId!'test-user')?js_string}';
     window.CUSTOMER_GPO_ADJUSTMENTS_LIST_PAGE_URL = window.CUSTOMER_GPO_ADJUSTMENTS_LIST_PAGE_URL || '${ctx}/adjustments';
     window.CUSTOMER_GPO_ADJUSTMENTS_ENTITY_NAME = window.CUSTOMER_GPO_ADJUSTMENTS_ENTITY_NAME || 'customer-gpo-adjustment';
@@ -79,13 +77,17 @@
           <@gridViewActions.render defaultDensity="compact" showDownload=false />
         </@actionToolbar.render>
 
-        <section class="bulk-upload-batch-section" aria-label="Customer GPO adjustment jobs">
+        <section class="bulk-upload-batch-section is-collapsed" aria-label="Customer GPO adjustment jobs">
           <div class="bulk-upload-batch-info-row">
             <div class="bulk-upload-batch-info-left">
               <span class="bulk-upload-batch-info-icon" aria-hidden="true">i</span>
               <span class="bulk-upload-batch-info-text">You Have [0] Unfinished Uploads.</span>
             </div>
-            <button type="button" class="bulk-upload-batch-collapse-btn" id="bulkUploadBatchCollapseBtn" aria-label="Collapse unfinished uploads" aria-expanded="true">⌃</button>
+            <button type="button" class="bulk-upload-batch-collapse-btn" id="bulkUploadBatchCollapseBtn" aria-label="Expand unfinished uploads" aria-expanded="false">
+              <svg viewBox="0 0 20 20" aria-hidden="true" class="bulk-upload-batch-chevron">
+                <path d="M5 7.5L10 12.5L15 7.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </button>
           </div>
           <div id="bulkUploadBatchGrid" class="bulk-upload-batch-grid">
             <div class="bulk-upload-batch-columns" aria-hidden="true">
