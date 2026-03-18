@@ -292,8 +292,6 @@ const MckBrandLogicPage = {
   gridManagerBootstrapped: false,
   gridManagerInitScheduled: false,
   apiBaseUrl: '',
-  updateScoringWeightingsEndpoint: '/api/v1/scoring-weightings/updateScoringWeightings',
-  exportScoringWeightingsEndpoint: '/api/v1/scoring-weightings/export-csv',
   pendingDisableIds: [],
   pendingTerminationUpdateIds: [],
   tabs: {
@@ -302,6 +300,8 @@ const MckBrandLogicPage = {
       gridElementId: 'mckWeightingGrid',
       exportName: 'gm-core-mckb-price-scoring-weighting.csv',
       apiEndpoint: '/api/v1/scoring-weightings/paginated',
+      updateEndpoint: '/api/v1/scoring-weightings/updateScoringWeightings',
+      exportEndpoint: '/api/v1/scoring-weightings/export-csv',
       paginationType: 'server',
       columns: [
         { field: 'uniqueId', headerName: 'Unique ID', minWidth: 140 },
@@ -321,13 +321,21 @@ const MckBrandLogicPage = {
       title: 'GM Core Paramter MCKB Quality Tiers',
       gridElementId: 'mckQualityTierGrid',
       exportName: 'gm-core-paramter-mckb-quality-tiers.csv',
+      apiEndpoint: '/api/v1/quality-tiers/paginated',
+      updateEndpoint: '/api/v1/quality-tiers/updateQualityTiers',
+      exportEndpoint: '/api/v1/quality-tiers/export-csv',
+      paginationType: 'server',
       columns: [
+        { field: 'uniqueId', headerName: 'Unique ID', minWidth: 140 },
         { field: 'effectiveDate', headerName: 'Effective Date', minWidth: 150 },
+        { field: 'disableDate', headerName: 'Disable Date', minWidth: 150 },
         { field: 'terminationDate', headerName: 'Termination Date', minWidth: 170 },
-        { field: 'itemCategory', headerName: 'Item Category', minWidth: 170 },
+        { field: 'itemSubCategory', headerName: 'Item Sub Category', minWidth: 190 },
         { field: 'itemNum', headerName: 'Item NUM', minWidth: 150 },
         { field: 'qualityScore', headerName: 'Quality Score', minWidth: 170 },
-        { field: 'qualityTier', headerName: 'Quality Tier', minWidth: 170 }
+        { field: 'qualityTier', headerName: 'Quality Tier', minWidth: 170 },
+        { field: 'notes', headerName: 'Notes', minWidth: 220 },
+        { field: 'status', headerName: 'Status', minWidth: 140 }
       ]
     },
     'relative-delta': {
@@ -428,7 +436,12 @@ const MckBrandLogicPage = {
   },
 
   async patchGridAction(payload) {
-    const response = await fetch(this.resolveApiUrl(this.updateScoringWeightingsEndpoint), {
+    const activeTabConfig = this.tabs[this.activeTab];
+    if (!activeTabConfig?.updateEndpoint) {
+      throw new Error('Update action is not configured for this tab.');
+    }
+
+    const response = await fetch(this.resolveApiUrl(activeTabConfig.updateEndpoint), {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       credentials: 'same-origin',
@@ -694,7 +707,8 @@ const MckBrandLogicPage = {
   },
 
   handleDisableAction() {
-    if (this.activeTab !== 'weighting') {
+    const activeTabConfig = this.tabs[this.activeTab];
+    if (!activeTabConfig?.updateEndpoint) {
       this.showInfo('Disable is not configured for this tab yet.', 'warning');
       return;
     }
@@ -711,7 +725,8 @@ const MckBrandLogicPage = {
   },
 
   handleUpdateTerminationDateAction() {
-    if (this.activeTab !== 'weighting') {
+    const activeTabConfig = this.tabs[this.activeTab];
+    if (!activeTabConfig?.updateEndpoint) {
       this.showInfo('Update Termination Date is not configured for this tab yet.', 'warning');
       return;
     }
@@ -921,7 +936,8 @@ const MckBrandLogicPage = {
   },
 
   async handleDownloadAction() {
-    if (this.activeTab !== 'weighting') {
+    const activeTabConfig = this.tabs[this.activeTab];
+    if (!activeTabConfig?.exportEndpoint) {
       this.showInfo('Download is not configured for this tab yet.', 'warning');
       return;
     }
@@ -933,7 +949,7 @@ const MckBrandLogicPage = {
     };
 
     try {
-      const response = await fetch(this.resolveApiUrl(this.exportScoringWeightingsEndpoint), {
+      const response = await fetch(this.resolveApiUrl(activeTabConfig.exportEndpoint), {
         method: 'POST',
         headers: {
           Accept: '*/*',
@@ -949,7 +965,7 @@ const MckBrandLogicPage = {
       }
 
       const blob = await response.blob();
-      const fileName = this.getDownloadFileNameFromResponse(response) || this.tabs.weighting.exportName;
+      const fileName = this.getDownloadFileNameFromResponse(response) || activeTabConfig.exportName;
       this.triggerFileDownload(blob, fileName);
     } catch (error) {
       console.error('Weighting export failed:', error);
@@ -1352,7 +1368,7 @@ const MckBrandLogicPage = {
         const urlParams = new URLSearchParams({
           page: String(page),
           size: String(pageSize),
-          sortBy: sortModel?.colId || 'effectiveDate',
+          sortBy: sortModel?.colId || 'uniqueId',
           sortDirection: String(sortModel?.sort || 'asc').toUpperCase()
         });
         this.appendFilterParams(urlParams, params.filterModel);
@@ -1370,7 +1386,7 @@ const MckBrandLogicPage = {
 
           const payload = await response.json();
           const rows = Array.isArray(payload?.content)
-            ? payload.content.map((row) => this.transformWeightingRow(row))
+            ? payload.content.map((row) => this.transformRowForTab(tabConfig, row))
             : [];
           const totalRows = Number.isFinite(payload?.totalElements) ? payload.totalElements : rows.length;
           this.syncNoRowsOverlay(params.api, rows.length);
@@ -1513,6 +1529,33 @@ const MckBrandLogicPage = {
       notes: row.notes ?? '',
       status: row.status ?? ''
     };
+  },
+
+  transformQualityTierRow(row) {
+    if (!row || typeof row !== 'object') return row;
+
+    return {
+      uniqueId: row.uniqueId ?? '',
+      effectiveDate: row.effectiveDate ?? '',
+      disableDate: row.disableDate ?? '',
+      terminationDate: row.terminationDate ?? '',
+      itemSubCategory: row.itemSubCategory ?? '',
+      itemNum: row.itemNum ?? '',
+      qualityScore: row.qualityScore ?? '',
+      qualityTier: row.qualityTier ?? '',
+      notes: row.notes ?? '',
+      status: row.status ?? ''
+    };
+  },
+
+  transformRowForTab(tabConfig, row) {
+    switch (tabConfig?.gridElementId) {
+      case 'mckQualityTierGrid':
+        return this.transformQualityTierRow(row);
+      case 'mckWeightingGrid':
+      default:
+        return this.transformWeightingRow(row);
+    }
   },
 
   buildFilterableColumn(column) {
