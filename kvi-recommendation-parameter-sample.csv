@@ -1,0 +1,4 @@
+effectiveDate,terminationDate,prcaMinThreshold,dedupMethod
+1/1/2024,12/31/2024,85,STANDARD
+2/1/2024,12/31/2024,90,ENHANCED
+3/1/2024,12/31/2024,80,BASIC
