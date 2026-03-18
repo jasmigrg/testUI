@@ -941,6 +941,16 @@ const MckBrandLogicPage = {
       nextModel[field] = builtModel;
     }
 
+    const previousSerialized = JSON.stringify(gridApi.getFilterModel() || {});
+    const nextSerialized = JSON.stringify(nextModel);
+
+    if (previousSerialized === nextSerialized) {
+      if (typeof gridApi.refreshInfiniteCache === 'function') {
+        gridApi.refreshInfiniteCache();
+      }
+      return;
+    }
+
     gridApi.setFilterModel(nextModel);
   },
 
@@ -950,10 +960,22 @@ const MckBrandLogicPage = {
     const kind = this.getFieldFilterKind(field);
 
     if (kind === 'text') {
+      const parsedInput = DynamicGrid.parseTextFilterInput(rawInput, 'contains');
+      if (parsedInput.isInvalid) {
+        return parsedInput;
+      }
+
+      const textOperatorMap = {
+        contains: 'contains',
+        equals: 'equals',
+        notEqual: 'notEqual'
+      };
+      const operator = textOperatorMap[parsedInput.operator] || 'contains';
+
       return {
         filterType: 'text',
-        type: 'contains',
-        filter: rawInput,
+        type: operator,
+        filter: String(parsedInput.value || '').trim(),
         rawInput
       };
     }
