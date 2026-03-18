@@ -86,6 +86,87 @@ class GtPageSelectHeader {
   }
 }
 
+const MckFilterUtils = {
+  supportedTextFilterOperators: ['!=', '<>', '>=', '<=', '>', '<', '='],
+
+  showFilterValidationMessage(message) {
+    if (window.PageToast?.show) {
+      let container = document.getElementById('mckBrandLogicPageToastLayer');
+      if (!container) {
+        container = document.createElement('div');
+        container.id = 'mckBrandLogicPageToastLayer';
+        container.className = 'app-page-toast-layer';
+        document.body.appendChild(container);
+      }
+
+      window.PageToast.show({
+        container,
+        type: 'error',
+        title: 'Action required',
+        subtitle: String(message || '').trim(),
+        icon: '!',
+        autoHideMs: 2800
+      });
+      return;
+    }
+
+    console.warn(message);
+  },
+
+  parseTextFilterInput(rawValue, fallbackOperator = 'contains') {
+    if (typeof rawValue !== 'string') {
+      return { value: rawValue, operator: fallbackOperator, isInvalid: false };
+    }
+
+    const trimmed = rawValue.trim();
+    const lowerValue = trimmed.toLowerCase();
+
+    if (lowerValue === 'blank') {
+      return { value: '', operator: 'blank', isInvalid: false };
+    }
+
+    if (lowerValue === 'notblank') {
+      return { value: '', operator: 'notBlank', isInvalid: false };
+    }
+
+    const startsWithOperatorLikeSymbol = /^[!<>=@]/.test(trimmed);
+    const matchedOperator = this.supportedTextFilterOperators.find((op) => trimmed.startsWith(op));
+
+    if (!matchedOperator) {
+      if (startsWithOperatorLikeSymbol) {
+        return {
+          value: rawValue,
+          operator: fallbackOperator,
+          isInvalid: true,
+          invalidReason: 'Invalid operator. Use =, !=, <>, >, <, >=, <=, blank, or notblank.'
+        };
+      }
+
+      return { value: rawValue, operator: fallbackOperator, isInvalid: false };
+    }
+
+    const value = trimmed.substring(matchedOperator.length).trim();
+    if (/^[!<>=@]/.test(value)) {
+      return {
+        value: rawValue,
+        operator: fallbackOperator,
+        isInvalid: true,
+        invalidReason: 'Invalid operator format. Use =, !=, <>, >, <, >=, <= followed by a value.'
+      };
+    }
+
+    let operator = fallbackOperator;
+    if (matchedOperator === '!=' || matchedOperator === '<>') operator = 'notEqual';
+    else if (matchedOperator === '>') operator = 'greaterThan';
+    else if (matchedOperator === '<') operator = 'lessThan';
+    else if (matchedOperator === '>=') operator = 'greaterThanOrEqual';
+    else if (matchedOperator === '<=') operator = 'lessThanOrEqual';
+    else if (matchedOperator === '=') operator = 'equals';
+
+    return { value, operator, isInvalid: false };
+  }
+};
+
 class MckManualFloatingFilter {
   init(params) {
     this.params = params;
@@ -153,11 +234,11 @@ class MckManualFloatingFilter {
 
     const fallbackOperator = this.isNumericOrDateFilter() ? 'equals' : 'contains';
     const parsedInput = this.isNumericOrDateFilter()
-      ? DynamicGrid.parseTextFilterInput(value, fallbackOperator)
+      ? MckFilterUtils.parseTextFilterInput(value, fallbackOperator)
       : { value, operator: fallbackOperator, isInvalid: false };
 
     if (parsedInput.isInvalid) {
-      DynamicGrid.showFilterValidationMessage(parsedInput.invalidReason);
+      MckFilterUtils.showFilterValidationMessage(parsedInput.invalidReason);
       return;
     }
 
@@ -929,7 +1010,7 @@ const MckBrandLogicPage = {
       const builtModel = this.buildManualFilterModel(field, rawInput);
 
       if (builtModel?.isInvalid) {
-        DynamicGrid.showFilterValidationMessage(`${field}: ${builtModel.invalidReason}`);
+        MckFilterUtils.showFilterValidationMessage(`${field}: ${builtModel.invalidReason}`);
         return;
       }
 
@@ -960,7 +1041,7 @@ const MckBrandLogicPage = {
     const kind = this.getFieldFilterKind(field);
 
     if (kind === 'text') {
-      const parsedInput = DynamicGrid.parseTextFilterInput(rawInput, 'contains');
+      const parsedInput = MckFilterUtils.parseTextFilterInput(rawInput, 'contains');
       if (parsedInput.isInvalid) {
         return parsedInput;
       }
@@ -980,7 +1061,7 @@ const MckBrandLogicPage = {
       };
     }
 
-    const parsedInput = DynamicGrid.parseTextFilterInput(rawInput, 'equals');
+    const parsedInput = MckFilterUtils.parseTextFilterInput(rawInput, 'equals');
     if (parsedInput.isInvalid) {
       return parsedInput;
     }
