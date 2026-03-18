@@ -428,16 +428,24 @@ const KviRecommendationLogicPage = {
     const activeGrid = this.getActiveGrid();
     if (!activeGrid?.api) return;
 
-    if (typeof activeGrid.api.setFilterModel === 'function') {
+    const currentFilterModel =
+      typeof activeGrid.api.getFilterModel === 'function' ? activeGrid.api.getFilterModel() || {} : {};
+    const hasFilters = Object.keys(currentFilterModel).length > 0;
+    const currentSortModel =
+      typeof activeGrid.api.getSortModel === 'function' ? activeGrid.api.getSortModel() || [] : [];
+    const hasSort = Array.isArray(currentSortModel) && currentSortModel.length > 0;
+    const currentPage =
+      typeof activeGrid.api.paginationGetCurrentPage === 'function'
+        ? activeGrid.api.paginationGetCurrentPage()
+        : 0;
+
+    if (hasFilters && typeof activeGrid.api.setFilterModel === 'function') {
       activeGrid.api.setFilterModel(null);
     }
-    if (typeof activeGrid.api.setSortModel === 'function') {
+    if (!hasFilters && hasSort && typeof activeGrid.api.setSortModel === 'function') {
       activeGrid.api.setSortModel(null);
     }
-    if (typeof activeGrid.api.onFilterChanged === 'function') {
-      activeGrid.api.onFilterChanged();
-    }
-    if (typeof activeGrid.api.paginationGoToFirstPage === 'function') {
+    if (!hasFilters && !hasSort && currentPage > 0 && typeof activeGrid.api.paginationGoToFirstPage === 'function') {
       activeGrid.api.paginationGoToFirstPage();
     }
     if (typeof activeGrid.api.deselectAll === 'function') {
@@ -908,7 +916,9 @@ const KviRecommendationLogicPage = {
     if (
       [
         'prcaMinThreshold',
+        'prcaNum',
         'itemNum',
+        'likeItemGroup',
         'finalBaseMargin',
         'finalTargetMargin',
         'finalPremiumMargin'
