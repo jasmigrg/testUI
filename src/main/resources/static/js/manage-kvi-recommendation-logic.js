@@ -85,6 +85,116 @@ class GtPageSelectHeader {
   }
 }
 
+class KviManualFloatingFilter {
+  init(params) {
+    this.params = params;
+    this.currentValue = '';
+    this.gui = document.createElement('div');
+    this.gui.className = 'mfi-manual-floating-filter';
+
+    this.input = document.createElement('input');
+    this.input.type = 'text';
+    this.input.className = 'mfi-floating-filter-input';
+    this.input.setAttribute(
+      'aria-label',
+      `${params.column.getColDef().headerName || params.column.getColId()} filter`
+    );
+    this.input.dataset.colId = params.column.getColId();
+
+    this.onKeyDown = (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        if (this.params?.api && typeof this.params.api.applyPendingFloatingFilters === 'function') {
+          this.params.api.applyPendingFloatingFilters();
+        } else {
+          this.apply();
+        }
+      }
+    };
+
+    this.input.addEventListener('keydown', this.onKeyDown);
+    this.gui.appendChild(this.input);
+
+    if (!params.api.__manualFloatingFilters) {
+      params.api.__manualFloatingFilters = [];
+    }
+    params.api.__manualFloatingFilters.push(this);
+  }
+
+  getGui() {
+    return this.gui;
+  }
+
+  onParentModelChanged(parentModel) {
+    let next = '';
+    if (parentModel && parentModel.rawInput != null) {
+      next = String(parentModel.rawInput);
+    } else if (parentModel && parentModel.dateFrom != null && this.isNumericOrDateFilter()) {
+      next = this.rebuildOperatorInput(
+        parentModel.type,
+        this.normalizeDateValueForDisplay(parentModel.dateFrom)
+      );
+    } else if (parentModel && parentModel.filter != null && this.isNumericOrDateFilter()) {
+      next = this.rebuildOperatorInput(parentModel.type, parentModel.filter);
+    } else if (parentModel && parentModel.filter != null) {
+      next = String(parentModel.filter);
+    }
+    this.currentValue = next;
+    if (this.input && this.input.value !== next) {
+      this.input.value = next;
+    }
+  }
+
+  apply() {
+    if (!this.input) return;
+    const value = this.input.value.trim();
+    this.currentValue = value;
+    const fallbackOperator = this.isNumericOrDateFilter() ? 'equals' : 'contains';
+    const parsedInput = KviRecommendationLogicPage.parseInlineFilterExpression(value, fallbackOperator);
+
+    this.params.parentFilterInstance((instance) => {
+      if (!instance) return;
+      instance.onFloatingFilterChanged(parsedInput.type, parsedInput.value || null);
+    });
+  }
+
+  isNumericOrDateFilter() {
+    const filter = this.params?.column?.getColDef?.()?.filter;
+    return filter === 'agNumberColumnFilter' || filter === 'agDateColumnFilter';
+  }
+
+  rebuildOperatorInput(type, value) {
+    const prefixMap = {
+      equals: '',
+      notEqual: '!=',
+      greaterThan: '>',
+      lessThan: '<',
+      greaterThanOrEqual: '>=',
+      lessThanOrEqual: '<='
+    };
+    const prefix = prefixMap[String(type || '').trim()] ?? '';
+    return `${prefix}${value == null ? '' : String(value)}`;
+  }
+
+  normalizeDateValueForDisplay(value) {
+    const raw = String(value == null ? '' : value).trim();
+    const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ].*)?$/);
+    if (!isoMatch) return raw;
+    return `${isoMatch[2]}/${isoMatch[3]}/${isoMatch[1]}`;
+  }
+
+  destroy() {
+    if (this.input && this.onKeyDown) {
+      this.input.removeEventListener('keydown', this.onKeyDown);
+    }
+    const list = this.params?.api?.__manualFloatingFilters;
+    if (Array.isArray(list)) {
+      const idx = list.indexOf(this);
+      if (idx >= 0) list.splice(idx, 1);
+    }
+  }
+}
+
 const KviRecommendationLogicPage = {
   activeTab: 'parameter',
   grids: {},
@@ -386,7 +496,8 @@ const KviRecommendationLogicPage = {
             '<span class="gt-sort-icon gt-sort-icon--desc" aria-hidden="true"><svg viewBox="0 0 8 12" focusable="false"><path d="M4 11L1 8H7L4 11Z"></path></svg></span>'
         },
         components: {
-          gtPageSelectHeader: GtPageSelectHeader
+          gtPageSelectHeader: GtPageSelectHeader,
+          manualApplyFloatingFilter: KviManualFloatingFilter
         },
         localeText: {
           equals: 'Equals',
@@ -597,6 +708,10 @@ const KviRecommendationLogicPage = {
   toApiDate(value) {
     if (!value) return value;
     const trimmed = String(value).trim();
+    const iso = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T].*)?$/);
+    if (iso) {
+      return `${iso[1]}-${iso[2]}-${iso[3]}`;
+    }
     const us = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
     if (us) {
       const month = us[1].padStart(2, '0');
