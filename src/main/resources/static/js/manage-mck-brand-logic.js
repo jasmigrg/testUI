@@ -1484,7 +1484,7 @@ const MckBrandLogicPage = {
     const operatorMap = {
       contains: 'contains',
       notContains: 'notContains',
-      startsWith: 'beginsWith',
+      startsWith: 'startsWith',
       endsWith: 'endsWith',
       equals: 'equals',
       notEqual: 'doesNotEqual',
@@ -1564,6 +1564,7 @@ const MckBrandLogicPage = {
           numAlwaysVisibleConditions: 1,
           filterOptions: [
             'equals',
+            'notEqual',
             'greaterThan',
             'lessThan',
             'greaterThanOrEqual',
@@ -1581,7 +1582,7 @@ const MckBrandLogicPage = {
         closeOnApply: true,
         maxNumConditions: 1,
         numAlwaysVisibleConditions: 1,
-        filterOptions: ['contains', 'notContains', 'startsWith', 'endsWith']
+        filterOptions: ['contains', 'equals', 'notEqual', 'notContains', 'startsWith', 'endsWith']
       }
     };
   }
