@@ -414,7 +414,7 @@ const KviRecommendationLogicAddPage = {
 
   getCurrentUser() {
     const currentUserId = document.getElementById('currentUserId')?.value;
-    return String(currentUserId || window.GRID_PREF_TEST_USER_ID || 'defaultUser');
+    return String(currentUserId || window.GRID_PREF_TEST_USER_ID || 'test-user');
   },
 
   getStorageKey() {
@@ -822,8 +822,8 @@ const KviRecommendationLogicAddPage = {
   resolveUploadContext() {
     return {
       userId: this.getCurrentUser(),
-      programId: String(window.KVI_RECOMMENDATION_PROGRAM_ID || 'KVI'),
-      workStationId: String(window.KVI_RECOMMENDATION_WORK_STATION_ID || 'WEB')
+      programId: String(window.KVI_RECOMMENDATION_PROGRAM_ID || 'PROG001'),
+      workStationId: String(window.KVI_RECOMMENDATION_WORK_STATION_ID || 'WS001')
     };
   },
 

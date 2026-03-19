@@ -1,0 +1,49 @@
+.kvi-mapping-page .screen-grid-empty-state[hidden] {
+  display: none !important;
+}
+
+.kvi-mapping-page .ag-theme-alpine.app-grid .ag-floating-filter-button {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  min-width: 28px;
+  height: 30px;
+  margin-left: 6px;
+}
+
+.kvi-mapping-page .ag-theme-alpine.app-grid .ag-floating-filter-button .ag-icon,
+.kvi-mapping-page .ag-theme-alpine.app-grid .ag-floating-filter-button .ag-icon-filter,
+.kvi-mapping-page .ag-theme-alpine.app-grid .ag-floating-filter-button .ag-icon-filter::before {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+  fill: #ffffff !important;
+}
+
+.kvi-mapping-page .ag-theme-alpine .ag-filter-apply-panel .ag-button,
+.kvi-mapping-page .ag-theme-alpine .ag-filter-apply-panel .ag-standard-button {
+  border-radius: 8px;
+  font-weight: 600;
+  min-height: 34px;
+}
+
+.kvi-mapping-page .ag-theme-alpine .ag-filter-apply-panel .ag-standard-button:first-child {
+  background: #007c91;
+  color: #ffffff;
+  border: 1px solid #007c91;
+}
+
+.kvi-mapping-page .ag-theme-alpine .ag-filter-apply-panel .ag-standard-button:first-child:hover {
+  background: #006d7f;
+  border-color: #006d7f;
+}
+
+.kvi-mapping-page .ag-theme-alpine .ag-filter-apply-panel .ag-standard-button:last-child {
+  background: #ffffff;
+  color: #007c91;
+  border: 1px solid #007c91;
+}
+
+.kvi-mapping-page .ag-theme-alpine .ag-filter-apply-panel .ag-standard-button:last-child:hover {
+  background: #eef8fa;
+}

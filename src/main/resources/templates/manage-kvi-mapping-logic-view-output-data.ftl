@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="${ctx}/css/action-toolbar.css">
   <link rel="stylesheet" href="${ctx}/css/page-toast.css">
   <link rel="stylesheet" href="${ctx}/css/screen-shared.css">
+  <link rel="stylesheet" href="${ctx}/css/manage-kvi-mapping-logic.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.1/styles/ag-grid.css">
@@ -36,7 +37,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.1/dist/ag-grid-community.min.js"></script>
 </head>
-<body class="mfi-page screen-page">
+<body class="mfi-page screen-page kvi-mapping-page">
 
   <#include "/components/header.ftl">
   <#import "/components/sidebar.ftl" as sidebar>
@@ -83,6 +84,7 @@
           </div>
 
           <#assign iconBack><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6L9 12L15 18" /></svg></#assign>
+          <#assign iconAdd><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5V19M5 12H19" /></svg></#assign>
           <#assign iconHeart><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20L4.7 12.7A4.8 4.8 0 1 1 11.5 5.9L12 6.4L12.5 5.9A4.8 4.8 0 1 1 19.3 12.7L12 20Z" /></svg></#assign>
           <#assign iconRefresh><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12A8 8 0 1 1 17.6 6.2" /><path d="M20 4V10H14" /></svg></#assign>
           <#assign iconExecute><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20L16.5 16.5" /></svg></#assign>
@@ -96,6 +98,9 @@
             >
               <button type="button" class="gt-action-btn icon-only is-back" aria-label="Back" data-action="back">
                 ${iconBack}
+              </button>
+              <button type="button" class="gt-action-btn icon-only is-add" aria-label="Add" data-action="add">
+                ${iconAdd}
               </button>
               <button type="button" class="gt-action-btn icon-only" aria-label="Favorite" data-action="favorite">
                 ${iconHeart}
@@ -147,6 +152,9 @@
             data-kvi-panel="parameter"
           >
             <section class="grid-wrapper">
+              <div class="screen-grid-empty-state" id="kviMappingParameterEmptyState" hidden>
+                <strong>No rows to show</strong>
+              </div>
               <div id="kviMappingParameterGrid" class="ag-theme-alpine app-grid"></div>
             </section>
           </section>
@@ -160,6 +168,9 @@
             hidden
           >
             <section class="grid-wrapper">
+              <div class="screen-grid-empty-state" id="kviMappingOutputEmptyState" hidden>
+                <strong>No rows to show</strong>
+              </div>
               <div id="kviMappingOutputGrid" class="ag-theme-alpine app-grid"></div>
             </section>
           </section>
