@@ -10,11 +10,21 @@ const KVI_INPUT_EXCLUSION_FIELD_DEFS = [
 const KVI_INPUT_EXCLUSION_OUTBOUND_FIELDS = [
   { localField: 'organization', backendField: 'organization' },
   { localField: 'itemDiscontinuedFlag', backendField: 'itemDiscontinuedFlag' },
-  { localField: 'itemSequesteredCommApriaFlag', backendField: 'itemSequesteredCommApriaFlag' },
+  { localField: 'itemSequesteredCommApriaFlag', backendField: 'itemSequesteredCoramApriaFlag' },
   { localField: 'itemUsedBiomedFlag', backendField: 'itemUsedBiomedFlag' },
   { localField: 'histRevenue', backendField: 'histRevenue' },
-  { localField: 'patientFlag', backendField: 'patientFlag' }
+  { localField: 'patientFlag', backendField: 'invalidPrcaFlag' }
 ];
+
+const KVI_INPUT_EXCLUSION_BACKEND_ALIASES = {
+  itemSequesteredCommApriaFlag: [
+    'itemSequesteredCoramApriaFlag',
+    'itemSequesteredCoramFlag'
+  ],
+  patientFlag: [
+    'invalidPrcaFlag'
+  ]
+};
 
 const KviInputExclusionAddPage = {
   entityName: '',
@@ -641,6 +651,11 @@ const KviInputExclusionAddPage = {
 
   mapErrorField(field) {
     const normalized = this.normalizeHeader(field);
+    const aliasMatch = Object.entries(KVI_INPUT_EXCLUSION_BACKEND_ALIASES).find(([, aliases]) => (
+      aliases.some((alias) => this.normalizeHeader(alias) === normalized)
+    ));
+    if (aliasMatch) return aliasMatch[0];
+
     const match = KVI_INPUT_EXCLUSION_FIELD_DEFS.find((column) => this.normalizeHeader(column.headerName) === normalized || this.normalizeHeader(column.field) === normalized);
     return match?.field || '';
   },
@@ -678,6 +693,11 @@ const KviInputExclusionAddPage = {
   getFieldValue(source, field) {
     if (!source || typeof source !== 'object') return '';
     if (source[field] != null) return source[field];
+
+    const aliases = KVI_INPUT_EXCLUSION_BACKEND_ALIASES[field] || [];
+    for (const alias of aliases) {
+      if (source[alias] != null) return source[alias];
+    }
 
     const normalizedField = this.normalizeHeader(field);
     for (const [key, value] of Object.entries(source)) {
