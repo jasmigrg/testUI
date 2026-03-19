@@ -25,8 +25,7 @@
     window.API_BASE_URL = window.API_BASE_URL || '${(apiBaseUrl!'')?js_string}';
     window.GRID_PREF_TEST_USER_ID = window.GRID_PREF_TEST_USER_ID || '${(userId!'defaultUser')?js_string}';
     window.KVI_LIST_PAGE_URL = window.KVI_LIST_PAGE_URL || '${ctx}/manage-kvi-input-view-input-data';
-    window.BULK_UPLOAD_SCREEN_CODE = window.BULK_UPLOAD_SCREEN_CODE || 'KVI_INPUT_EXCLUSION';
-    window.BULK_UPLOAD_USE_MOCK = window.BULK_UPLOAD_USE_MOCK ?? true;
+    window.KVI_INPUT_EXCLUSION_ENTITY_NAME = window.KVI_INPUT_EXCLUSION_ENTITY_NAME || 'kvi-input-exclusion';
     window.GRID_PREF_SCREEN_ID_BY_GRID = Object.assign({}, window.GRID_PREF_SCREEN_ID_BY_GRID, {
       kviInputExclusionAddGrid: 'id_kvi_input_exclusion_add'
     });
@@ -83,31 +82,47 @@
           <@gridViewActions.render defaultDensity="compact" showDownload=false />
         </@actionToolbar.render>
 
-        <section class="bulk-upload-batch-section" aria-label="KVI input exclusion upload batches">
+        <section class="bulk-upload-batch-section is-collapsed" aria-label="KVI input exclusion upload jobs">
           <div class="bulk-upload-batch-info-row">
             <div class="bulk-upload-batch-info-left">
               <span class="bulk-upload-batch-info-icon" aria-hidden="true">i</span>
-              <span class="bulk-upload-batch-info-text">You Have [X] Unfinished Uploads.</span>
+              <span class="bulk-upload-batch-info-text">You Have [0] Unfinished Uploads.</span>
             </div>
-            <button type="button" class="bulk-upload-batch-collapse-btn" id="bulkUploadBatchCollapseBtn" aria-label="Collapse unfinished uploads" aria-expanded="true">⌃</button>
+            <button type="button" class="bulk-upload-batch-collapse-btn" id="bulkUploadBatchCollapseBtn" aria-label="Expand unfinished uploads" aria-expanded="false">
+              <svg viewBox="0 0 20 20" aria-hidden="true" class="bulk-upload-batch-chevron">
+                <path d="M5 7.5L10 12.5L15 7.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </button>
           </div>
           <div id="bulkUploadBatchGrid" class="bulk-upload-batch-grid">
             <div class="bulk-upload-batch-columns" aria-hidden="true">
-              <span class="bulk-upload-batch-col">Batch Number</span>
-              <span class="bulk-upload-batch-col">Batch Status</span>
-              <span class="bulk-upload-batch-col">Records Count</span>
-              <span class="bulk-upload-batch-col">Error Count</span>
-              <span class="bulk-upload-batch-col">Created By</span>
-              <span class="bulk-upload-batch-col">Price Rule Level</span>
-              <span class="bulk-upload-batch-col">Start Date</span>
-              <span class="bulk-upload-batch-col">End Date</span>
+              <span class="bulk-upload-batch-col">Job ID</span>
+              <span class="bulk-upload-batch-col">
+                <span class="bulk-upload-batch-header-help">
+                  <span>Status</span>
+                  <span class="bulk-upload-batch-help">
+                    <button
+                      type="button"
+                      class="bulk-upload-batch-help-btn"
+                      aria-label="Status refresh help"
+                      aria-describedby="kviInputExclusionBatchRefreshHelp"
+                    >?</button>
+                    <span id="kviInputExclusionBatchRefreshHelp" class="bulk-upload-batch-help-tooltip" role="tooltip">
+                      Job status does not refresh automatically. Refresh the page to see the latest status.
+                    </span>
+                  </span>
+                </span>
+              </span>
+              <span class="bulk-upload-batch-col">Total Rows</span>
+              <span class="bulk-upload-batch-col">Processed</span>
+              <span class="bulk-upload-batch-col">Success</span>
+              <span class="bulk-upload-batch-col">Error</span>
               <span class="bulk-upload-batch-col">Program ID</span>
-              <span class="bulk-upload-batch-col">User ID</span>
-              <span class="bulk-upload-batch-col">Workstation ID</span>
-              <span class="bulk-upload-batch-col">Date Updated</span>
-              <span class="bulk-upload-batch-col">Delete</span>
+              <span class="bulk-upload-batch-col">Work Stn ID</span>
+              <span class="bulk-upload-batch-col">Updated</span>
+              <span class="bulk-upload-batch-col">Remove</span>
             </div>
-            <div id="bulkUploadBatchTableBody" class="bulk-upload-batch-list" role="list" aria-label="Unfinished upload batches"></div>
+            <div id="bulkUploadBatchTableBody" class="bulk-upload-batch-list" role="list" aria-label="KVI input exclusion upload jobs"></div>
           </div>
         </section>
 
@@ -170,7 +185,7 @@
 
       <footer class="bulk-upload-footer">
         <button type="button" class="bulk-upload-cancel-btn" data-bulk-close>Cancel</button>
-        <button type="button" class="bulk-upload-next-btn" id="bulkUploadNextBtn">Next</button>
+        <button type="button" class="bulk-upload-next-btn" id="bulkUploadNextBtn">Upload</button>
       </footer>
     </section>
   </div>

@@ -1,110 +1,50 @@
-class KviInlineSaveCellEditor {
-  init(params) {
-    this.params = params;
-    this.eGui = document.createElement('div');
-    this.eGui.className = 'screen-add-inline-save-editor';
+const KVI_INPUT_EXCLUSION_FIELD_DEFS = [
+  { field: 'organization', headerName: 'Organization', minWidth: 180 },
+  { field: 'itemDiscontinuedFlag', headerName: 'Item Discontinued Flag', minWidth: 210 },
+  { field: 'itemSequesteredCommApriaFlag', headerName: 'Sequestered Comm Apria Flag', minWidth: 250 },
+  { field: 'itemUsedBiomedFlag', headerName: 'Used Biomed Flag', minWidth: 190 },
+  { field: 'histRevenue', headerName: 'Hist Revenue', minWidth: 170, type: 'number' },
+  { field: 'patientFlag', headerName: 'Patient Flag', minWidth: 170 }
+];
 
-    this.input = document.createElement('input');
-    this.input.type = 'text';
-    this.input.className = 'screen-add-inline-save-input';
-    this.input.value = params.value == null ? '' : String(params.value);
-    this.input.placeholder = '_';
-
-    this.saveBtn = document.createElement('button');
-    this.saveBtn.type = 'button';
-    this.saveBtn.className = 'screen-add-inline-save-btn';
-    this.saveBtn.textContent = 'Save';
-
-    this.onInputKeyDown = (event) => {
-      if (event.key === 'Enter') {
-        event.preventDefault();
-        event.stopPropagation();
-        this.onSaveClick();
-      }
-    };
-
-    this.onSaveMouseDown = (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-    };
-
-    this.onSaveClick = () => {
-      const pageRef = this.params.pageRef;
-      const field = this.params.column?.getColId?.() || this.params.colDef?.field;
-      const result = pageRef?.saveCellFromEditor
-        ? pageRef.saveCellFromEditor(this.params.node, field, this.input.value)
-        : { ok: true, value: this.input.value };
-
-      if (result?.ok) {
-        this.input.value = result.value == null ? '' : String(result.value);
-        this.params.stopEditing();
-      }
-    };
-
-    this.input.addEventListener('keydown', this.onInputKeyDown);
-    this.saveBtn.addEventListener('mousedown', this.onSaveMouseDown);
-    this.saveBtn.addEventListener('click', this.onSaveClick);
-
-    this.eGui.appendChild(this.input);
-    this.eGui.appendChild(this.saveBtn);
-  }
-
-  getGui() {
-    return this.eGui;
-  }
-
-  afterGuiAttached() {
-    if (this.input) {
-      this.input.focus();
-      this.input.select();
-    }
-  }
-
-  getValue() {
-    return this.input ? this.input.value : '';
-  }
-
-  destroy() {
-    if (this.input && this.onInputKeyDown) {
-      this.input.removeEventListener('keydown', this.onInputKeyDown);
-    }
-    if (this.saveBtn && this.onSaveMouseDown) {
-      this.saveBtn.removeEventListener('mousedown', this.onSaveMouseDown);
-    }
-    if (this.saveBtn && this.onSaveClick) {
-      this.saveBtn.removeEventListener('click', this.onSaveClick);
-    }
-  }
-}
+const KVI_INPUT_EXCLUSION_OUTBOUND_FIELDS = [
+  { localField: 'organization', backendField: 'organization' },
+  { localField: 'itemDiscontinuedFlag', backendField: 'itemDiscontinuedFlag' },
+  { localField: 'itemSequesteredCommApriaFlag', backendField: 'itemSequesteredCommApriaFlag' },
+  { localField: 'itemUsedBiomedFlag', backendField: 'itemUsedBiomedFlag' },
+  { localField: 'histRevenue', backendField: 'histRevenue' },
+  { localField: 'patientFlag', backendField: 'patientFlag' }
+];
 
 const KviInputExclusionAddPage = {
+  entityName: '',
   gridApi: null,
-  bulkFlow: null,
-  batchRows: [],
   gridElement: null,
-  detachCommunityPaste: null,
   bulkUploadModal: null,
   uploadedRows: [],
-  selectedBatchId: null,
   uploadFilter: 'all',
-  mockBatchStore: [],
-  mockBatchRowsById: {},
-  mockBatchSequence: 1000,
+  selectedJobId: null,
+  jobRows: [],
+  detachCommunityPaste: null,
+  pollTimer: null,
   maxPasteRows: 5000,
   maxPasteCols: 10,
   maxPasteCells: 50000,
 
   init() {
-    this.cacheBulkUploadDom();
+    this.entityName = String(window.KVI_INPUT_EXCLUSION_ENTITY_NAME || 'kvi-input-exclusion').trim();
+    this.cacheDom();
     this.initGrid();
-    this.initBulkUploadFlow();
+    this.initBatchSectionControls();
+    this.initBatchTable();
     this.initBulkUploadModal();
     this.bindToolbarActions();
     this.bindBulkUploadAction();
     this.initViewActions();
+    this.restoreJobs();
   },
 
-  cacheBulkUploadDom() {
+  cacheDom() {
     this.uploadStatusRow = document.getElementById('screenAddUploadStatusRow');
     this.uploadStatusInputs = Array.from(document.querySelectorAll('input[name="kviUploadStatus"]'));
     this.batchSection = document.querySelector('.bulk-upload-batch-section');
@@ -114,137 +54,24 @@ const KviInputExclusionAddPage = {
     if (this.uploadStatusRow) this.uploadStatusRow.hidden = true;
   },
 
-  initBatchSectionControls() {
-    if (!this.batchSection || !this.batchCollapseBtn) return;
-    this.batchCollapseBtn.addEventListener('click', () => {
-      const isCollapsed = this.batchSection.classList.toggle('is-collapsed');
-      this.batchCollapseBtn.setAttribute('aria-expanded', String(!isCollapsed));
-      this.batchCollapseBtn.textContent = isCollapsed ? '⌄' : '⌃';
-    });
-  },
-
-  updateBatchInfoCount(count) {
-    if (!this.batchInfoText) return;
-    this.batchInfoText.textContent = `You Have [${count}] Unfinished Uploads.`;
-  },
-
-  initBulkUploadFlow() {
-    if (!window.BulkUploadFlow?.create) {
-      this.initBatchSectionControls();
-      this.initBatchGrid();
-      return;
-    }
-
-    this.bulkFlow = window.BulkUploadFlow.create({
-      getScreenCode: () => this.getScreenCode(),
-      getBulkUploadBaseUrl: () => this.getBulkUploadBaseUrl(),
-      shouldUseMock: () => this.shouldUseMockBulkUpload(),
-      getCurrentUser: () => this.getCurrentUser(),
-      showInfo: (message, type) => this.showInfo(message, type),
-      formatNowUsDate: () => this.formatNowUsDate(),
-      parseAndMapCsvFile: (file) => this.parseAndMapCsvFile(file),
-      normalizeBatchRow: (item, index) => this.normalizeBatchRow(item, index),
-      normalizeBatchDataRow: (item) => this.normalizeBatchDataRow(item),
-      onBatchRowsLoaded: (rows, batchId) => {
-        this.selectedBatchId = batchId;
-        this.uploadedRows = rows;
-        this.uploadFilter = 'all';
-        this.uploadStatusInputs.forEach((input) => {
-          input.checked = input.value === 'all';
-        });
-        if (this.uploadStatusRow) this.uploadStatusRow.hidden = rows.length === 0;
-        this.applyUploadFilter();
-        this.showInfo(`Loaded batch ${batchId} (${rows.length} row(s)).`, 'success');
-      },
-      onBatchCleared: () => {
-        this.selectedBatchId = null;
-        this.uploadedRows = [];
-        this.applyUploadFilter();
-      },
-      batchSectionEl: this.batchSection,
-      batchCollapseBtnEl: this.batchCollapseBtn,
-      batchInfoTextEl: this.batchInfoText,
-      batchTableBodyEl: this.batchTableBody
-    });
-
-    this.bulkFlow.init().catch((error) => {
-      console.error('Bulk upload flow init failed:', error);
-      this.showInfo('Failed to initialize batch section.', 'error');
-    });
-  },
-
   initialRows() {
-    return [
-      {
-        organization: '',
-        itemDiscontinuedFlag: '',
-        itemSequesteredCommApriaFlag: '',
-        itemUsedBiomedFlag: '',
-        histRevenue: '',
-        patientFlag: ''
-      }
-    ];
+    return [this.createBlankRow()];
   },
 
-  appendBlankRows(count) {
-    if (!this.gridApi || !Number.isInteger(count) || count <= 0) return;
-    const rows = Array.from({ length: count }, () => ({
-      organization: '',
-      itemDiscontinuedFlag: '',
-      itemSequesteredCommApriaFlag: '',
-      itemUsedBiomedFlag: '',
-      histRevenue: '',
-      patientFlag: '',
-      uploadStatus: '',
-      uploadErrors: []
-    }));
-    this.gridApi.applyTransaction({ add: rows });
-  },
-
-  ensureRowCapacityForPaste(rowCountToPaste, startRowIndex = null) {
-    if (!this.gridApi || rowCountToPaste <= 0) return;
-    const focused = this.gridApi.getFocusedCell?.();
-    const resolvedStartRowIndex = Number.isInteger(startRowIndex)
-      ? startRowIndex
-      : (Number.isInteger(focused?.rowIndex) ? focused.rowIndex : 0);
-    const requiredRows = resolvedStartRowIndex + rowCountToPaste;
-    const currentRows = typeof this.gridApi.getDisplayedRowCount === 'function'
-      ? this.gridApi.getDisplayedRowCount()
-      : this.getGridRows().length;
-    const missingRows = requiredRows - currentRows;
-    if (missingRows > 0) {
-      this.appendBlankRows(missingRows);
-    }
-  },
-
-  syncUploadedRowsFromGrid(forceRebuild = false) {
-    if (forceRebuild || this.uploadedRows.length === 0) {
-      const rows = this.getGridRows()
-        .map((row) => this.normalizeRow(row))
-        .filter((row) => !this.isRowEmpty(row))
-        .map((row) => {
-          const validation = this.validateRow(row);
-          return {
-            ...row,
-            uploadStatus: validation.isValid ? 'success' : 'error',
-            uploadErrors: validation.errors
-          };
-        });
-      this.uploadedRows = rows;
-    }
-
-    if (this.uploadStatusRow) this.uploadStatusRow.hidden = this.uploadedRows.length === 0;
-    if (this.uploadFilter !== 'all') this.applyUploadFilter();
-  },
-
-  validationCellRules(field) {
-    return {
-      'screen-add-cell-error': (params) => Array.isArray(params.data?.uploadErrors) && params.data.uploadErrors.includes(field)
-    };
-  },
-
-  isErrorCell(params, field) {
-    return Array.isArray(params?.data?.uploadErrors) && params.data.uploadErrors.includes(field);
+  createBlankRow() {
+    const row = {};
+    KVI_INPUT_EXCLUSION_FIELD_DEFS.forEach(({ field }) => {
+      row[field] = '';
+    });
+    row.uploadStatus = '';
+    row.uploadErrors = [];
+    row.errorMessages = [];
+    row.fieldErrorMessages = {};
+    row.editedFields = [];
+    row.wasEditedAfterError = false;
+    row.isBackendRow = false;
+    row.rowNumber = null;
+    return row;
   },
 
   initGrid() {
@@ -257,16 +84,15 @@ const KviInputExclusionAddPage = {
       gridOptions: {
         rowData: this.initialRows(),
         rowSelection: 'multiple',
+        isRowSelectable: (node) => this.canSelectRow(node?.data),
         suppressRowClickSelection: true,
         singleClickEdit: false,
         enableRangeSelection: true,
         suppressClipboardPaste: false,
         copyHeadersToClipboard: false,
+        enableBrowserTooltips: true,
         stopEditingWhenCellsLoseFocus: true,
         onCellValueChanged: (event) => this.onCellValueChanged(event),
-        components: {
-          kviInlineSaveCellEditor: KviInlineSaveCellEditor
-        },
         icons: {
           sortUnSort:
             '<span class="gt-sort-icon gt-sort-icon--none" aria-hidden="true"><svg viewBox="0 0 8 12" focusable="false"><path d="M4 1L7 4H1L4 1Z"></path><path d="M4 11L1 8H7L4 11Z"></path></svg></span>',
@@ -280,15 +106,18 @@ const KviInputExclusionAddPage = {
           unSortIcon: true,
           wrapHeaderText: true,
           autoHeaderHeight: true,
-          editable: true
+          editable: (params) => this.isEditableCell(params),
+          resizable: true
         }
       },
       columns: [
         {
           field: 'select',
           headerName: '',
-          checkboxSelection: true,
-          headerCheckboxSelection: true,
+          checkboxSelection: (params) => this.canSelectRow(params?.data),
+          headerCheckboxSelection: (params) => this.hasSelectableRows(params?.api),
+          headerCheckboxSelectionFilteredOnly: true,
+          showDisabledCheckboxes: true,
           width: 44,
           minWidth: 44,
           maxWidth: 44,
@@ -300,372 +129,211 @@ const KviInputExclusionAddPage = {
           editable: false,
           suppressSizeToFit: true
         },
-        {
-          field: 'organization',
-          headerName: 'Organization',
-          minWidth: 180,
-          filter: 'agTextColumnFilter',
-          cellEditorSelector: (params) => (this.isErrorCell(params, 'organization')
-            ? { component: 'kviInlineSaveCellEditor', params: { pageRef: this } }
-            : undefined),
-          cellClassRules: this.validationCellRules('organization')
-        },
-        {
-          field: 'itemDiscontinuedFlag',
-          headerName: 'Item Discontinued Flag',
-          minWidth: 210,
-          filter: 'agTextColumnFilter',
-          cellEditorSelector: (params) => (this.isErrorCell(params, 'itemDiscontinuedFlag')
-            ? { component: 'kviInlineSaveCellEditor', params: { pageRef: this } }
-            : undefined),
-          cellClassRules: this.validationCellRules('itemDiscontinuedFlag')
-        },
-        {
-          field: 'itemSequesteredCommApriaFlag',
-          headerName: 'Sequestered Comm Apria Flag',
-          minWidth: 250,
-          filter: 'agTextColumnFilter',
-          cellEditorSelector: (params) => (this.isErrorCell(params, 'itemSequesteredCommApriaFlag')
-            ? { component: 'kviInlineSaveCellEditor', params: { pageRef: this } }
-            : undefined),
-          cellClassRules: this.validationCellRules('itemSequesteredCommApriaFlag')
-        },
-        {
-          field: 'itemUsedBiomedFlag',
-          headerName: 'Used Biomed Flag',
-          minWidth: 190,
-          filter: 'agTextColumnFilter',
-          cellEditorSelector: (params) => (this.isErrorCell(params, 'itemUsedBiomedFlag')
-            ? { component: 'kviInlineSaveCellEditor', params: { pageRef: this } }
-            : undefined),
-          cellClassRules: this.validationCellRules('itemUsedBiomedFlag')
-        },
-        {
-          field: 'histRevenue',
-          headerName: 'Hist Revenue',
-          minWidth: 170,
-          filter: 'agNumberColumnFilter',
-          filterValueGetter: (params) => this.numberFilterValue(params?.data?.histRevenue),
-          cellEditorSelector: (params) => (this.isErrorCell(params, 'histRevenue')
-            ? { component: 'kviInlineSaveCellEditor', params: { pageRef: this } }
-            : undefined),
-          cellClassRules: this.validationCellRules('histRevenue')
-        },
-        {
-          field: 'patientFlag',
-          headerName: 'Patient Flag',
-          minWidth: 170,
-          filter: 'agTextColumnFilter',
-          cellEditorSelector: (params) => (this.isErrorCell(params, 'patientFlag')
-            ? { component: 'kviInlineSaveCellEditor', params: { pageRef: this } }
-            : undefined),
-          cellClassRules: this.validationCellRules('patientFlag')
-        }
+        ...KVI_INPUT_EXCLUSION_FIELD_DEFS.map((column) => this.buildColumn(column))
       ]
     });
 
     this.gridElement = document.getElementById('kviInputExclusionAddGrid');
     if (!this.gridApi) return;
+
     if (typeof this.detachCommunityPaste === 'function') {
       this.detachCommunityPaste();
       this.detachCommunityPaste = null;
     }
+
     if (window.CommunityGridPaste?.attach) {
+      const pasteableFields = KVI_INPUT_EXCLUSION_FIELD_DEFS.map((column) => column.field);
       this.detachCommunityPaste = window.CommunityGridPaste.attach({
         gridElement: this.gridElement,
         gridApi: this.gridApi,
-        editableFieldOrder: [
-          'organization',
-          'itemDiscontinuedFlag',
-          'itemSequesteredCommApriaFlag',
-          'itemUsedBiomedFlag',
-          'histRevenue',
-          'patientFlag'
-        ],
+        editableFieldOrder: pasteableFields,
         maxRows: this.maxPasteRows,
         maxCols: this.maxPasteCols,
         maxCells: this.maxPasteCells,
         showInfo: (message, type) => this.showInfo(message, type),
         ensureRowCapacity: (rowCount, startRowIndex) => this.ensureRowCapacityForPaste(rowCount, startRowIndex),
         normalizeRow: (row) => this.normalizeRow(row),
-        validateRow: (row) => this.validateRow(row),
+        validateRow: () => ({ isValid: true, errors: [] }),
+        resolveHeaderField: (header, allowedFields) => this.resolvePasteHeaderField(header, allowedFields),
+        requireHeaderMapping: true,
+        headerMatchThreshold: 3,
         onApplied: () => this.syncUploadedRowsFromGrid(true)
       });
     }
 
-    window.gridApi = this.gridApi;
     this.gridApi.applyPendingFloatingFilters = () => this.applyAdvancedFilters();
-
     if (typeof this.gridApi.addEventListener === 'function') {
       this.gridApi.addEventListener('firstDataRendered', () => this.applyDefaultDensity());
       this.gridApi.addEventListener('firstDataRendered', () => {
-        if (typeof this.gridApi.deselectAll === 'function') {
-          this.gridApi.deselectAll();
-        }
+        if (typeof this.gridApi.deselectAll === 'function') this.gridApi.deselectAll();
       });
     }
-    this.applyDefaultDensity();
 
+    this.applyDefaultDensity();
     setTimeout(() => {
-      if (typeof GridManager !== 'undefined' && window.gridApi) {
-        GridManager.init(window.gridApi, 'kviInputExclusionAddGrid');
+      if (typeof GridManager !== 'undefined' && this.gridApi) {
+        GridManager.init(this.gridApi, 'kviInputExclusionAddGrid');
       }
     }, 300);
   },
 
-  numberFilterValue(value) {
-    const raw = String(value ?? '').replace(/,/g, '').trim();
-    if (!raw) return null;
-    const numeric = Number(raw);
-    return Number.isFinite(numeric) ? numeric : null;
+  buildColumn(column) {
+    const config = {
+      field: column.field,
+      headerName: column.headerName,
+      minWidth: column.minWidth,
+      editable: (params) => this.isEditableCell(params, column.field),
+      cellClassRules: this.validationCellRules(column.field),
+      tooltipValueGetter: (params) => this.getCellErrorTooltip(params, column.field)
+    };
+
+    if (column.type === 'number') {
+      config.filter = 'agNumberColumnFilter';
+      config.filterValueGetter = (params) => this.numberFilterValue(params?.data?.[column.field]);
+    } else {
+      config.filter = 'agTextColumnFilter';
+    }
+
+    return config;
   },
 
-  formatUsDateFromIso(value) {
-    if (!value) return '';
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return String(value);
-    return `${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')}/${date.getFullYear()}`;
-  },
-
-  getScreenCode() {
-    return String(window.BULK_UPLOAD_SCREEN_CODE || 'KVI_INPUT_EXCLUSION').trim() || 'KVI_INPUT_EXCLUSION';
-  },
-
-  getBulkUploadBaseUrl() {
-    const baseUrl = (window.API_BASE_URL || '').replace(/\/$/, '');
-    return baseUrl ? `${baseUrl}/api/v1/bulk-upload` : '/api/v1/bulk-upload';
-  },
-
-  shouldUseMockBulkUpload() {
-    return window.BULK_UPLOAD_USE_MOCK !== false;
-  },
-
-  getCurrentUser() {
-    const currentUserId = document.getElementById('currentUserId')?.value;
-    return String(currentUserId || window.GRID_PREF_TEST_USER_ID || 'defaultUser');
-  },
-
-  formatNowUsDate() {
-    return this.formatUsDateFromIso(new Date().toISOString());
-  },
-
-  nextMockBatchNumber() {
-    this.mockBatchSequence += 1;
-    return String(this.mockBatchSequence);
-  },
-
-  async fetchJson(endpoint, options = {}) {
-    const response = await fetch(endpoint, options);
-    if (!response.ok) throw new Error(`Request failed: ${response.status}`);
-    return response.json();
-  },
-
-  getApiDataArray(payload) {
-    if (Array.isArray(payload?.data)) return payload.data;
-    if (Array.isArray(payload)) return payload;
-    return [];
-  },
-
-  toUploadStatus(value) {
-    const normalized = String(value || '').trim().toLowerCase();
-    if (normalized === 'success' || normalized === 'passed' || normalized === 'valid') return 'success';
-    if (normalized === 'error' || normalized === 'failed' || normalized === 'invalid') return 'error';
-    return normalized === 'all' ? 'all' : '';
-  },
-
-  normalizeBatchRow(item, index) {
+  validationCellRules(field) {
     return {
-      id: item.id || item.batchId || item.batchNumber || `batch-${index + 1}`,
-      batchNumber: item.batchNumber || item.batchId || item.id || '',
-      batchStatus: item.batchStatus || item.status || '',
-      recordsCount: item.recordsCount ?? item.totalRecords ?? item.totalCount ?? '',
-      errorCount: item.errorCount ?? item.totalErrors ?? '',
-      createdBy: item.createdBy || item.createdUser || '',
-      priceRuleLevel: item.priceRuleLevel || '',
-      startDate: this.formatUsDateFromIso(item.startDate || item.createdAt),
-      endDate: this.formatUsDateFromIso(item.endDate),
-      programId: item.programId || '',
-      userId: item.userId || '',
-      workstationId: item.workstationId || '',
-      dateUpdated: this.formatUsDateFromIso(item.dateUpdated || item.updatedAt)
+      'screen-add-cell-error': (params) => Array.isArray(params.data?.uploadErrors) && params.data.uploadErrors.includes(field)
     };
   },
 
-  normalizeBatchDataRow(item) {
-    const normalized = this.normalizeRow({
-      organization: item.organization || '',
-      itemDiscontinuedFlag: item.itemDiscontinuedFlag || item.item_discontinued_flag || '',
-      itemSequesteredCommApriaFlag: item.itemSequesteredCommApriaFlag || item.itemSequesteredCoramApriaFlag || item.item_sequestered_coram_apria_flag || '',
-      itemUsedBiomedFlag: item.itemUsedBiomedFlag || item.item_used_biomed_flag || '',
-      histRevenue: item.histRevenue || item.hist_revenue || '',
-      patientFlag: item.patientFlag || item.patient_flag || ''
+  isSuccessfulUploadRow(row) {
+    return String(row?.uploadStatus || '').trim().toLowerCase() === 'success';
+  },
+
+  isReadyForResubmitRow(row) {
+    return Boolean(row?.isBackendRow)
+      && !this.isSuccessfulUploadRow(row)
+      && Boolean(row?.wasEditedAfterError)
+      && (!Array.isArray(row?.uploadErrors) || row.uploadErrors.length === 0);
+  },
+
+  canSelectRow(row) {
+    if (!row) return false;
+    if (!row.isBackendRow) return true;
+    if (this.isSuccessfulUploadRow(row)) return false;
+    return this.isReadyForResubmitRow(row);
+  },
+
+  hasSelectableRows(gridApi) {
+    if (!gridApi || typeof gridApi.forEachNodeAfterFilterAndSort !== 'function') return false;
+    let hasSelectable = false;
+    gridApi.forEachNodeAfterFilterAndSort((node) => {
+      if (!hasSelectable && this.canSelectRow(node?.data)) hasSelectable = true;
     });
-
-    const rowErrors = Array.isArray(item.uploadErrors)
-      ? item.uploadErrors
-      : Array.isArray(item.errorFields)
-        ? item.errorFields
-        : Array.isArray(item.errors)
-          ? item.errors.map((entry) => entry?.field || entry?.column || '').filter(Boolean)
-          : [];
-
-    const mappedErrors = rowErrors
-      .map((field) => this.normalizeHeader(field))
-      .map((field) => {
-        if (field === 'organization') return 'organization';
-        if (field === 'itemdiscontinuedflag') return 'itemDiscontinuedFlag';
-        if (field === 'itemsequesteredcommapriaflag' || field === 'itemsequesteredcoramapriaflag') return 'itemSequesteredCommApriaFlag';
-        if (field === 'itemusedbiomedflag') return 'itemUsedBiomedFlag';
-        if (field === 'histrevenue') return 'histRevenue';
-        if (field === 'patientflag') return 'patientFlag';
-        return '';
-      })
-      .filter(Boolean);
-
-    const validation = this.validateRow(normalized);
-    const explicitStatus = this.toUploadStatus(item.uploadStatus || item.rowStatus || item.status);
-    const finalErrors = mappedErrors.length > 0 ? mappedErrors : validation.errors;
-
-    return {
-      ...normalized,
-      uploadStatus: explicitStatus || (finalErrors.length > 0 ? 'error' : 'success'),
-      uploadErrors: finalErrors
-    };
+    return hasSelectable;
   },
 
-  initBatchGrid() {
+  isEditableCell(params, fieldOverride = '') {
+    const field = fieldOverride || params?.colDef?.field;
+    const row = params?.data;
+    if (!field || !row) return false;
+    if (!row.isBackendRow) return true;
+    return !this.isSuccessfulUploadRow(row);
+  },
+
+  initBatchSectionControls() {
+    if (!this.batchSection || !this.batchCollapseBtn) return;
+    this.setBatchSectionCollapsed(true);
+    this.batchCollapseBtn.addEventListener('click', () => {
+      const isCollapsed = !this.batchSection.classList.contains('is-collapsed');
+      this.setBatchSectionCollapsed(isCollapsed);
+    });
+  },
+
+  setBatchSectionCollapsed(isCollapsed) {
+    if (!this.batchSection || !this.batchCollapseBtn) return;
+    this.batchSection.classList.toggle('is-collapsed', isCollapsed);
+    this.batchCollapseBtn.setAttribute('aria-expanded', String(!isCollapsed));
+    this.batchCollapseBtn.setAttribute('aria-label', isCollapsed ? 'Expand unfinished uploads' : 'Collapse unfinished uploads');
+  },
+
+  initBatchTable() {
     if (!this.batchTableBody) return;
     this.batchTableBody.addEventListener('click', (event) => {
-      const deleteBtn = event.target.closest('[data-batch-delete]');
-      if (deleteBtn) {
-        this.deleteBatchRow(deleteBtn.getAttribute('data-batch-id'));
+      const removeBtn = event.target.closest('[data-job-remove]');
+      if (removeBtn) {
+        this.removeStoredJob(removeBtn.getAttribute('data-job-remove'));
         return;
       }
-      const link = event.target.closest('[data-batch-link]');
-      if (link) {
-        this.loadBatchData(link.getAttribute('data-batch-id'));
+
+      const jobLink = event.target.closest('[data-job-link]');
+      if (jobLink) {
+        this.loadJobResults(jobLink.getAttribute('data-job-link'));
       }
     });
-    this.loadBatchRows();
   },
 
-  renderBatchRows(rows) {
-    if (!this.batchTableBody) return;
-    if (!rows || rows.length === 0) {
-      this.batchTableBody.innerHTML = '<div class="bulk-upload-batch-empty">No unfinished uploads.</div>';
-      return;
+  initBulkUploadModal() {
+    if (!window.BulkUploadModal?.create) return;
+    this.bulkUploadModal = window.BulkUploadModal.create({
+      modalId: 'bulkUploadModal',
+      dropzoneId: 'bulkUploadDropzone',
+      inputId: 'bulkUploadInput',
+      browseBtnId: 'bulkUploadBrowseBtn',
+      nextBtnId: 'bulkUploadNextBtn',
+      errorId: 'bulkUploadError',
+      fileCardId: 'bulkUploadFileCard',
+      fileNameId: 'bulkUploadSelectedFile',
+      fileSizeId: 'bulkUploadFileSize',
+      fileRemoveBtnId: 'bulkUploadFileRemoveBtn',
+      initialNextLabel: 'Upload',
+      uploadLabel: 'Upload',
+      validateFile: (file) => /\.csv$/i.test(file.name) || file.type === 'text/csv',
+      onUpload: (file, controls) => this.processUploadedCsv(file).then((success) => {
+        if (success) controls.close();
+        return success;
+      })
+    });
+  },
+
+  bindBulkUploadAction() {
+    const bulkUploadButton = document.querySelector('[data-action="bulk-upload"]');
+    if (bulkUploadButton && this.bulkUploadModal) {
+      bulkUploadButton.addEventListener('click', () => this.bulkUploadModal.open());
     }
 
-    const escapeHtml = (value) => String(value == null ? '' : value)
-      .replaceAll('&', '&amp;')
-      .replaceAll('<', '&lt;')
-      .replaceAll('>', '&gt;')
-      .replaceAll('"', '&quot;')
-      .replaceAll("'", '&#39;');
-
-    this.batchTableBody.innerHTML = rows.map((row) => {
-      const batchId = String(row.id || row.batchNumber || '');
-      return `
-        <div class="bulk-upload-batch-row" role="listitem">
-          <span class="bulk-upload-batch-cell"><button type="button" class="bulk-upload-batch-number-link" data-batch-link data-batch-id="${escapeHtml(batchId)}">${escapeHtml(row.batchNumber || '')}</button></span>
-          <span class="bulk-upload-batch-cell">${escapeHtml(row.batchStatus || '')}</span>
-          <span class="bulk-upload-batch-cell">${escapeHtml(row.recordsCount ?? '')}</span>
-          <span class="bulk-upload-batch-cell">${escapeHtml(row.errorCount ?? '')}</span>
-          <span class="bulk-upload-batch-cell">${escapeHtml(row.createdBy || '')}</span>
-          <span class="bulk-upload-batch-cell">${escapeHtml(row.priceRuleLevel || '')}</span>
-          <span class="bulk-upload-batch-cell">${escapeHtml(row.startDate || '')}</span>
-          <span class="bulk-upload-batch-cell">${escapeHtml(row.endDate || '')}</span>
-          <span class="bulk-upload-batch-cell">${escapeHtml(row.programId || '')}</span>
-          <span class="bulk-upload-batch-cell">${escapeHtml(row.userId || '')}</span>
-          <span class="bulk-upload-batch-cell">${escapeHtml(row.workstationId || '')}</span>
-          <span class="bulk-upload-batch-cell">${escapeHtml(row.dateUpdated || '')}</span>
-          <span class="bulk-upload-batch-cell"><button type="button" class="bulk-upload-batch-delete-btn" data-batch-delete data-batch-id="${escapeHtml(batchId)}" aria-label="Delete batch">🗑</button></span>
-        </div>`;
-    }).join('');
-  },
-
-  async fetchBatchRows() {
-    if (this.shouldUseMockBulkUpload()) {
-      return [...this.mockBatchStore];
-    }
-    const endpoint = `${this.getBulkUploadBaseUrl()}/batches?screenCode=${encodeURIComponent(this.getScreenCode())}`;
-    const json = await this.fetchJson(endpoint, { method: 'GET', headers: { Accept: 'application/json' } });
-    return this.getApiDataArray(json).map((item, index) => this.normalizeBatchRow(item, index));
-  },
-
-  defaultBatchRows() {
-    return [];
-  },
-
-  async loadBatchRows() {
-    try {
-      const rows = await this.fetchBatchRows();
-      this.batchRows = rows.length > 0 ? rows : this.defaultBatchRows();
-      this.renderBatchRows(this.batchRows);
-      this.updateBatchInfoCount(this.batchRows.length);
-    } catch (error) {
-      console.warn('Batch fetch failed. Showing empty batch grid.', error);
-      this.batchRows = this.defaultBatchRows();
-      this.renderBatchRows(this.batchRows);
-      this.updateBatchInfoCount(0);
-    }
-  },
-
-  async fetchRowsForBatch(batchId) {
-    if (this.shouldUseMockBulkUpload()) {
-      const rows = this.mockBatchRowsById[batchId];
-      return Array.isArray(rows) ? rows : [];
-    }
-    const endpoint = `${this.getBulkUploadBaseUrl()}/batches/${encodeURIComponent(batchId)}/rows?screenCode=${encodeURIComponent(this.getScreenCode())}&view=all`;
-    const json = await this.fetchJson(endpoint, { method: 'GET', headers: { Accept: 'application/json' } });
-    return this.getApiDataArray(json).map((item) => this.normalizeBatchDataRow(item));
-  },
-
-  async loadBatchData(batchId) {
-    if (!batchId) return;
-    this.selectedBatchId = batchId;
-    try {
-      const rows = await this.fetchRowsForBatch(batchId);
-      this.uploadedRows = rows;
-      this.uploadFilter = 'all';
-      this.uploadStatusInputs.forEach((input) => {
-        input.checked = input.value === 'all';
+    this.uploadStatusInputs.forEach((input) => {
+      input.addEventListener('change', () => {
+        if (!input.checked) return;
+        this.uploadFilter = input.value;
+        this.clearColumnFilters();
+        this.applyUploadFilter();
       });
-      if (this.uploadStatusRow) this.uploadStatusRow.hidden = rows.length === 0;
-      this.applyUploadFilter();
-      this.showInfo(`Loaded batch ${batchId} (${rows.length} row(s)).`, 'success');
-    } catch (error) {
-      console.error('Failed to load batch rows:', error);
-      this.showInfo('Failed to load selected batch rows.', 'error');
-    }
+    });
   },
 
-  async deleteBatchRow(batchId) {
-    if (!batchId) return;
-    if (this.shouldUseMockBulkUpload()) {
-      this.mockBatchStore = this.mockBatchStore.filter((row) => String(row.id) !== String(batchId));
-      delete this.mockBatchRowsById[batchId];
-    } else {
-      const endpoint = `${this.getBulkUploadBaseUrl()}/batches/${encodeURIComponent(batchId)}?screenCode=${encodeURIComponent(this.getScreenCode())}`;
-      try {
-        const response = await fetch(endpoint, { method: 'DELETE', headers: { Accept: 'application/json' } });
-        if (!response.ok) throw new Error(`Failed batch delete: ${response.status}`);
-      } catch (error) {
-        console.error('Batch delete API failed:', error);
-        this.showInfo('Failed to delete batch.', 'error');
-        return;
-      }
-    }
+  bindToolbarActions() {
+    document.addEventListener('click', (event) => {
+      const actionButton = event.target.closest('.gt-action-btn[data-action]');
+      if (!actionButton) return;
 
-    this.batchRows = this.batchRows.filter((row) => String(row.id || row.batchNumber) !== String(batchId));
-    this.renderBatchRows(this.batchRows);
-    this.updateBatchInfoCount(this.batchRows.length);
-    if (String(this.selectedBatchId || '') === String(batchId)) {
-      this.selectedBatchId = null;
-      this.uploadedRows = [];
-      this.applyUploadFilter();
-    }
-    this.showInfo('Batch removed from list.', 'success');
+      switch (actionButton.dataset.action) {
+        case 'back':
+          window.location.href = window.KVI_LIST_PAGE_URL || '/manage-kvi-input-view-input-data';
+          break;
+        case 'delete':
+          this.deleteSelectedRows();
+          break;
+        case 'saveDraft':
+          this.saveDraft();
+          break;
+        case 'submit':
+          this.processGridRows();
+          break;
+        case 'execute':
+          this.executeFilters();
+          break;
+        default:
+          break;
+      }
+    });
   },
 
   initViewActions() {
@@ -688,164 +356,620 @@ const KviInputExclusionAddPage = {
     });
   },
 
-  bindBulkUploadAction() {
-    const bulkUploadButton = document.querySelector('[data-action="bulk-upload"]');
-    if (!bulkUploadButton || !this.bulkUploadModal) return;
-
-    bulkUploadButton.addEventListener('click', () => {
-      this.bulkUploadModal.open();
-    });
-
-    this.uploadStatusInputs.forEach((input) => {
-      input.addEventListener('change', () => {
-        if (!input.checked) return;
-        this.uploadFilter = input.value;
-        this.clearColumnFilters();
-        this.applyUploadFilter();
-      });
-    });
+  ensureRowCapacityForPaste(rowCountToPaste, startRowIndex = null) {
+    if (!this.gridApi || rowCountToPaste <= 0) return;
+    const focused = this.gridApi.getFocusedCell?.();
+    const resolvedStartRowIndex = Number.isInteger(startRowIndex)
+      ? startRowIndex
+      : (Number.isInteger(focused?.rowIndex) ? focused.rowIndex : 0);
+    const requiredRows = resolvedStartRowIndex + rowCountToPaste;
+    const currentRows = typeof this.gridApi.getDisplayedRowCount === 'function'
+      ? this.gridApi.getDisplayedRowCount()
+      : this.getGridRows().length;
+    const missingRows = requiredRows - currentRows;
+    if (missingRows > 0) this.appendBlankRows(missingRows);
   },
 
-  initBulkUploadModal() {
-    if (!window.BulkUploadModal || typeof window.BulkUploadModal.create !== 'function') return;
-
-    this.bulkUploadModal = window.BulkUploadModal.create({
-      modalId: 'bulkUploadModal',
-      dropzoneId: 'bulkUploadDropzone',
-      inputId: 'bulkUploadInput',
-      browseBtnId: 'bulkUploadBrowseBtn',
-      nextBtnId: 'bulkUploadNextBtn',
-      errorId: 'bulkUploadError',
-      fileCardId: 'bulkUploadFileCard',
-      fileNameId: 'bulkUploadSelectedFile',
-      fileSizeId: 'bulkUploadFileSize',
-      fileRemoveBtnId: 'bulkUploadFileRemoveBtn',
-      initialNextLabel: 'Next',
-      uploadLabel: 'Upload',
-      validateFile: (file) => /\.csv$/i.test(file.name) || file.type === 'text/csv',
-      onUpload: (file, controls) => {
-        this.processUploadedCsv(file).then((success) => {
-          if (success) {
-            controls.close();
-          }
-        });
-      }
-    });
+  appendBlankRows(count) {
+    if (!this.gridApi || !Number.isInteger(count) || count <= 0) return;
+    this.gridApi.applyTransaction({ add: Array.from({ length: count }, () => this.createBlankRow()) });
   },
 
-  normalizeHeader(header) {
-    if (window.CsvUploadUtils?.normalizeHeader) {
-      return window.CsvUploadUtils.normalizeHeader(header);
+  syncUploadedRowsFromGrid(forceRebuild = false) {
+    if (forceRebuild || this.uploadedRows.length === 0 || !this.selectedJobId) {
+      const rows = this.getGridRows()
+        .map((row) => this.normalizeRow(row))
+        .filter((row) => !this.isRowEmpty(row))
+        .map((row) => ({
+          ...row,
+          uploadStatus: '',
+          uploadErrors: [],
+          errorMessages: [],
+          fieldErrorMessages: {},
+          editedFields: [],
+          wasEditedAfterError: false,
+          isBackendRow: false,
+          rowNumber: null
+        }));
+      this.uploadedRows = rows;
     }
-    return String(header || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+
+    if (this.uploadStatusRow) this.uploadStatusRow.hidden = this.uploadedRows.length === 0;
+    if (this.uploadFilter !== 'all') this.applyUploadFilter();
   },
 
-  normalizeText(value) {
-    return String(value || '').trim();
+  getBulkUploadBaseUrl() {
+    const baseUrl = String(window.API_BASE_URL || '').trim().replace(/\/$/, '');
+    return baseUrl ? `${baseUrl}/api/foundational/api/bulk-upload` : '/api/foundational/api/bulk-upload';
   },
 
-  isValidRequiredText(value) {
-    return this.normalizeText(value).length > 0;
+  getCurrentUser() {
+    const currentUserId = document.getElementById('currentUserId')?.value;
+    return String(currentUserId || window.GRID_PREF_TEST_USER_ID || 'test-user');
   },
 
-  isValidNumeric(value) {
-    if (window.CsvUploadUtils?.isNumeric) {
-      return window.CsvUploadUtils.isNumeric(value);
+  getStorageKey() {
+    return `kvi-input-exclusion-jobs:${this.entityName}`;
+  },
+
+  readStoredJobs() {
+    try {
+      const payload = window.localStorage?.getItem(this.getStorageKey());
+      const rows = payload ? JSON.parse(payload) : [];
+      return Array.isArray(rows) ? rows : [];
+    } catch (error) {
+      console.warn('Failed to read stored jobs', error);
+      return [];
     }
-    return false;
   },
 
-  applyAdvancedFilters() {
-    const kindByField = {
-      organization: 'text',
-      itemDiscontinuedFlag: 'text',
-      itemSequesteredCommApriaFlag: 'text',
-      itemUsedBiomedFlag: 'text',
-      histRevenue: 'number',
-      patientFlag: 'text'
-    };
+  writeStoredJobs(rows) {
+    try {
+      window.localStorage?.setItem(this.getStorageKey(), JSON.stringify(rows));
+    } catch (error) {
+      console.warn('Failed to write stored jobs', error);
+    }
+  },
 
-    const floatingInputs = this.gridElement
-      ? Array.from(this.gridElement.querySelectorAll('.mfi-floating-filter-input[data-col-id]'))
-      : [];
-    const rawInputByField = new Map();
-    floatingInputs.forEach((input) => {
-      rawInputByField.set(input.dataset.colId, input.value);
-    });
+  addStoredJob(jobId, seed = {}) {
+    if (!jobId) return;
+    const context = this.resolveUploadContext();
+    const next = [
+      {
+        jobId: String(jobId),
+        entityName: this.entityName,
+        status: seed.status || 'PENDING_UPLOAD',
+        programId: seed.programId || context.programId,
+        workStationId: seed.workStationId || context.workStationId,
+        updatedAt: seed.updatedAt || new Date().toISOString()
+      },
+      ...this.readStoredJobs().filter((row) => String(row.jobId) !== String(jobId))
+    ];
+    this.jobRows = next;
+    this.writeStoredJobs(next);
+    this.renderStoredJobs(next);
+    this.updateBatchInfoCount(this.countUnfinishedJobs(next));
+  },
 
-    if (window.GridFilterOperatorUtils?.applyFloatingFilters) {
-      const applied = window.GridFilterOperatorUtils.applyFloatingFilters({
-        gridApi: this.gridApi,
-        gridElement: this.gridElement,
-        fieldTypeMap: kindByField,
-        isNumeric: (value) => this.isValidNumeric(value),
-        onValidationError: (field, reason) => this.showInfo(`${field}: ${reason}`, 'error')
-      });
+  removeStoredJob(jobId) {
+    if (!jobId) return;
+    const next = this.readStoredJobs().filter((row) => String(row.jobId) !== String(jobId));
+    this.writeStoredJobs(next);
+    this.jobRows = next;
+    this.renderStoredJobs(next);
+    this.updateBatchInfoCount(this.countUnfinishedJobs(next));
+    if (String(this.selectedJobId || '') === String(jobId)) {
+      this.selectedJobId = null;
+      this.uploadedRows = [];
+      this.applyUploadFilter();
+    }
+    this.showInfo('Job removed from this list.', 'success');
+  },
 
-      if (applied) {
-        requestAnimationFrame(() => {
-          floatingInputs.forEach((input) => {
-            const raw = rawInputByField.get(input.dataset.colId);
-            if (raw != null) input.value = raw;
-          });
-        });
-      }
+  restoreJobs() {
+    this.jobRows = this.readStoredJobs();
+    this.renderStoredJobs(this.jobRows);
+    this.updateBatchInfoCount(this.countUnfinishedJobs(this.jobRows));
+    this.refreshStoredJobStatuses();
+  },
+
+  countUnfinishedJobs(rows) {
+    return rows.filter((row) => !this.isTerminalStatus(row.status)).length;
+  },
+
+  startPollingIfNeeded() {
+    if (this.pollTimer) {
+      clearInterval(this.pollTimer);
+      this.pollTimer = null;
+    }
+  },
+
+  async refreshStoredJobStatuses() {
+    const stored = this.readStoredJobs();
+    if (stored.length === 0) {
+      this.jobRows = [];
+      this.renderStoredJobs([]);
+      this.updateBatchInfoCount(0);
       return;
     }
 
-    if (typeof this.gridApi?.onFilterChanged === 'function') {
-      this.gridApi.onFilterChanged();
+    const next = await Promise.all(stored.map(async (row) => {
+      try {
+        return this.normalizeJobRow(await this.fetchJobStatus(row.jobId));
+      } catch (error) {
+        return {
+          ...row,
+          status: row.status || 'UNKNOWN',
+          errorMessage: error?.message || 'Failed to refresh status'
+        };
+      }
+    }));
+
+    this.jobRows = next;
+    this.writeStoredJobs(next);
+    this.renderStoredJobs(next);
+    this.updateBatchInfoCount(this.countUnfinishedJobs(next));
+    this.startPollingIfNeeded();
+  },
+
+  renderStoredJobs(rows) {
+    if (!this.batchTableBody) return;
+    if (!Array.isArray(rows) || rows.length === 0) {
+      this.batchTableBody.innerHTML = '<div class="bulk-upload-batch-empty">No upload tracked yet.</div>';
+      return;
     }
+
+    this.batchTableBody.innerHTML = rows.map((row) => `
+      <div class="bulk-upload-batch-row" role="listitem">
+        <span class="bulk-upload-batch-cell"><button type="button" class="bulk-upload-batch-number-link" data-job-link="${this.escapeHtml(row.jobId)}">${this.escapeHtml(row.jobId)}</button></span>
+        <span class="bulk-upload-batch-cell">${this.escapeHtml(row.status || '')}</span>
+        <span class="bulk-upload-batch-cell">${this.escapeHtml(row.totalRows ?? '')}</span>
+        <span class="bulk-upload-batch-cell">${this.escapeHtml(row.processedRows ?? '')}</span>
+        <span class="bulk-upload-batch-cell">${this.escapeHtml(row.successCount ?? '')}</span>
+        <span class="bulk-upload-batch-cell">${this.escapeHtml(row.errorCount ?? '')}</span>
+        <span class="bulk-upload-batch-cell">${this.escapeHtml(row.programId || '')}</span>
+        <span class="bulk-upload-batch-cell">${this.escapeHtml(row.workStationId || '')}</span>
+        <span class="bulk-upload-batch-cell">${this.escapeHtml(this.formatDateTime(row.updatedAt || row.completedAt || row.createdAt))}</span>
+        <span class="bulk-upload-batch-cell"><button type="button" class="bulk-upload-batch-delete-btn" data-job-remove="${this.escapeHtml(row.jobId)}" aria-label="Remove job">🗑</button></span>
+      </div>
+    `).join('');
+  },
+
+  updateBatchInfoCount(count) {
+    if (!this.batchInfoText) return;
+    this.batchInfoText.textContent = `You Have [${count}] Unfinished Uploads.`;
+  },
+
+  escapeHtml(value) {
+    return String(value == null ? '' : value)
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;');
+  },
+
+  formatDateTime(value) {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value);
+    return `${this.toDisplayText(date.toISOString())} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+  },
+
+  async fetchJson(endpoint, options = {}) {
+    const response = await fetch(endpoint, options);
+    const text = await response.text();
+    let payload = {};
+    if (text) {
+      try {
+        payload = JSON.parse(text);
+      } catch (error) {
+        payload = { message: text };
+      }
+    }
+    if (!response.ok) {
+      const message = payload?.message || payload?.error || `Request failed: ${response.status}`;
+      const error = new Error(message);
+      error.status = response.status;
+      throw error;
+    }
+    return payload;
+  },
+
+  normalizeJobRow(status) {
+    return {
+      jobId: String(status?.jobId || ''),
+      entityName: status?.entityName || this.entityName,
+      sourceType: status?.sourceType || '',
+      programId: status?.programId || '',
+      workStationId: status?.workStationId || status?.workstationId || status?.workStnId || '',
+      status: status?.status || '',
+      totalRows: status?.totalRows ?? '',
+      successCount: status?.successCount ?? '',
+      errorCount: status?.errorCount ?? '',
+      warningCount: status?.warningCount ?? '',
+      processedRows: status?.processedRows ?? '',
+      progressPercentage: status?.progressPercentage ?? '',
+      createdAt: status?.createdAt || '',
+      startedAt: status?.startedAt || '',
+      completedAt: status?.completedAt || '',
+      updatedAt: status?.updatedAt || '',
+      errorMessage: status?.errorMessage || '',
+      batchJobExecutionId: status?.batchJobExecutionId ?? ''
+    };
+  },
+
+  async fetchJobStatus(jobId) {
+    return this.fetchJson(`${this.getBulkUploadBaseUrl()}/jobs/status?jobId=${encodeURIComponent(jobId)}`, {
+      method: 'GET',
+      headers: { Accept: 'application/json' }
+    });
+  },
+
+  async fetchJobResults(jobId, onlyErrors = false) {
+    const endpoint = onlyErrors
+      ? `${this.getBulkUploadBaseUrl()}/jobs/errors?jobId=${encodeURIComponent(jobId)}&page=0&size=100`
+      : `${this.getBulkUploadBaseUrl()}/jobs/results?jobId=${encodeURIComponent(jobId)}&page=0&size=100`;
+    return this.fetchJson(endpoint, { method: 'GET', headers: { Accept: 'application/json' } });
+  },
+
+  isTerminalStatus(status) {
+    return ['COMPLETED', 'FAILED'].includes(String(status || '').toUpperCase());
+  },
+
+  toUploadStatus(value) {
+    const normalized = String(value || '').trim().toUpperCase();
+    if (['SUCCESS', 'COMPLETED', 'VALID'].includes(normalized)) return 'success';
+    if (['ERROR', 'FAILED', 'INVALID'].includes(normalized)) return 'error';
+    return '';
+  },
+
+  mapErrorField(field) {
+    const normalized = this.normalizeHeader(field);
+    const match = KVI_INPUT_EXCLUSION_FIELD_DEFS.find((column) => this.normalizeHeader(column.headerName) === normalized || this.normalizeHeader(column.field) === normalized);
+    return match?.field || '';
+  },
+
+  extractFieldErrorMessages(item) {
+    const messagesByField = {};
+    const assignMessage = (field, message) => {
+      const mappedField = this.mapErrorField(field);
+      if (!mappedField || message == null || message === '') return;
+      messagesByField[mappedField] = String(message);
+    };
+
+    if (Array.isArray(item?.errorFields) && Array.isArray(item?.errorMessages) && item.errorFields.length === item.errorMessages.length) {
+      item.errorFields.forEach((field, index) => assignMessage(field, item.errorMessages[index]));
+    }
+
+    if (item?.fieldErrors && typeof item.fieldErrors === 'object' && !Array.isArray(item.fieldErrors)) {
+      Object.entries(item.fieldErrors).forEach(([field, message]) => assignMessage(field, message));
+    }
+
+    return messagesByField;
+  },
+
+  getCellErrorTooltip(params, field) {
+    const row = params?.data;
+    if (!row || !field) return '';
+    const fieldMessage = row.fieldErrorMessages?.[field];
+    if (fieldMessage) return fieldMessage;
+    if (Array.isArray(row.uploadErrors) && row.uploadErrors.includes(field) && Array.isArray(row.errorMessages) && row.errorMessages.length > 0) {
+      return row.errorMessages.join('\n');
+    }
+    return '';
+  },
+
+  getFieldValue(source, field) {
+    if (!source || typeof source !== 'object') return '';
+    if (source[field] != null) return source[field];
+
+    const normalizedField = this.normalizeHeader(field);
+    for (const [key, value] of Object.entries(source)) {
+      if (this.normalizeHeader(key) === normalizedField) return value;
+    }
+
+    const column = KVI_INPUT_EXCLUSION_FIELD_DEFS.find((item) => item.field === field);
+    if (column) {
+      const normalizedHeader = this.normalizeHeader(column.headerName);
+      for (const [key, value] of Object.entries(source)) {
+        if (this.normalizeHeader(key) === normalizedHeader) return value;
+      }
+    }
+
+    return '';
+  },
+
+  toBackendDataShape(source) {
+    const mapped = this.createBlankRow();
+    KVI_INPUT_EXCLUSION_FIELD_DEFS.forEach(({ field }) => {
+      mapped[field] = this.getFieldValue(source, field);
+    });
+    return mapped;
+  },
+
+  resolveUploadInstructions(response, file) {
+    const instructions = response?.uploadInstructions;
+    const method = String(instructions?.method || 'PUT').toUpperCase();
+    const headers = {};
+
+    if (instructions?.headers && typeof instructions.headers === 'object' && !Array.isArray(instructions.headers)) {
+      Object.entries(instructions.headers).forEach(([key, value]) => {
+        if (key && value != null && value !== '') headers[key] = value;
+      });
+    }
+
+    if (Array.isArray(instructions?.headers)) {
+      instructions.headers.forEach((entry) => {
+        const key = entry?.name || entry?.key;
+        const value = entry?.value;
+        if (key && value != null && value !== '') headers[key] = value;
+      });
+    }
+
+    if (!Object.keys(headers).some((key) => key.toLowerCase() === 'content-type')) {
+      headers['Content-Type'] = file.type || 'text/csv';
+    }
+
+    return { method, headers };
+  },
+
+  normalizeResultRow(item) {
+    const baseRow = this.normalizeRow(this.toBackendDataShape(item?.data || {}));
+    const fieldErrorMessages = this.extractFieldErrorMessages(item);
+    const uploadErrors = Array.from(new Set([
+      ...(Array.isArray(item?.errorFields) ? item.errorFields.map((field) => this.mapErrorField(field)).filter(Boolean) : []),
+      ...Object.keys(fieldErrorMessages)
+    ]));
+    const uploadStatus = this.toUploadStatus(item?.status)
+      || (uploadErrors.length > 0 || (Array.isArray(item?.errorMessages) && item.errorMessages.length > 0) ? 'error' : 'success');
+
+    return {
+      ...baseRow,
+      uploadStatus,
+      uploadErrors,
+      errorMessages: Array.isArray(item?.errorMessages) ? item.errorMessages : [],
+      fieldErrorMessages,
+      editedFields: [],
+      wasEditedAfterError: false,
+      rowNumber: item?.rowNumber ?? null,
+      isBackendRow: true
+    };
+  },
+
+  async loadJobResults(jobId) {
+    if (!jobId) return;
+    this.selectedJobId = String(jobId);
+    try {
+      const [status, resultsPayload] = await Promise.all([
+        this.fetchJobStatus(jobId),
+        this.fetchJobResults(jobId, false)
+      ]);
+
+      const normalizedStatus = this.normalizeJobRow(status);
+      this.upsertJobRow(normalizedStatus);
+
+      const rows = Array.isArray(resultsPayload?.results)
+        ? resultsPayload.results.map((row) => this.normalizeResultRow(row))
+        : [];
+
+      this.uploadedRows = rows;
+      this.uploadFilter = 'all';
+      this.uploadStatusInputs.forEach((input) => {
+        input.checked = input.value === 'all';
+      });
+      if (this.uploadStatusRow) this.uploadStatusRow.hidden = rows.length === 0;
+      this.applyUploadFilter();
+      this.showInfo(`Loaded job ${jobId} (${rows.length} row(s)).`, 'success');
+    } catch (error) {
+      console.error('Failed to load job results:', error);
+      this.showInfo(error?.message || 'Failed to load job results.', 'error');
+    }
+  },
+
+  upsertJobRow(row) {
+    const next = [row, ...this.readStoredJobs().filter((item) => String(item.jobId) !== String(row.jobId))];
+    this.jobRows = next;
+    this.writeStoredJobs(next);
+    this.renderStoredJobs(next);
+    this.updateBatchInfoCount(this.countUnfinishedJobs(next));
+    this.startPollingIfNeeded();
+  },
+
+  async refreshSingleJobStatus(jobId) {
+    if (!jobId) return null;
+    try {
+      const normalizedStatus = this.normalizeJobRow(await this.fetchJobStatus(jobId));
+      this.upsertJobRow(normalizedStatus);
+      return normalizedStatus;
+    } catch (error) {
+      console.warn('Failed to refresh single job status', error);
+      return null;
+    }
+  },
+
+  async processUploadedCsv(file) {
+    try {
+      const response = await this.requestSignedUrlUpload(file);
+      if (!response?.jobId) throw new Error('Job id missing from upload response');
+
+      const context = this.resolveUploadContext();
+      this.addStoredJob(response.jobId, {
+        status: 'PENDING_UPLOAD',
+        programId: context.programId,
+        workStationId: context.workStationId
+      });
+      await this.refreshSingleJobStatus(response.jobId);
+      this.showInfo(`Upload accepted. Job ${response.jobId} created.`, 'success');
+      return true;
+    } catch (error) {
+      console.error('Bulk upload failed:', error);
+      this.showInfo(error?.message || 'Bulk upload failed.', 'error');
+      return false;
+    }
+  },
+
+  resolveUploadContext() {
+    return {
+      userId: this.getCurrentUser(),
+      programId: String(window.KVI_INPUT_EXCLUSION_PROGRAM_ID || 'PROG001'),
+      workStationId: String(window.KVI_INPUT_EXCLUSION_WORK_STATION_ID || 'WS001')
+    };
+  },
+
+  getBulkUploadFileName(file) {
+    const rawExtension = String(file?.name || '').trim().split('.').pop();
+    const hasExtension = rawExtension && rawExtension !== String(file?.name || '').trim();
+    const extension = hasExtension ? `.${rawExtension}` : '.csv';
+    return `${this.entityName}${extension}`;
+  },
+
+  async requestSignedUrlUpload(file) {
+    const context = this.resolveUploadContext();
+    const uploadFileName = this.getBulkUploadFileName(file);
+    const response = await this.fetchJson(`${this.getBulkUploadBaseUrl()}/request-signed-url`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({
+        entityName: this.entityName,
+        userId: context.userId,
+        programId: context.programId,
+        workStationId: context.workStationId,
+        fileName: uploadFileName
+      })
+    });
+
+    if (!response?.signedUrl) throw new Error('Signed URL missing from response');
+
+    const uploadRequest = this.resolveUploadInstructions(response, file);
+    const uploadResponse = await fetch(response.signedUrl, {
+      method: uploadRequest.method,
+      headers: uploadRequest.headers,
+      body: file
+    });
+    if (!uploadResponse.ok) throw new Error(`Signed upload failed: ${uploadResponse.status}`);
+
+    return response;
+  },
+
+  async submitGridRows(rows, mode = 'grid') {
+    const endpoint = mode === 'resubmit' && this.selectedJobId
+      ? `${this.getBulkUploadBaseUrl()}/jobs/resubmit?jobId=${encodeURIComponent(this.selectedJobId)}&createNewJob=false`
+      : `${this.getBulkUploadBaseUrl()}/grid?entityName=${encodeURIComponent(this.entityName)}`;
+
+    const payload = {
+      records: rows.map((row) => this.toBackendRecord(row))
+    };
+
+    if (mode !== 'resubmit') payload.source = 'GRID';
+
+    return this.fetchJson(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify(payload)
+    });
+  },
+
+  processGridRows() {
+    const selectedRows = this.gridApi?.getSelectedRows?.() || [];
+    const sourceRows = selectedRows.length > 0 ? selectedRows : this.getGridRows();
+    const normalizedRows = sourceRows
+      .map((row) => this.normalizeRow(row))
+      .filter((row) => !this.isRowEmpty(row));
+
+    if (normalizedRows.length === 0) {
+      this.showInfo(selectedRows.length > 0 ? 'Selected row(s) are empty.' : 'Paste or enter at least one row before processing.', 'error');
+      return;
+    }
+
+    const submitRows = normalizedRows.map((row) => ({
+      ...row,
+      uploadStatus: '',
+      uploadErrors: [],
+      errorMessages: [],
+      fieldErrorMessages: {},
+      editedFields: [],
+      wasEditedAfterError: false
+    }));
+
+    const shouldResubmit = Boolean(this.selectedJobId) && sourceRows.some((row) => row.isBackendRow);
+    if (shouldResubmit && selectedRows.length === 0) {
+      this.showInfo('You have error rows. Select the corrected row(s) and then submit.', 'warning');
+      return;
+    }
+
+    const mode = shouldResubmit ? 'resubmit' : 'grid';
+    this.submitGridRows(submitRows, mode).then(async (response) => {
+      if (mode === 'resubmit') {
+        if (typeof this.gridApi?.deselectAll === 'function') this.gridApi.deselectAll();
+        this.showInfo(response?.message || 'Selected corrected row(s) submitted successfully.', 'success');
+        window.location.reload();
+        return;
+      }
+
+      if (!response?.jobId) throw new Error('Job id missing from submit response');
+      const context = this.resolveUploadContext();
+      this.addStoredJob(response.jobId, {
+        status: 'PROCESSING',
+        programId: context.programId,
+        workStationId: context.workStationId
+      });
+      await this.refreshSingleJobStatus(response.jobId);
+      this.showInfo(response?.message || `Job ${response.jobId} created successfully.`, 'success');
+    }).catch((error) => {
+      console.error('Grid processing failed:', error);
+      this.showInfo(error?.message || 'Grid processing failed.', 'error');
+    });
+  },
+
+  toBackendRecord(row) {
+    const payload = {};
+    KVI_INPUT_EXCLUSION_OUTBOUND_FIELDS.forEach(({ localField, backendField }) => {
+      payload[backendField] = row[localField] == null ? '' : row[localField];
+    });
+    return payload;
+  },
+
+  normalizeHeader(header) {
+    if (window.CsvUploadUtils?.normalizeHeader) return window.CsvUploadUtils.normalizeHeader(header);
+    return String(header || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+  },
+
+  resolvePasteHeaderField(header, allowedFields = []) {
+    const normalizedHeader = this.normalizeHeader(header);
+    if (!normalizedHeader) return '';
+
+    const match = KVI_INPUT_EXCLUSION_FIELD_DEFS.find(({ field, headerName }) => (
+      this.normalizeHeader(field) === normalizedHeader || this.normalizeHeader(headerName) === normalizedHeader
+    ));
+
+    return match && allowedFields.includes(match.field) ? match.field : '';
+  },
+
+  toDisplayText(value) {
+    return String(value || '').trim();
+  },
+
+  numberFilterValue(value) {
+    const raw = String(value ?? '').replace(/,/g, '').trim();
+    if (!raw) return null;
+    const numeric = Number(raw);
+    return Number.isFinite(numeric) ? numeric : null;
   },
 
   normalizeRow(row) {
     return {
-      organization: this.normalizeText(row.organization || ''),
-      itemDiscontinuedFlag: this.normalizeText(row.itemDiscontinuedFlag || ''),
-      itemSequesteredCommApriaFlag: this.normalizeText(row.itemSequesteredCommApriaFlag || ''),
-      itemUsedBiomedFlag: this.normalizeText(row.itemUsedBiomedFlag || ''),
-      histRevenue: this.normalizeText(row.histRevenue || ''),
-      patientFlag: this.normalizeText(row.patientFlag || '')
+      organization: this.toDisplayText(row.organization),
+      itemDiscontinuedFlag: this.toDisplayText(row.itemDiscontinuedFlag),
+      itemSequesteredCommApriaFlag: this.toDisplayText(row.itemSequesteredCommApriaFlag),
+      itemUsedBiomedFlag: this.toDisplayText(row.itemUsedBiomedFlag),
+      histRevenue: this.toDisplayText(row.histRevenue).replace(/,/g, ''),
+      patientFlag: this.toDisplayText(row.patientFlag)
     };
   },
 
   isRowEmpty(row) {
-    return !row.organization
-      && !row.itemDiscontinuedFlag
-      && !row.itemSequesteredCommApriaFlag
-      && !row.itemUsedBiomedFlag
-      && !row.histRevenue
-      && !row.patientFlag;
-  },
-
-  validateRow(row) {
-    const errors = [];
-    if (!this.isValidRequiredText(row.organization)) errors.push('organization');
-    if (!this.isValidRequiredText(row.itemDiscontinuedFlag)) errors.push('itemDiscontinuedFlag');
-    if (!this.isValidRequiredText(row.itemSequesteredCommApriaFlag)) errors.push('itemSequesteredCommApriaFlag');
-    if (!this.isValidRequiredText(row.itemUsedBiomedFlag)) errors.push('itemUsedBiomedFlag');
-    if (!this.isValidNumeric(row.histRevenue)) errors.push('histRevenue');
-    if (!this.isValidRequiredText(row.patientFlag)) errors.push('patientFlag');
-    return {
-      isValid: errors.length === 0,
-      errors
-    };
-  },
-
-  validateField(field, value) {
-    if (field === 'histRevenue') {
-      return this.isValidNumeric(value);
-    }
-    if ([
-      'organization',
-      'itemDiscontinuedFlag',
-      'itemSequesteredCommApriaFlag',
-      'itemUsedBiomedFlag',
-      'patientFlag'
-    ].includes(field)) {
-      return this.isValidRequiredText(value);
-    }
-    return true;
+    return KVI_INPUT_EXCLUSION_FIELD_DEFS.every(({ field }) => !String(row[field] || '').trim());
   },
 
   onCellValueChanged(event) {
@@ -854,58 +978,35 @@ const KviInputExclusionAddPage = {
     if (!field || !rowNode?.data) return;
 
     const normalized = this.normalizeRow(rowNode.data);
-    const validation = this.validateRow(normalized);
-    Object.assign(rowNode.data, normalized, {
-      uploadStatus: validation.isValid ? 'success' : 'error',
-      uploadErrors: validation.errors
-    });
-
-    if (this.gridApi?.refreshCells) {
-      this.gridApi.refreshCells({ rowNodes: [rowNode], force: true });
+    Object.assign(rowNode.data, this.buildEditedRowState(normalized, field));
+    if (this.gridApi?.refreshCells) this.gridApi.refreshCells({ rowNodes: [rowNode], force: true });
+    if (this.selectedJobId) {
+      if (typeof this.gridApi?.deselectNode === 'function') this.gridApi.deselectNode(rowNode);
+      this.applyUploadFilter();
+      return;
     }
-    this.syncUploadedRowsFromGrid();
+    this.syncUploadedRowsFromGrid(true);
   },
 
-  saveCellFromEditor(rowNode, field, nextValue) {
-    if (!rowNode?.data || !field) return;
-    const normalized = this.normalizeRow({
-      ...rowNode.data,
-      [field]: nextValue
-    });
-    const value = normalized[field];
-    const isValid = this.validateField(field, value);
+  buildEditedRowState(row, editedField) {
+    const nextFieldErrorMessages = { ...(row.fieldErrorMessages || {}) };
+    delete nextFieldErrorMessages[editedField];
 
-    if (!isValid) {
-      const validation = this.validateRow(normalized);
-      Object.assign(rowNode.data, normalized, {
-        uploadStatus: validation.isValid ? 'success' : 'error',
-        uploadErrors: validation.errors
-      });
-      if (this.gridApi?.refreshCells) {
-        this.gridApi.refreshCells({ rowNodes: [rowNode], force: true });
-      }
-      this.showInfo('Cell value is invalid. Fix and save again.', 'error');
-      return { ok: false, value };
-    }
+    const nextUploadErrors = Array.isArray(row.uploadErrors)
+      ? row.uploadErrors.filter((field) => field !== editedField)
+      : [];
 
-    const validation = this.validateRow(normalized);
-    Object.assign(rowNode.data, normalized, {
-      uploadStatus: validation.isValid ? 'success' : 'error',
-      uploadErrors: validation.errors
-    });
+    const nextEditedFields = Array.from(new Set([...(Array.isArray(row.editedFields) ? row.editedFields : []), editedField]));
+    const nextStatus = row.isBackendRow ? 'error' : '';
 
-    if (this.gridApi?.refreshCells) {
-      this.gridApi.refreshCells({ rowNodes: [rowNode], force: true });
-    }
-
-    if (this.uploadedRows.length > 0) {
-      if (this.uploadStatusRow) this.uploadStatusRow.hidden = false;
-      this.applyUploadFilter();
-    }
-    this.syncUploadedRowsFromGrid();
-
-    this.showInfo('Cell saved locally.', 'success');
-    return { ok: true, value };
+    return {
+      ...row,
+      uploadStatus: nextStatus,
+      uploadErrors: nextUploadErrors,
+      fieldErrorMessages: nextFieldErrorMessages,
+      editedFields: nextEditedFields,
+      wasEditedAfterError: row.isBackendRow ? true : Boolean(row.wasEditedAfterError)
+    };
   },
 
   async parseAndMapCsvFile(file) {
@@ -914,141 +1015,46 @@ const KviInputExclusionAddPage = {
       ? window.CsvUploadUtils.parseCsvText(csvText)
       : { normalizedHeaders: [], rows: [] };
 
-    if (parsed.rows.length < 1) {
-      throw new Error('CSV must include header and at least one data row');
-    }
+    if (parsed.rows.length < 1) throw new Error('CSV must include header and at least one data row');
 
     const indexByHeader = {};
-    parsed.normalizedHeaders.forEach((h, idx) => {
-      indexByHeader[h] = idx;
+    parsed.normalizedHeaders.forEach((header, index) => {
+      indexByHeader[header] = index;
     });
 
     return parsed.rows.map((cells) => {
-      const row = this.normalizeRow({
-        organization: cells[indexByHeader.organization] || '',
-        itemDiscontinuedFlag: cells[indexByHeader.itemdiscontinuedflag] || '',
-        itemSequesteredCommApriaFlag: cells[indexByHeader.itemsequesteredcommapriaflag] || cells[indexByHeader.itemsequesteredcoramapriaflag] || '',
-        itemUsedBiomedFlag: cells[indexByHeader.itemusedbiomedflag] || '',
-        histRevenue: cells[indexByHeader.histrevenue] || '',
-        patientFlag: cells[indexByHeader.patientflag] || ''
+      const row = this.createBlankRow();
+      KVI_INPUT_EXCLUSION_FIELD_DEFS.forEach(({ field, headerName }) => {
+        const index = indexByHeader[this.normalizeHeader(headerName)] ?? indexByHeader[this.normalizeHeader(field)];
+        row[field] = index == null ? '' : (cells[index] || '');
       });
-      const result = this.validateRow(row);
-      row.uploadStatus = result.isValid ? 'success' : 'error';
-      row.uploadErrors = result.errors;
-      return row;
+      return this.normalizeResultRow({
+        status: 'SUCCESS',
+        data: row,
+        errorFields: [],
+        errorMessages: []
+      });
     });
   },
 
-  async createMockBatchFromFile(file) {
-    const mappedRows = await this.parseAndMapCsvFile(file);
-    const batchId = `KVI-INPUT-EXCLUSION-${Date.now()}`;
-    const batchNumber = this.nextMockBatchNumber();
-    const errorCount = mappedRows.filter((row) => row.uploadStatus === 'error').length;
-    const today = this.formatNowUsDate();
-    const batch = {
-      id: batchId,
-      batchNumber,
-      batchStatus: errorCount > 0 ? 'Validation Error' : 'Validation Success',
-      recordsCount: mappedRows.length,
-      errorCount,
-      createdBy: this.getCurrentUser(),
-      priceRuleLevel: 'KVI INPUT EXCLUSION',
-      startDate: today,
-      endDate: today,
-      programId: 'KVI_INPUT_EXCLUSION',
-      userId: this.getCurrentUser(),
-      workstationId: 'WEB',
-      dateUpdated: today
-    };
-    this.mockBatchStore = [batch, ...this.mockBatchStore];
-    this.mockBatchRowsById[batchId] = mappedRows;
-    await this.loadBatchRows();
-    this.showInfo(`Batch ${batchNumber} created. Click batch number to load rows.`, 'success');
-    return true;
-  },
-
-  async createBackendBatch(file) {
-    const endpoint = `${this.getBulkUploadBaseUrl()}/batches`;
-    const payload = {
-      screenCode: this.getScreenCode(),
-      fileName: file.name,
-      fileSize: file.size,
-      contentType: file.type || 'text/csv'
-    };
-    const json = await this.fetchJson(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify(payload)
+  applyAdvancedFilters() {
+    const fieldTypeMap = {};
+    KVI_INPUT_EXCLUSION_FIELD_DEFS.forEach((column) => {
+      fieldTypeMap[column.field] = column.type === 'number' ? 'number' : 'text';
     });
-    const data = json?.data || json || {};
-    const batchId = data.batchId || data.id || data.batchNumber;
-    if (!batchId) throw new Error('Batch id missing from create response');
-    return {
-      batchId,
-      batchNumber: data.batchNumber || String(batchId),
-      uploadUrl: data.uploadUrl || data.signedUrl || ''
-    };
-  },
 
-  async uploadBackendFile(batchId, file, uploadUrl = '') {
-    if (uploadUrl) {
-      const uploadResponse = await fetch(uploadUrl, {
-        method: 'PUT',
-        headers: { 'Content-Type': file.type || 'text/csv' },
-        body: file
+    if (window.GridFilterOperatorUtils?.applyFloatingFilters) {
+      window.GridFilterOperatorUtils.applyFloatingFilters({
+        gridApi: this.gridApi,
+        gridElement: this.gridElement,
+        fieldTypeMap,
+        isNumeric: (value) => !Number.isNaN(Number(String(value).replace(/,/g, '').trim())),
+        onValidationError: (field, reason) => this.showInfo(`${field}: ${reason}`, 'error')
       });
-      if (!uploadResponse.ok) throw new Error(`Signed upload failed: ${uploadResponse.status}`);
       return;
     }
 
-    const endpoint = `${this.getBulkUploadBaseUrl()}/batches/${encodeURIComponent(batchId)}/file`;
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('screenCode', this.getScreenCode());
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      body: formData
-    });
-    if (!response.ok) throw new Error(`Multipart upload failed: ${response.status}`);
-  },
-
-  async startBackendImport(batchId) {
-    const endpoint = `${this.getBulkUploadBaseUrl()}/batches/${encodeURIComponent(batchId)}/import/start?screenCode=${encodeURIComponent(this.getScreenCode())}`;
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: { Accept: 'application/json' }
-    });
-    if (!response.ok) throw new Error(`Import start failed: ${response.status}`);
-    return response.json().catch(() => ({}));
-  },
-
-  async processUploadedCsv(file) {
-    if (this.bulkFlow?.handleFileUpload) {
-      try {
-        return await this.bulkFlow.handleFileUpload(file);
-      } catch (error) {
-        console.error('Shared bulk upload flow failed:', error);
-        this.showInfo(error?.message || 'Failed to process upload', 'error');
-        return false;
-      }
-    }
-
-    try {
-      if (this.shouldUseMockBulkUpload()) {
-        return this.createMockBatchFromFile(file);
-      }
-
-      const createdBatch = await this.createBackendBatch(file);
-      await this.uploadBackendFile(createdBatch.batchId, file, createdBatch.uploadUrl);
-      await this.startBackendImport(createdBatch.batchId);
-      await this.loadBatchRows();
-      this.showInfo(`Batch ${createdBatch.batchNumber} created. Import started.`, 'success');
-      return true;
-    } catch (error) {
-      console.error('Bulk upload flow failed:', error);
-      this.showInfo(error?.message || 'Failed to process upload', 'error');
-      return false;
-    }
+    if (typeof this.gridApi?.onFilterChanged === 'function') this.gridApi.onFilterChanged();
   },
 
   applyUploadFilter() {
@@ -1057,19 +1063,13 @@ const KviInputExclusionAddPage = {
     const filteredRows = this.uploadFilter === 'all'
       ? this.uploadedRows
       : this.uploadedRows.filter((row) => row.uploadStatus === this.uploadFilter);
-
-    this.gridApi.setGridOption('rowData', filteredRows);
+    this.gridApi.setGridOption('rowData', filteredRows.length > 0 ? filteredRows : (this.selectedJobId ? [] : this.initialRows()));
   },
 
   clearColumnFilters() {
     if (!this.gridApi) return;
-
-    if (typeof this.gridApi.setFilterModel === 'function') {
-      this.gridApi.setFilterModel(null);
-    }
-    if (typeof this.gridApi.onFilterChanged === 'function') {
-      this.gridApi.onFilterChanged();
-    }
+    if (typeof this.gridApi.setFilterModel === 'function') this.gridApi.setFilterModel(null);
+    if (typeof this.gridApi.onFilterChanged === 'function') this.gridApi.onFilterChanged();
     if (this.gridElement) {
       this.gridElement.querySelectorAll('.mfi-floating-filter-input').forEach((input) => {
         input.value = '';
@@ -1081,10 +1081,11 @@ const KviInputExclusionAddPage = {
     if (!this.gridApi) return;
     const selectedRows = this.gridApi.getSelectedRows?.() || [];
     if (selectedRows.length === 0) {
-      this.showInfo('Select at least one row to delete', 'error');
+      this.showInfo('Select at least one row to delete.', 'error');
       return;
     }
     this.gridApi.applyTransaction({ remove: selectedRows });
+    if (!this.selectedJobId) this.syncUploadedRowsFromGrid(true);
   },
 
   getGridRows() {
@@ -1097,96 +1098,16 @@ const KviInputExclusionAddPage = {
   },
 
   saveDraft() {
-    this.showInfo('Save Draft action is pending client decision.', 'success');
-  },
-
-  submit() {
-    const selectedRows = this.gridApi?.getSelectedRows?.() || [];
-    if (selectedRows.length === 0) {
-      this.showInfo('Select at least one row to submit.', 'error');
-      return;
-    }
-
-    const selectedEnteredRows = selectedRows
-      .map((row) => this.normalizeRow(row))
-      .filter((row) => !this.isRowEmpty(row));
-
-    if (selectedEnteredRows.length === 0) {
-      this.showInfo('Selected row(s) are empty. Select at least one completed row.', 'error');
-      return;
-    }
-
-    const validatedSelectedRows = selectedEnteredRows.map((normalized) => {
-      const validation = this.validateRow(normalized);
-      return {
-        ...normalized,
-        uploadStatus: validation.isValid ? 'success' : 'error',
-        uploadErrors: validation.errors
-      };
-    });
-
-    if (validatedSelectedRows.some((row) => row.uploadStatus === 'error')) {
-      this.showInfo('Some selected rows are invalid. Fix or unselect them before submitting.', 'error');
-      return;
-    }
-
-    const selectedSet = new Set(selectedRows);
-    const sourceRows = this.uploadedRows.length > 0 ? this.uploadedRows : this.getGridRows();
-    const remainingRows = sourceRows.filter((row) => !selectedSet.has(row));
-
-    this.uploadedRows = remainingRows;
-    this.uploadFilter = 'all';
-    this.uploadStatusInputs.forEach((input) => {
-      input.checked = input.value === 'all';
-    });
-    if (this.uploadStatusRow) this.uploadStatusRow.hidden = remainingRows.length === 0;
-    this.applyUploadFilter();
-
-    if (this.bulkFlow?.applyPostSubmit) {
-      this.bulkFlow.applyPostSubmit(remainingRows).catch((error) => {
-        console.error('Post-submit batch sync failed:', error);
-      });
-    } else if (this.selectedBatchId && this.shouldUseMockBulkUpload()) {
-      this.mockBatchRowsById[this.selectedBatchId] = remainingRows;
-    }
-
-    this.showInfo('Selected row(s) submitted. Remaining rows stay available for correction/submission.', 'success');
+    this.syncUploadedRowsFromGrid(true);
+    this.showInfo('Rows kept locally on the page. No backend draft API is available yet.', 'success');
   },
 
   executeFilters() {
-    if (this.gridApi) this.applyAdvancedFilters();
-  },
-
-  bindToolbarActions() {
-    document.addEventListener('click', (event) => {
-      const actionButton = event.target.closest('.gt-action-btn[data-action]');
-      if (!actionButton) return;
-
-      switch (actionButton.dataset.action) {
-        case 'back':
-          window.location.href = window.KVI_LIST_PAGE_URL || '/manage-kvi-input-view-input-data';
-          break;
-        case 'delete':
-          this.deleteSelectedRows();
-          break;
-        case 'saveDraft':
-          this.saveDraft();
-          break;
-        case 'submit':
-          this.submit();
-          break;
-        case 'execute':
-          this.executeFilters();
-          break;
-        default:
-          break;
-      }
-    });
+    this.applyAdvancedFilters();
   },
 
   showInfo(message, type = 'success') {
     if (!window.PageToast?.show) return;
-
     const container = this.ensureToastContainer();
     if (!container) return;
 
@@ -1196,13 +1117,12 @@ const KviInputExclusionAddPage = {
       : normalizedType === 'warning'
         ? 'Heads up'
         : 'Success';
-    const subtitle = String(message || '').trim();
 
     window.PageToast.show({
       container,
       type: normalizedType,
       title,
-      subtitle,
+      subtitle: String(message || '').trim(),
       icon: normalizedType === 'error' ? '!' : normalizedType === 'warning' ? 'i' : '✓',
       autoHideMs: 2400
     });

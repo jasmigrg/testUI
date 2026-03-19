@@ -1,3 +1,113 @@
+class KviInputManualFloatingFilter {
+  init(params) {
+    this.params = params;
+    this.currentValue = '';
+    this.gui = document.createElement('div');
+    this.gui.className = 'mfi-manual-floating-filter';
+
+    this.input = document.createElement('input');
+    this.input.type = 'text';
+    this.input.className = 'mfi-floating-filter-input';
+    this.input.setAttribute(
+      'aria-label',
+      `${params.column.getColDef().headerName || params.column.getColId()} filter`
+    );
+    this.input.dataset.colId = params.column.getColId();
+
+    this.onKeyDown = (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        if (this.params?.api && typeof this.params.api.applyPendingFloatingFilters === 'function') {
+          this.params.api.applyPendingFloatingFilters();
+        } else {
+          this.apply();
+        }
+      }
+    };
+
+    this.input.addEventListener('keydown', this.onKeyDown);
+    this.gui.appendChild(this.input);
+
+    if (!params.api.__manualFloatingFilters) {
+      params.api.__manualFloatingFilters = [];
+    }
+    params.api.__manualFloatingFilters.push(this);
+  }
+
+  getGui() {
+    return this.gui;
+  }
+
+  onParentModelChanged(parentModel) {
+    let next = '';
+    if (parentModel && parentModel.rawInput != null) {
+      next = String(parentModel.rawInput);
+    } else if (parentModel && parentModel.dateFrom != null && this.isNumericOrDateFilter()) {
+      next = this.rebuildOperatorInput(
+        parentModel.type,
+        this.normalizeDateValueForDisplay(parentModel.dateFrom)
+      );
+    } else if (parentModel && parentModel.filter != null && this.isNumericOrDateFilter()) {
+      next = this.rebuildOperatorInput(parentModel.type, parentModel.filter);
+    } else if (parentModel && parentModel.filter != null) {
+      next = String(parentModel.filter);
+    }
+    this.currentValue = next;
+    if (this.input && this.input.value !== next) {
+      this.input.value = next;
+    }
+  }
+
+  apply() {
+    if (!this.input) return;
+    const value = this.input.value.trim();
+    this.currentValue = value;
+    const fallbackOperator = this.isNumericOrDateFilter() ? 'equals' : 'contains';
+    const parsedInput = KviInputPage.parseInlineFilterExpression(value, fallbackOperator);
+
+    this.params.parentFilterInstance((instance) => {
+      if (!instance) return;
+      instance.onFloatingFilterChanged(parsedInput.type, parsedInput.value || null);
+    });
+  }
+
+  isNumericOrDateFilter() {
+    const filter = this.params?.column?.getColDef?.()?.filter;
+    return filter === 'agNumberColumnFilter' || filter === 'agDateColumnFilter';
+  }
+
+  rebuildOperatorInput(type, value) {
+    const prefixMap = {
+      equals: '',
+      notEqual: '!=',
+      greaterThan: '>',
+      lessThan: '<',
+      greaterThanOrEqual: '>=',
+      lessThanOrEqual: '<='
+    };
+    const prefix = prefixMap[String(type || '').trim()] ?? '';
+    return `${prefix}${value == null ? '' : String(value)}`;
+  }
+
+  normalizeDateValueForDisplay(value) {
+    const raw = String(value == null ? '' : value).trim();
+    const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ].*)?$/);
+    if (!isoMatch) return raw;
+    return `${isoMatch[2]}/${isoMatch[3]}/${isoMatch[1]}`;
+  }
+
+  destroy() {
+    if (this.input && this.onKeyDown) {
+      this.input.removeEventListener('keydown', this.onKeyDown);
+    }
+    const list = this.params?.api?.__manualFloatingFilters;
+    if (Array.isArray(list)) {
+      const idx = list.indexOf(this);
+      if (idx >= 0) list.splice(idx, 1);
+    }
+  }
+}
+
 const KviInputPage = {
   activeTab: 'control',
   grids: {},
@@ -136,7 +246,9 @@ const KviInputPage = {
   },
 
   setGridEmptyState(tabKey, mode = 'hidden') {
-    return;
+    const emptyState = this.emptyStates?.[tabKey];
+    if (!emptyState) return;
+    emptyState.hidden = mode !== 'empty';
   },
 
   getSelectedDensityMode() {
@@ -188,16 +300,24 @@ const KviInputPage = {
     const activeGrid = this.getActiveGrid();
     if (!activeGrid?.api) return;
 
-    if (typeof activeGrid.api.setFilterModel === 'function') {
+    const currentFilterModel =
+      typeof activeGrid.api.getFilterModel === 'function' ? activeGrid.api.getFilterModel() || {} : {};
+    const hasFilters = Object.keys(currentFilterModel).length > 0;
+    const currentSortModel =
+      typeof activeGrid.api.getSortModel === 'function' ? activeGrid.api.getSortModel() || [] : [];
+    const hasSort = Array.isArray(currentSortModel) && currentSortModel.length > 0;
+    const currentPage =
+      typeof activeGrid.api.paginationGetCurrentPage === 'function'
+        ? activeGrid.api.paginationGetCurrentPage()
+        : 0;
+
+    if (hasFilters && typeof activeGrid.api.setFilterModel === 'function') {
       activeGrid.api.setFilterModel(null);
     }
-    if (typeof activeGrid.api.setSortModel === 'function') {
+    if (!hasFilters && hasSort && typeof activeGrid.api.setSortModel === 'function') {
       activeGrid.api.setSortModel(null);
     }
-    if (typeof activeGrid.api.onFilterChanged === 'function') {
-      activeGrid.api.onFilterChanged();
-    }
-    if (typeof activeGrid.api.paginationGoToFirstPage === 'function') {
+    if (!hasFilters && !hasSort && currentPage > 0 && typeof activeGrid.api.paginationGoToFirstPage === 'function') {
       activeGrid.api.paginationGoToFirstPage();
     }
     if (typeof activeGrid.api.deselectAll === 'function') {
@@ -268,6 +388,23 @@ const KviInputPage = {
           sortDescending:
             '<span class="gt-sort-icon gt-sort-icon--desc" aria-hidden="true"><svg viewBox="0 0 8 12" focusable="false"><path d="M4 11L1 8H7L4 11Z"></path></svg></span>'
         },
+        components: {
+          manualApplyFloatingFilter: KviInputManualFloatingFilter
+        },
+        localeText: {
+          equals: 'Equals',
+          notEqual: 'Does not equal',
+          greaterThan: 'Greater than',
+          lessThan: 'Less than',
+          after: 'Greater than',
+          before: 'Less than',
+          greaterThanOrEqual: 'Greater than or equal',
+          lessThanOrEqual: 'Less than or equal',
+          contains: 'Contains',
+          notContains: 'Does not contain',
+          startsWith: 'Begins with',
+          endsWith: 'Ends with'
+        },
         defaultColDef: {
           sortable: true,
           unSortIcon: true,
@@ -275,7 +412,9 @@ const KviInputPage = {
           autoHeaderHeight: true,
           filterParams: {
             buttons: ['apply', 'reset'],
-            closeOnApply: true
+            closeOnApply: true,
+            maxNumConditions: 1,
+            numAlwaysVisibleConditions: 1
           }
         }
       },
@@ -288,6 +427,10 @@ const KviInputPage = {
       element: gridElement,
       gridElementId: tabConfig.gridElementId
     };
+
+    if (gridApi) {
+      gridApi.applyPendingFloatingFilters = () => this.applyPendingFilters();
+    }
 
     if (!this.gridManagerBootstrapped && !this.gridManagerInitScheduled && gridApi && window.GridManager) {
       this.gridManagerInitScheduled = true;
@@ -356,7 +499,7 @@ const KviInputPage = {
         minWidth: 210,
         editable: true
       }
-    ];
+    ].map((column) => this.buildFilterableColumn(column));
   },
 
   dataColumns() {
@@ -390,7 +533,7 @@ const KviInputPage = {
       { field: 'itemUsedBiomedFlag', headerName: 'Item Used Biomed Flag', minWidth: 190 },
       { field: 'likeItemGroup', headerName: 'Like Item Group', minWidth: 180 },
       { field: 'histExtendedPrice', headerName: 'Hist Extended Price', minWidth: 170 }
-    ];
+    ].map((column) => this.buildFilterableColumn(column));
   },
 
   exclusionColumns() {
@@ -401,58 +544,57 @@ const KviInputPage = {
       { field: 'itemUsedBiomedFlag', headerName: 'Used Biomed Flag', minWidth: 180 },
       { field: 'histRevenue', headerName: 'Hist Revenue', minWidth: 150 },
       { field: 'patientFlag', headerName: 'Patient Flag', minWidth: 150 }
-    ];
+    ].map((column) => this.buildFilterableColumn(column));
   },
 
   controlSortFieldMap() {
     return {
-      kviInputUpdateDate: 'kviInputUpdateDate',
-      kviInputIncludeMonth: 'kviInputIncludeMonth'
+      kviInputUpdateDate: 'kvi_input_update_date',
+      kviInputIncludeMonth: 'kvi_input_include_month'
     };
   },
 
   dataSortFieldMap() {
     return {
-      gmInputUpdateDate: 'kviInputUpdateDate',
-      orderCompany: 'orderCompany',
-      orderNumber: 'orderNumber',
-      orderType: 'orderType',
-      lineNumber: 'lineNumber',
-      lineType: 'lineType',
-      lastStatus: 'lastStatus',
-      nextStatus: 'nextStatus',
-      shipTo: 'shipTo',
-      billTo: 'billTo',
-      orderDate: 'orderDate',
-      prcaNum: 'prcaNum',
+      gmInputUpdateDate: 'kvi_input_update_date',
+      orderCompany: 'order_company',
+      orderNumber: 'order_number',
+      orderType: 'order_type',
+      lineNumber: 'line_number',
+      lineType: 'line_type',
+      lastStatus: 'last_status',
+      nextStatus: 'next_status',
+      shipTo: 'ship_to',
+      billTo: 'bill_to',
+      orderDate: 'order_date',
+      prcaNum: 'prca_num',
       organization: 'organization',
-      customerSegment: 'customerSegment',
-      customerMarket: 'customerMarket',
-      customer340bFlag: 'customer340bFlag',
-      patientFlag: 'invalidPrcaFlag',
-      itemNumber: 'itemNum',
-      itemFamily: 'itemFamily',
-      itemCategory: 'itemCategory',
-      itemGroup: 'itemGroup',
-      itemSubCategory: 'itemSubCategory',
-      itemDescription: 'itemDescription',
-      itemVendorFamily: 'itemVendorFamily',
-      itemDiscontinuedFlag: 'itemDiscontinuedFlag',
-      itemSequesteredCoramApriaFlag: 'itemSequesteredCoramApriaFlag',
-      itemUsedBiomedFlag: 'itemUsedBiomedFlag',
-      likeItemGroup: 'likeItemGroup',
-      histExtendedPrice: 'histExtendedPrice'
+      customerSegment: 'customer_segment',
+      customerMarket: 'customer_market',
+      customer340bFlag: 'customer_340b_flag',
+      patientFlag: 'invalid_prca_flag',
+      itemNumber: 'item_num',
+      itemFamily: 'item_family',
+      itemCategory: 'item_category',
+      itemGroup: 'item_group',
+      itemSubCategory: 'item_sub_category',
+      itemDescription: 'item_description',
+      itemVendorFamily: 'item_vendor_family',
+      itemDiscontinuedFlag: 'item_discontinued_flag',
+      itemSequesteredCoramApriaFlag: 'item_sequestered_coram_apria_flag',
+      itemUsedBiomedFlag: 'item_used_biomed_flag',
+      likeItemGroup: 'like_item_group',
+      histExtendedPrice: 'hist_extended_price'
     };
   },
 
   exclusionSortFieldMap() {
     return {
-      organization: 'organization',
-      itemDiscontinuedFlag: 'itemDiscontinuedFlag',
-      itemSequesteredCommApriaFlag: 'itemSequesteredCoramApriaFlag',
-      itemUsedBiomedFlag: 'itemUsedBiomedFlag',
-      histRevenue: 'histRevenue',
-      patientFlag: 'invalidPrcaFlag'
+      itemDiscontinuedFlag: 'item_discontinued_flag',
+      itemSequesteredCommApriaFlag: 'item_sequestered_coram_apria_flag',
+      itemUsedBiomedFlag: 'item_used_biomed_flag',
+      histRevenue: 'hist_revenue',
+      patientFlag: 'invalid_prca_flag'
     };
   },
 
@@ -475,11 +617,65 @@ const KviInputPage = {
   toApiDate(value) {
     if (!value) return value;
     const trimmed = String(value).trim();
+    const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T].*)?$/);
+    if (isoMatch) {
+      return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+    }
     const usMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
     if (usMatch) {
       return `${usMatch[3]}-${usMatch[1].padStart(2, '0')}-${usMatch[2].padStart(2, '0')}`;
     }
     return trimmed;
+  },
+
+  applyPendingFilters() {
+    const activeGrid = this.getActiveGrid();
+    const gridApi = activeGrid?.api;
+    if (!gridApi || typeof gridApi.getFilterModel !== 'function' || typeof gridApi.setFilterModel !== 'function') {
+      return;
+    }
+
+    const nextModel = { ...(gridApi.getFilterModel() || {}) };
+    const pendingFilters = Array.isArray(gridApi.__manualFloatingFilters)
+      ? [...gridApi.__manualFloatingFilters]
+      : [];
+
+    for (const floatingFilter of pendingFilters) {
+      const field = String(
+        floatingFilter?.input?.dataset?.colId ||
+          floatingFilter?.params?.column?.getColId?.() ||
+          ''
+      ).trim();
+
+      if (!field || field === 'select') continue;
+
+      const rawInput = String(floatingFilter?.input?.value || '').trim();
+      const builtModel = this.buildManualFilterModel(field, rawInput);
+
+      if (builtModel?.isInvalid) {
+        this.showInfo(`${field}: ${builtModel.invalidReason}`, 'error');
+        return;
+      }
+
+      if (!builtModel) {
+        delete nextModel[field];
+        continue;
+      }
+
+      nextModel[field] = builtModel;
+    }
+
+    const previousSerialized = JSON.stringify(gridApi.getFilterModel() || {});
+    const nextSerialized = JSON.stringify(nextModel);
+
+    if (previousSerialized === nextSerialized) {
+      if (typeof gridApi.refreshInfiniteCache === 'function') {
+        gridApi.refreshInfiniteCache();
+      }
+      return;
+    }
+
+    gridApi.setFilterModel(nextModel);
   },
 
   parseInlineFilterExpression(rawValue, defaultType) {
@@ -503,6 +699,59 @@ const KviInputPage = {
     return { value, type };
   },
 
+  buildManualFilterModel(field, rawInput) {
+    if (!rawInput) return null;
+
+    const kind = this.getFieldFilterKind(field);
+    const parsed = this.parseInlineFilterExpression(rawInput, kind === 'text' ? 'contains' : 'equals');
+    const value = String(parsed.value || '').trim();
+
+    if (!value) {
+      return { isInvalid: true, invalidReason: 'Enter a value after the operator.' };
+    }
+
+    if (
+      kind === 'text' &&
+      ['greaterThan', 'lessThan', 'greaterThanOrEqual', 'lessThanOrEqual'].includes(parsed.type)
+    ) {
+      return { isInvalid: true, invalidReason: 'Text filters support contains, =, and != only.' };
+    }
+
+    if (kind === 'date') {
+      const apiDate = this.toApiDate(value);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(apiDate)) {
+        return { isInvalid: true, invalidReason: 'Enter a valid date in MM/DD/YYYY format.' };
+      }
+      return {
+        filterType: 'date',
+        type: parsed.type || 'equals',
+        dateFrom: apiDate,
+        dateTo: null,
+        rawInput
+      };
+    }
+
+    if (kind === 'number') {
+      const normalizedNumber = value.replace(/[%,$\s]/g, '').replace(/,/g, '');
+      if (normalizedNumber === '' || Number.isNaN(Number(normalizedNumber))) {
+        return { isInvalid: true, invalidReason: 'Enter a valid number.' };
+      }
+      return {
+        filterType: 'number',
+        type: parsed.type || 'equals',
+        filter: normalizedNumber,
+        rawInput
+      };
+    }
+
+    return {
+      filterType: 'text',
+      type: parsed.type || 'contains',
+      filter: value,
+      rawInput
+    };
+  },
+
   mapOperatorToApi(operator, field) {
     const op = String(operator || '').trim();
     if (!op) return null;
@@ -519,6 +768,95 @@ const KviInputPage = {
 
     if (field === 'kviInputUpdateDate' || field === 'orderDate') return 'eq';
     return 'like';
+  },
+
+  getFieldFilterKind(field) {
+    const normalizedField = String(field || '').trim();
+
+    if (['kviInputUpdateDate', 'gmInputUpdateDate', 'orderDate'].includes(normalizedField)) {
+      return 'date';
+    }
+
+    if (
+      [
+        'kviInputIncludeMonth',
+        'orderCompany',
+        'orderNumber',
+        'lineNumber',
+        'shipTo',
+        'billTo',
+        'prcaNum',
+        'itemNumber',
+        'likeItemGroup',
+        'histExtendedPrice',
+        'histRevenue'
+      ].includes(normalizedField)
+    ) {
+      return 'number';
+    }
+
+    return 'text';
+  },
+
+  buildFilterableColumn(column) {
+    const field = String(column?.field || '').trim();
+    if (!field) return column;
+
+    const kind = this.getFieldFilterKind(field);
+
+    if (kind === 'date') {
+      return {
+        ...column,
+        filter: 'agDateColumnFilter',
+        filterParams: {
+          buttons: ['apply', 'reset'],
+          closeOnApply: true,
+          maxNumConditions: 1,
+          numAlwaysVisibleConditions: 1,
+          filterOptions: [
+            'equals',
+            'notEqual',
+            'greaterThan',
+            'lessThan',
+            'greaterThanOrEqual',
+            'lessThanOrEqual'
+          ]
+        }
+      };
+    }
+
+    if (kind === 'number') {
+      return {
+        ...column,
+        filter: 'agNumberColumnFilter',
+        filterParams: {
+          buttons: ['apply', 'reset'],
+          closeOnApply: true,
+          maxNumConditions: 1,
+          numAlwaysVisibleConditions: 1,
+          filterOptions: [
+            'equals',
+            'notEqual',
+            'greaterThan',
+            'lessThan',
+            'greaterThanOrEqual',
+            'lessThanOrEqual'
+          ]
+        }
+      };
+    }
+
+    return {
+      ...column,
+      filter: 'agTextColumnFilter',
+      filterParams: {
+        buttons: ['apply', 'reset'],
+        closeOnApply: true,
+        maxNumConditions: 1,
+        numAlwaysVisibleConditions: 1,
+        filterOptions: ['contains', 'equals', 'notEqual']
+      }
+    };
   },
 
   getValue(row, candidates) {
@@ -666,7 +1004,7 @@ const KviInputPage = {
   persistControlRowUpdate(rowData) {
     const payload = this.buildControlUpdatePayload(rowData);
     if (!this.controlUpdateUrl) {
-      return rowData;
+      return this.transformControlRow(payload);
     }
 
     return fetch(this.controlUpdateUrl, {
@@ -691,14 +1029,14 @@ const KviInputPage = {
         if (responseBody?.data && !Array.isArray(responseBody.data)) {
           return this.transformControlRow(responseBody.data);
         }
-        return rowData;
+        return this.transformControlRow(payload);
       });
   },
 
   buildControlUpdatePayload(rowData) {
     return {
-      kviInputUpdateDate: this.toApiDate(rowData.kviInputUpdateDate),
-      kviInputIncludeMonth: rowData.kviInputIncludeMonth
+      kvi_input_update_date: this.toApiDate(rowData.kviInputUpdateDate),
+      kvi_input_include_month: rowData.kviInputIncludeMonth
     };
   },
 
@@ -763,6 +1101,15 @@ const KviInputPage = {
               : (rows.length < pageSize ? params.startRow + rows.length : -1);
 
             params.successCallback(rows, lastRow);
+            this.syncNoRowsOverlay(
+              params.api,
+              tabConfig.gridElementId === 'kviInputControlGrid'
+                ? 'control'
+                : tabConfig.gridElementId === 'kviInputDataGrid'
+                  ? 'data'
+                  : 'exclusion',
+              rows.length
+            );
             requestAnimationFrame(() => {
               this.setGridEmptyState(
                 tabConfig.gridElementId === 'kviInputControlGrid'
@@ -777,6 +1124,15 @@ const KviInputPage = {
           .catch((error) => {
             console.error('KVI input datasource fetch failed:', error);
             params.failCallback();
+            this.syncNoRowsOverlay(
+              params.api,
+              tabConfig.gridElementId === 'kviInputControlGrid'
+                ? 'control'
+                : tabConfig.gridElementId === 'kviInputDataGrid'
+                  ? 'data'
+                  : 'exclusion',
+              0
+            );
             requestAnimationFrame(() => {
               this.setGridEmptyState(
                 tabConfig.gridElementId === 'kviInputControlGrid'
@@ -790,6 +1146,18 @@ const KviInputPage = {
           });
       }
     };
+  },
+
+  syncNoRowsOverlay(gridApi, tabKey, rowCount) {
+    this.setGridEmptyState(tabKey, rowCount > 0 ? 'hidden' : 'empty');
+    if (!gridApi) return;
+    if (rowCount > 0) {
+      if (typeof gridApi.hideOverlay === 'function') gridApi.hideOverlay();
+      return;
+    }
+    if (typeof gridApi.showNoRowsOverlay === 'function') {
+      gridApi.showNoRowsOverlay();
+    }
   },
 
   extractRowsFromResponse(responseBody) {
