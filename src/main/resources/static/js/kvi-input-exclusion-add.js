@@ -1,29 +1,26 @@
 const KVI_INPUT_EXCLUSION_FIELD_DEFS = [
   { field: 'organization', headerName: 'Organization', minWidth: 180 },
   { field: 'itemDiscontinuedFlag', headerName: 'Item Discontinued Flag', minWidth: 210 },
-  { field: 'itemSequesteredCommApriaFlag', headerName: 'Sequestered Comm Apria Flag', minWidth: 250 },
+  { field: 'itemSequesteredCoramApriaFlag', headerName: 'Item Sequestered Coram Apria Flag', minWidth: 250 },
   { field: 'itemUsedBiomedFlag', headerName: 'Used Biomed Flag', minWidth: 190 },
   { field: 'histRevenue', headerName: 'Hist Revenue', minWidth: 170, type: 'number' },
-  { field: 'patientFlag', headerName: 'Patient Flag', minWidth: 170 }
+  { field: 'invalidPrcaFlag', headerName: 'Invalid PRCA Flag', minWidth: 170 }
 ];
 
 const KVI_INPUT_EXCLUSION_OUTBOUND_FIELDS = [
   { localField: 'organization', backendField: 'organization' },
   { localField: 'itemDiscontinuedFlag', backendField: 'itemDiscontinuedFlag' },
-  { localField: 'itemSequesteredCommApriaFlag', backendField: 'itemSequesteredCoramApriaFlag' },
+  { localField: 'itemSequesteredCoramApriaFlag', backendField: 'itemSequesteredCoramApriaFlag' },
   { localField: 'itemUsedBiomedFlag', backendField: 'itemUsedBiomedFlag' },
   { localField: 'histRevenue', backendField: 'histRevenue' },
-  { localField: 'patientFlag', backendField: 'invalidPrcaFlag' }
+  { localField: 'invalidPrcaFlag', backendField: 'invalidPrcaFlag' }
 ];
 
 const KVI_INPUT_EXCLUSION_BACKEND_ALIASES = {
-  itemSequesteredCommApriaFlag: [
-    'itemSequesteredCoramApriaFlag',
+  itemSequesteredCoramApriaFlag: [
     'itemSequesteredCoramFlag'
   ],
-  patientFlag: [
-    'invalidPrcaFlag'
-  ]
+  invalidPrcaFlag: []
 };
 
 const KviInputExclusionAddPage = {
@@ -1024,10 +1021,10 @@ const KviInputExclusionAddPage = {
     const normalized = { ...this.createBlankRow(), ...row };
     normalized.organization = this.toDisplayText(normalized.organization);
     normalized.itemDiscontinuedFlag = this.toDisplayText(normalized.itemDiscontinuedFlag);
-    normalized.itemSequesteredCommApriaFlag = this.toDisplayText(normalized.itemSequesteredCommApriaFlag);
+    normalized.itemSequesteredCoramApriaFlag = this.toDisplayText(normalized.itemSequesteredCoramApriaFlag);
     normalized.itemUsedBiomedFlag = this.toDisplayText(normalized.itemUsedBiomedFlag);
     normalized.histRevenue = this.toDisplayText(normalized.histRevenue).replace(/,/g, '');
-    normalized.patientFlag = this.toDisplayText(normalized.patientFlag);
+    normalized.invalidPrcaFlag = this.toDisplayText(normalized.invalidPrcaFlag);
     return normalized;
   },
 

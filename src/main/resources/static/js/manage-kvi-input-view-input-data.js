@@ -705,10 +705,10 @@ const KviInputPage = {
     return [
       { field: 'organization', headerName: 'Organization', minWidth: 150 },
       { field: 'itemDiscontinuedFlag', headerName: 'Item Discontinued Flag', minWidth: 210 },
-      { field: 'itemSequesteredCommApriaFlag', headerName: 'Sequestered Comm Apria Flag', minWidth: 250 },
+      { field: 'itemSequesteredCoramApriaFlag', headerName: 'Item Sequestered Coram Apria Flag', minWidth: 250 },
       { field: 'itemUsedBiomedFlag', headerName: 'Used Biomed Flag', minWidth: 180 },
       { field: 'histRevenue', headerName: 'Hist Revenue', minWidth: 150 },
-      { field: 'patientFlag', headerName: 'Patient Flag', minWidth: 150 }
+      { field: 'invalidPrcaFlag', headerName: 'Invalid PRCA Flag', minWidth: 150 }
     ].map((column) => this.buildFilterableColumn(column));
   },
 
@@ -756,10 +756,10 @@ const KviInputPage = {
   exclusionSortFieldMap() {
     return {
       itemDiscontinuedFlag: 'item_discontinued_flag',
-      itemSequesteredCommApriaFlag: 'item_sequestered_coram_apria_flag',
+      itemSequesteredCoramApriaFlag: 'item_sequestered_coram_apria_flag',
       itemUsedBiomedFlag: 'item_used_biomed_flag',
       histRevenue: 'hist_revenue',
-      patientFlag: 'invalid_prca_flag'
+      invalidPrcaFlag: 'invalid_prca_flag'
     };
   },
 
@@ -1081,10 +1081,10 @@ const KviInputPage = {
     return {
       organization: this.getValue(row, ['organization', 'organisation']),
       itemDiscontinuedFlag: this.getValue(row, ['itemDiscontinuedFlag', 'item_discontinued_flag']),
-      itemSequesteredCommApriaFlag: this.getValue(row, ['itemSequesteredCommApriaFlag', 'itemSequesteredCoramApriaFlag', 'item_sequestered_coram_apria_flag']),
+      itemSequesteredCoramApriaFlag: this.getValue(row, ['itemSequesteredCoramApriaFlag', 'itemSequesteredCommApriaFlag', 'item_sequestered_coram_apria_flag']),
       itemUsedBiomedFlag: this.getValue(row, ['itemUsedBiomedFlag', 'item_used_biomed_flag']),
       histRevenue: this.getValue(row, ['histRevenue', 'hist_revenue']),
-      patientFlag: this.getValue(row, ['patientFlag', 'invalidPrcaFlag', 'patient_flag', 'invalid_prca_flag'])
+      invalidPrcaFlag: this.getValue(row, ['invalidPrcaFlag', 'patientFlag', 'patient_flag', 'invalid_prca_flag'])
     };
   },
 
