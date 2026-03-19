@@ -220,6 +220,10 @@ const KviMappingLogicAddPage = {
     return String(row?.uploadStatus || '').trim().toLowerCase() === 'success';
   },
 
+  isProcessingUploadRow(row) {
+    return String(row?.uploadStatus || '').trim().toLowerCase() === 'processing';
+  },
+
   isReadyForResubmitRow(row) {
     return Boolean(row?.isBackendRow)
       && !this.isSuccessfulUploadRow(row)
@@ -248,7 +252,7 @@ const KviMappingLogicAddPage = {
     const row = params?.data;
     if (!field || !row) return false;
     if (!row.isBackendRow) return true;
-    return !this.isSuccessfulUploadRow(row);
+    return !this.isSuccessfulUploadRow(row) && !this.isProcessingUploadRow(row);
   },
 
   initBatchSectionControls() {
@@ -930,6 +934,15 @@ const KviMappingLogicAddPage = {
     this.submitGridRows(submitRows, mode).then(async (response) => {
       if (mode === 'resubmit') {
         if (typeof this.gridApi?.deselectAll === 'function') this.gridApi.deselectAll();
+        submitRows.forEach((submittedRow) => {
+          const match = this.uploadedRows.find((row) => row.isBackendRow && row.rowNumber === submittedRow.rowNumber);
+          if (!match) return;
+          match.uploadStatus = 'processing';
+          match.wasEditedAfterError = false;
+          match.uploadErrors = [];
+          match.fieldErrorMessages = {};
+          match.errorMessages = [];
+        });
         this.showInfo(response?.message || 'Selected corrected row(s) submitted successfully.', 'success');
         if (this.selectedJobId) {
           const refreshedStatus = await this.refreshSingleJobStatus(this.selectedJobId);

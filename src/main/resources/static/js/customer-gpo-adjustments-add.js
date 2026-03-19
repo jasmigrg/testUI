@@ -281,6 +281,10 @@ const CustomerGpoAdjustmentsAddPage = {
     return String(row?.uploadStatus || '').trim().toLowerCase() === 'error';
   },
 
+  isProcessingUploadRow(row) {
+    return String(row?.uploadStatus || '').trim().toLowerCase() === 'processing';
+  },
+
   isReadyForResubmitRow(row) {
     return Boolean(row?.isBackendRow)
       && !this.isSuccessfulUploadRow(row)
@@ -311,7 +315,7 @@ const CustomerGpoAdjustmentsAddPage = {
     const column = CUSTOMER_GPO_FIELD_DEFS.find((item) => item.field === field);
     if (column?.editable === false) return false;
     if (!row.isBackendRow) return true;
-    return !this.isSuccessfulUploadRow(row);
+    return !this.isSuccessfulUploadRow(row) && !this.isProcessingUploadRow(row);
   },
 
   initBatchSectionControls() {
@@ -1119,6 +1123,9 @@ const CustomerGpoAdjustmentsAddPage = {
           if (!match) return;
           match.uploadStatus = 'processing';
           match.wasEditedAfterError = false;
+          match.uploadErrors = [];
+          match.fieldErrorMessages = {};
+          match.errorMessages = [];
         });
         this.applyUploadFilter();
         this.showInfo(response?.message || 'Selected corrected row(s) submitted successfully.', 'success');
