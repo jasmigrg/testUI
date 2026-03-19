@@ -529,6 +529,7 @@ const KviInputExclusionAddPage = {
         <span class="bulk-upload-batch-cell">${this.escapeHtml(row.errorCount ?? '')}</span>
         <span class="bulk-upload-batch-cell">${this.escapeHtml(row.programId || '')}</span>
         <span class="bulk-upload-batch-cell">${this.escapeHtml(row.workStationId || '')}</span>
+        <span class="bulk-upload-batch-cell">${this.escapeHtml(this.formatDateTime(row.createdAt))}</span>
         <span class="bulk-upload-batch-cell">${this.escapeHtml(this.formatDateTime(row.updatedAt || row.completedAt || row.createdAt))}</span>
         <span class="bulk-upload-batch-cell"><button type="button" class="bulk-upload-batch-delete-btn" data-job-remove="${this.escapeHtml(row.jobId)}" aria-label="Remove job">🗑</button></span>
       </div>
@@ -551,8 +552,12 @@ const KviInputExclusionAddPage = {
 
   formatDateTime(value) {
     if (!value) return '';
+    const raw = String(value).trim();
+    if (/^\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}:\d{2}$/.test(raw)) {
+      return raw;
+    }
     const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return String(value);
+    if (Number.isNaN(date.getTime())) return raw;
     return `${this.toDisplayText(date.toISOString())} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
   },
 
@@ -909,7 +914,10 @@ const KviInputExclusionAddPage = {
       if (mode === 'resubmit') {
         if (typeof this.gridApi?.deselectAll === 'function') this.gridApi.deselectAll();
         this.showInfo(response?.message || 'Selected corrected row(s) submitted successfully.', 'success');
-        window.location.reload();
+        if (this.selectedJobId) {
+          await this.refreshSingleJobStatus(this.selectedJobId);
+          await this.loadJobResults(this.selectedJobId);
+        }
         return;
       }
 
@@ -964,14 +972,14 @@ const KviInputExclusionAddPage = {
   },
 
   normalizeRow(row) {
-    return {
-      organization: this.toDisplayText(row.organization),
-      itemDiscontinuedFlag: this.toDisplayText(row.itemDiscontinuedFlag),
-      itemSequesteredCommApriaFlag: this.toDisplayText(row.itemSequesteredCommApriaFlag),
-      itemUsedBiomedFlag: this.toDisplayText(row.itemUsedBiomedFlag),
-      histRevenue: this.toDisplayText(row.histRevenue).replace(/,/g, ''),
-      patientFlag: this.toDisplayText(row.patientFlag)
-    };
+    const normalized = { ...this.createBlankRow(), ...row };
+    normalized.organization = this.toDisplayText(normalized.organization);
+    normalized.itemDiscontinuedFlag = this.toDisplayText(normalized.itemDiscontinuedFlag);
+    normalized.itemSequesteredCommApriaFlag = this.toDisplayText(normalized.itemSequesteredCommApriaFlag);
+    normalized.itemUsedBiomedFlag = this.toDisplayText(normalized.itemUsedBiomedFlag);
+    normalized.histRevenue = this.toDisplayText(normalized.histRevenue).replace(/,/g, '');
+    normalized.patientFlag = this.toDisplayText(normalized.patientFlag);
+    return normalized;
   },
 
   isRowEmpty(row) {

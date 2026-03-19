@@ -119,7 +119,8 @@
               <span class="bulk-upload-batch-col">Error</span>
               <span class="bulk-upload-batch-col">Program ID</span>
               <span class="bulk-upload-batch-col">Work Stn ID</span>
-              <span class="bulk-upload-batch-col">Updated</span>
+              <span class="bulk-upload-batch-col">Created At</span>
+              <span class="bulk-upload-batch-col">Updated At</span>
               <span class="bulk-upload-batch-col">Remove</span>
             </div>
             <div id="bulkUploadBatchTableBody" class="bulk-upload-batch-list" role="list" aria-label="KVI mapping upload jobs"></div>

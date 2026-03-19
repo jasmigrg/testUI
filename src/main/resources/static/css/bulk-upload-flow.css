@@ -150,7 +150,8 @@
 
 .bulk-upload-batch-grid {
   width: 100%;
-  overflow: visible;
+  overflow-x: auto;
+  overflow-y: visible;
   border: none;
   border-radius: 0;
   background: transparent;
@@ -163,10 +164,22 @@
 .bulk-upload-batch-columns,
 .bulk-upload-batch-row {
   display: grid;
-  grid-template-columns: repeat(13, minmax(0, 1fr));
+  grid-template-columns:
+    minmax(72px, 0.8fr)
+    minmax(110px, 1fr)
+    minmax(88px, 0.8fr)
+    minmax(88px, 0.8fr)
+    minmax(88px, 0.8fr)
+    minmax(88px, 0.8fr)
+    minmax(100px, 0.9fr)
+    minmax(100px, 0.9fr)
+    minmax(132px, 1.1fr)
+    minmax(132px, 1.1fr)
+    minmax(72px, 0.7fr);
   column-gap: 8px;
   align-items: center;
   min-width: 0;
+  min-width: 1100px;
 }
 
 .bulk-upload-batch-columns {
@@ -177,7 +190,7 @@
   font-size: 12px;
   font-weight: 700;
   color: #2f3b4a;
-  white-space: normal;
+  white-space: nowrap;
   line-height: 1.2;
 }
 

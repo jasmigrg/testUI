@@ -542,6 +542,7 @@ const KviMappingLogicAddPage = {
         <span class="bulk-upload-batch-cell">${this.escapeHtml(row.errorCount ?? '')}</span>
         <span class="bulk-upload-batch-cell">${this.escapeHtml(row.programId || '')}</span>
         <span class="bulk-upload-batch-cell">${this.escapeHtml(row.workStationId || '')}</span>
+        <span class="bulk-upload-batch-cell">${this.escapeHtml(this.formatDateTime(row.createdAt))}</span>
         <span class="bulk-upload-batch-cell">${this.escapeHtml(this.formatDateTime(row.updatedAt || row.completedAt || row.createdAt))}</span>
         <span class="bulk-upload-batch-cell"><button type="button" class="bulk-upload-batch-delete-btn" data-job-remove="${this.escapeHtml(row.jobId)}" aria-label="Remove job">🗑</button></span>
       </div>
@@ -564,8 +565,12 @@ const KviMappingLogicAddPage = {
 
   formatDateTime(value) {
     if (!value) return '';
+    const raw = String(value).trim();
+    if (/^\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}:\d{2}$/.test(raw)) {
+      return raw;
+    }
     const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return String(value);
+    if (Number.isNaN(date.getTime())) return raw;
     return `${this.toUsDate(date.toISOString())} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
   },
 
@@ -922,7 +927,10 @@ const KviMappingLogicAddPage = {
       if (mode === 'resubmit') {
         if (typeof this.gridApi?.deselectAll === 'function') this.gridApi.deselectAll();
         this.showInfo(response?.message || 'Selected corrected row(s) submitted successfully.', 'success');
-        window.location.reload();
+        if (this.selectedJobId) {
+          await this.refreshSingleJobStatus(this.selectedJobId);
+          await this.loadJobResults(this.selectedJobId);
+        }
         return;
       }
 
