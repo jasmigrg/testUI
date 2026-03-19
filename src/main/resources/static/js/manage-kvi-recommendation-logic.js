@@ -278,12 +278,9 @@ const KviRecommendationLogicPage = {
         await this.downloadParameterCsv();
         return;
       }
-
-      const activeGrid = this.getActiveGrid();
-      if (!activeGrid?.api || typeof activeGrid.api.exportDataAsCsv !== 'function') return;
-      activeGrid.api.exportDataAsCsv({
-        fileName: 'kvi-recommendation-output.csv'
-      });
+      if (this.activeTab === 'output') {
+        await this.downloadOutputCsv();
+      }
     });
   },
 
@@ -325,6 +322,48 @@ const KviRecommendationLogicPage = {
       this.triggerFileDownload(blob, fileName);
     } catch (error) {
       console.error('KVI recommendation parameter export failed:', error);
+      this.showInfo(error?.message || 'Download failed.', 'error');
+    }
+  },
+
+  async downloadOutputCsv() {
+    try {
+      const activeGrid = this.grids.output;
+      const queryParams = this.buildTabQueryParams(
+        {
+          sortFieldMap: this.outputSortFieldMap()
+        },
+        {
+          filterModel: typeof activeGrid?.api?.getFilterModel === 'function'
+            ? activeGrid.api.getFilterModel()
+            : {}
+        },
+        {
+          includePaging: false,
+          includeSort: false
+        }
+      );
+      const response = await fetch(
+        this.resolveApiUrl(`/api/v1/recommendation-output/export-csv?${queryParams.toString()}`),
+        {
+          method: 'GET',
+          headers: {
+            Accept: '*/*'
+          },
+          credentials: 'same-origin'
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(await this.extractDownloadErrorMessage(response));
+      }
+
+      const blob = await response.blob();
+      const fileName =
+        this.getDownloadFileNameFromResponse(response) || 'kvi-recommendation-output.csv';
+      this.triggerFileDownload(blob, fileName);
+    } catch (error) {
+      console.error('KVI recommendation output export failed:', error);
       this.showInfo(error?.message || 'Download failed.', 'error');
     }
   },
