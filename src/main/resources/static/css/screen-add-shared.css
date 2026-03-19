@@ -211,7 +211,7 @@
   }
 
   .screen-add-page .bulk-upload-batch-section {
-    overflow-x: auto;
+    overflow-x: visible;
   }
 
   .screen-add-page .bulk-upload-batch-grid {

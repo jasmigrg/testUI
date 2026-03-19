@@ -919,12 +919,20 @@ const KviInputExclusionAddPage = {
         if (typeof this.gridApi?.deselectAll === 'function') this.gridApi.deselectAll();
         this.showInfo(response?.message || 'Selected corrected row(s) submitted successfully.', 'success');
         if (this.selectedJobId) {
-          await this.refreshSingleJobStatus(this.selectedJobId);
-          await this.loadJobResults(this.selectedJobId, {
-            showToast: false,
-            resetUploadFilter: true,
-            clearColumnFilters: true
+          const refreshedStatus = await this.refreshSingleJobStatus(this.selectedJobId);
+          this.uploadFilter = 'all';
+          this.uploadStatusInputs.forEach((input) => {
+            input.checked = input.value === 'all';
           });
+          this.clearColumnFilters();
+          this.applyUploadFilter();
+          if (this.isTerminalStatus(refreshedStatus?.status)) {
+            await this.loadJobResults(this.selectedJobId, {
+              showToast: false,
+              resetUploadFilter: true,
+              clearColumnFilters: true
+            });
+          }
         }
         return;
       }
