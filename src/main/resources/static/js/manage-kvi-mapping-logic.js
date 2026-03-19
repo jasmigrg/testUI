@@ -283,15 +283,168 @@ const KviMappingLogicPage = {
     });
 
     const downloadBtn = scope.querySelector('.gt-view-btn[data-action="download"]');
-    downloadBtn?.addEventListener('click', () => {
-      const activeGrid = this.getActiveGrid();
-      if (!activeGrid?.api || typeof activeGrid.api.exportDataAsCsv !== 'function') return;
-      activeGrid.api.exportDataAsCsv({
-        fileName: this.activeTab === 'parameter'
-          ? 'kvi-mapping-parameter.csv'
-          : 'kvi-mapping-output.csv'
-      });
+    downloadBtn?.addEventListener('click', async () => {
+      await this.downloadActiveTabCsv();
     });
+  },
+
+  async downloadActiveTabCsv() {
+    const exportConfigByTab = {
+      parameter: {
+        gridKey: 'parameter',
+        endpoint: '/api/v1/kviMappingParameter/export-csv',
+        fallbackFileName: 'kvi-mapping-parameter.csv',
+        sortFieldMap: this.parameterSortFieldMap()
+      },
+      output: {
+        gridKey: 'output',
+        endpoint: '/api/v1/kviMappingOutput/export-csv',
+        fallbackFileName: 'kvi-mapping-output.csv',
+        sortFieldMap: this.outputSortFieldMap()
+      }
+    };
+
+    const exportConfig = exportConfigByTab[this.activeTab];
+    if (!exportConfig) return;
+
+    try {
+      const activeGrid = this.grids[exportConfig.gridKey];
+      const queryParams = this.buildTabQueryParams(
+        {
+          sortFieldMap: exportConfig.sortFieldMap
+        },
+        {
+          filterModel: typeof activeGrid?.api?.getFilterModel === 'function'
+            ? activeGrid.api.getFilterModel()
+            : {}
+        },
+        {
+          includePaging: false,
+          includeSort: false
+        }
+      );
+      const response = await fetch(
+        this.resolveApiUrl(`${exportConfig.endpoint}?${queryParams.toString()}`),
+        {
+          method: 'GET',
+          headers: {
+            Accept: '*/*'
+          },
+          credentials: 'same-origin'
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(await this.extractDownloadErrorMessage(response));
+      }
+
+      const blob = await response.blob();
+      const fileName =
+        this.getDownloadFileNameFromResponse(response) || exportConfig.fallbackFileName;
+      this.triggerFileDownload(blob, fileName);
+    } catch (error) {
+      console.error('KVI mapping export failed:', error);
+      this.showInfo(error?.message || 'Download failed.', 'error');
+    }
+  },
+
+  buildTabQueryParams(tabConfig, params, options = {}) {
+    const {
+      includePaging = true,
+      includeSort = true
+    } = options;
+    const pageSize = params?.endRow - params?.startRow;
+    const pageNum = Math.floor((params?.startRow || 0) / (pageSize || 20));
+    const urlParams = new URLSearchParams();
+
+    if (includePaging) {
+      urlParams.append('page', String(pageNum + 1));
+      urlParams.append(tabConfig.pageSizeParam || 'pageSize', String(pageSize || 20));
+    }
+
+    if (includeSort && params?.sortModel && params.sortModel.length > 0) {
+      const sortModel = params.sortModel[0];
+      const sortField = (tabConfig.sortFieldMap && tabConfig.sortFieldMap[sortModel.colId]) || sortModel.colId;
+      urlParams.append('sortBy', sortField);
+      urlParams.append('sortDir', sortModel.sort);
+    }
+
+    if (params?.filterModel) {
+      Object.keys(params.filterModel).forEach((field) => {
+        const filter = params.filterModel[field];
+        const filterField = (tabConfig.sortFieldMap && tabConfig.sortFieldMap[field]) || field;
+        const sourceValue = filter?.rawInput ?? filter?.filter ?? filter?.dateFrom;
+        if (sourceValue === undefined || sourceValue === null || String(sourceValue).trim() === '') return;
+
+        const parsed = this.parseInlineFilterExpression(sourceValue, filter?.type);
+        if (!parsed.value) return;
+
+        const finalValue = (filterField === 'effective_date' || filterField === 'termination_date')
+          ? this.toApiDate(parsed.value)
+          : parsed.value;
+        const apiOperator = this.mapOperatorToApi(parsed.type, filterField);
+
+        urlParams.append(filterField, finalValue);
+        if (apiOperator) {
+          urlParams.append(`${filterField}_op`, apiOperator);
+        }
+      });
+    }
+
+    return urlParams;
+  },
+
+  resolveApiUrl(path) {
+    const normalizedPath = String(path || '').trim();
+    if (!normalizedPath) return this.apiBaseUrl;
+    if (/^https?:\/\//i.test(normalizedPath)) return normalizedPath;
+    if (!this.apiBaseUrl) return normalizedPath;
+    return `${this.apiBaseUrl}${normalizedPath.startsWith('/') ? normalizedPath : `/${normalizedPath}`}`;
+  },
+
+  async extractDownloadErrorMessage(response) {
+    if (!response) return 'Download failed.';
+
+    try {
+      const contentType = response.headers?.get?.('content-type') || '';
+      if (contentType.includes('application/json')) {
+        const payload = await response.json();
+        return payload?.message || payload?.error || 'Download failed.';
+      }
+
+      const text = await response.text();
+      return text || 'Download failed.';
+    } catch (error) {
+      return 'Download failed.';
+    }
+  },
+
+  getDownloadFileNameFromResponse(response) {
+    const disposition = response?.headers?.get?.('content-disposition') || '';
+    if (!disposition) return '';
+
+    const utfMatch = disposition.match(/filename\*\s*=\s*UTF-8''([^;]+)/i);
+    if (utfMatch?.[1]) {
+      try {
+        return decodeURIComponent(utfMatch[1].trim());
+      } catch (error) {
+        return utfMatch[1].trim();
+      }
+    }
+
+    const plainMatch = disposition.match(/filename\s*=\s*"?([^\";]+)"?/i);
+    return plainMatch?.[1]?.trim() || '';
+  },
+
+  triggerFileDownload(blob, fileName) {
+    const downloadUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = fileName || 'download.csv';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(downloadUrl), 0);
   },
 
   showInfo(message, type = 'success') {
@@ -955,41 +1108,10 @@ const KviMappingLogicPage = {
       rowCount: null,
       getRows: (params) => {
         const pageSize = params.endRow - params.startRow;
-        const pageNum = Math.floor(params.startRow / (pageSize || 20));
-        const urlParams = new URLSearchParams();
-
-        urlParams.append('page', String(pageNum + 1));
-        urlParams.append(tabConfig.pageSizeParam || 'pageSize', String(pageSize));
-
-        if (params.sortModel && params.sortModel.length > 0) {
-          const sortModel = params.sortModel[0];
-          const sortField = (tabConfig.sortFieldMap && tabConfig.sortFieldMap[sortModel.colId]) || sortModel.colId;
-          urlParams.append('sortBy', sortField);
-          urlParams.append('sortDir', sortModel.sort);
-        }
-
-        if (params.filterModel) {
-          Object.keys(params.filterModel).forEach((field) => {
-            const filter = params.filterModel[field];
-            const filterField = (tabConfig.sortFieldMap && tabConfig.sortFieldMap[field]) || field;
-            const sourceValue = filter?.rawInput ?? filter?.filter ?? filter?.dateFrom;
-            if (sourceValue === undefined || sourceValue === null || String(sourceValue).trim() === '') return;
-
-            const parsed = this.parseInlineFilterExpression(sourceValue, filter?.type);
-            if (!parsed.value) return;
-
-            const finalValue = (filterField === 'effective_date' || filterField === 'termination_date')
-              ? this.toApiDate(parsed.value)
-              : parsed.value;
-            const apiOperator = this.mapOperatorToApi(parsed.type, filterField);
-
-            urlParams.append(filterField, finalValue);
-            if (apiOperator) {
-              urlParams.append(`${filterField}_op`, apiOperator);
-            }
-          });
-        }
-
+        const urlParams = this.buildTabQueryParams(tabConfig, params, {
+          includePaging: true,
+          includeSort: true
+        });
         const apiUrl = `${tabConfig.apiEndpoint}?${urlParams.toString()}`;
 
         fetch(apiUrl)
