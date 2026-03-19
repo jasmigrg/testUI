@@ -552,7 +552,7 @@ const CustomerGpoAdjustmentsAddPage = {
   },
 
   countUnfinishedJobs(rows) {
-    return rows.filter((row) => !this.isTerminalStatus(row.status)).length;
+    return rows.filter((row) => this.isActionableJob(row)).length;
   },
 
   startPollingIfNeeded() {
@@ -707,6 +707,12 @@ const CustomerGpoAdjustmentsAddPage = {
 
   isTerminalStatus(status) {
     return ['COMPLETED', 'FAILED'].includes(String(status || '').toUpperCase());
+  },
+
+  isActionableJob(row) {
+    if (!row) return false;
+    if (!this.isTerminalStatus(row.status)) return true;
+    return Number(row.errorCount || 0) > 0;
   },
 
   toUploadStatus(value) {

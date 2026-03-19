@@ -150,7 +150,7 @@
 
 .bulk-upload-batch-grid {
   width: 100%;
-  overflow: hidden;
+  overflow: visible;
   border: none;
   border-radius: 0;
   background: transparent;

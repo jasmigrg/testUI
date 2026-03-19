@@ -57,17 +57,17 @@
 .screen-add-page .bulk-upload-batch-columns,
 .screen-add-page .bulk-upload-batch-row {
   grid-template-columns:
-    1.1fr
-    1fr
-    0.95fr
-    0.95fr
-    0.85fr
-    0.8fr
-    0.95fr
-    1fr
-    1.1fr
-    0.8fr;
-  column-gap: 16px;
+    minmax(88px, 1fr)
+    minmax(120px, 1.25fr)
+    minmax(84px, 0.9fr)
+    minmax(84px, 0.9fr)
+    minmax(78px, 0.8fr)
+    minmax(72px, 0.75fr)
+    minmax(92px, 0.95fr)
+    minmax(92px, 0.95fr)
+    minmax(148px, 1.45fr)
+    minmax(64px, 0.6fr);
+  column-gap: 12px;
 }
 
 .screen-add-page .bulk-upload-batch-columns {
@@ -88,6 +88,12 @@
 .screen-add-page .bulk-upload-batch-col,
 .screen-add-page .bulk-upload-batch-cell {
   white-space: nowrap;
+  text-align: left;
+}
+
+.screen-add-page .bulk-upload-batch-cell {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .screen-add-page .bulk-upload-batch-col:last-child,
@@ -176,4 +182,45 @@
 .screen-add-page .screen-add-inline-save-btn:hover {
   background: #0b7884;
   border-color: #0b7884;
+}
+
+@media (max-width: 1500px) {
+  .screen-add-page .gt-action-toolbar {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+}
+
+@media (max-width: 1380px) {
+  .screen-add-page .content-card {
+    overflow-x: hidden;
+  }
+
+  .screen-add-page .gt-grid-controls {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .screen-add-page .gt-grid-manager-tools {
+    width: 100%;
+    justify-content: flex-start;
+    overflow-x: auto;
+  }
+
+  .screen-add-page .bulk-upload-batch-section {
+    overflow-x: auto;
+  }
+
+  .screen-add-page .bulk-upload-batch-grid {
+    min-width: 980px;
+  }
+
+  .screen-add-page .grid-wrapper {
+    overflow-x: auto;
+  }
+
+  .screen-add-page .screen-grid {
+    min-width: 960px;
+  }
 }
