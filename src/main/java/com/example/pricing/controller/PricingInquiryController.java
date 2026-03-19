@@ -1,4 +1,4 @@
-package com.example.pricing.controller.ui;
+package com.example.pricing.controller;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;

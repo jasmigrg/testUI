@@ -748,8 +748,9 @@ const KviInputExclusionAddPage = {
     };
   },
 
-  async loadJobResults(jobId) {
+  async loadJobResults(jobId, options = {}) {
     if (!jobId) return;
+    const { showToast = true, resetUploadFilter = true, clearColumnFilters = false } = options;
     this.selectedJobId = String(jobId);
     try {
       const [status, resultsPayload] = await Promise.all([
@@ -765,13 +766,16 @@ const KviInputExclusionAddPage = {
         : [];
 
       this.uploadedRows = rows;
-      this.uploadFilter = 'all';
-      this.uploadStatusInputs.forEach((input) => {
-        input.checked = input.value === 'all';
-      });
+      if (resetUploadFilter) {
+        this.uploadFilter = 'all';
+        this.uploadStatusInputs.forEach((input) => {
+          input.checked = input.value === 'all';
+        });
+      }
       if (this.uploadStatusRow) this.uploadStatusRow.hidden = rows.length === 0;
+      if (clearColumnFilters) this.clearColumnFilters();
       this.applyUploadFilter();
-      this.showInfo(`Loaded job ${jobId} (${rows.length} row(s)).`, 'success');
+      if (showToast) this.showInfo(`Loaded job ${jobId} (${rows.length} row(s)).`, 'success');
     } catch (error) {
       console.error('Failed to load job results:', error);
       this.showInfo(error?.message || 'Failed to load job results.', 'error');
@@ -916,7 +920,11 @@ const KviInputExclusionAddPage = {
         this.showInfo(response?.message || 'Selected corrected row(s) submitted successfully.', 'success');
         if (this.selectedJobId) {
           await this.refreshSingleJobStatus(this.selectedJobId);
-          await this.loadJobResults(this.selectedJobId);
+          await this.loadJobResults(this.selectedJobId, {
+            showToast: false,
+            resetUploadFilter: true,
+            clearColumnFilters: true
+          });
         }
         return;
       }

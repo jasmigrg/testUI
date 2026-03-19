@@ -61,7 +61,7 @@
       <div class="content-card">
         <@pageHeader.render
           title="Manage KVI Recommendation Logic and View Output Data"
-          crumbs=[{"label":"Home","href":"${ctx}/"},{"label":"Manage KVI Recommendation Logic and View Output Data"}]
+          crumbs=[{"label":"Home","href":"${ctx}/"},{"label":"Manage KVI Recommendation Logic and View Output Data","href":"${ctx}/manage-kvi-recommendation-logic-view-output-data"},{"label":"Add"}]
         />
 
         <#assign iconBack><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6L9 12L15 18" /></svg></#assign>

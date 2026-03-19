@@ -61,7 +61,7 @@
       <div class="content-card">
         <@pageHeader.render
           title="KVI Input Exclusion"
-          crumbs=[{"label":"Home","href":"${ctx}/"},{"label":"KVI Input Exclusion"}]
+          crumbs=[{"label":"Home","href":"${ctx}/"},{"label":"Manage KVI Input and View Input Data","href":"${ctx}/manage-kvi-input-view-input-data"},{"label":"KVI Input Exclusion Add"}]
         />
 
         <#assign iconBack><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6L9 12L15 18" /></svg></#assign>

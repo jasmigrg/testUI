@@ -58,7 +58,7 @@
       <div class="content-card">
         <@pageHeader.render
           title="Customer GPO Adjustments"
-          crumbs=[{"label":"Home","href":"${ctx}/"},{"label":"Adjustments","href":"${ctx}/adjustments"},{"label":"Customer GPO Adjustments"}]
+          crumbs=[{"label":"Home","href":"${ctx}/"},{"label":"Adjustments","href":"${ctx}/adjustments"},{"label":"Customer GPO Adjustments","href":"${ctx}/customer-gpo-adjustments"},{"label":"Add"}]
         />
 
         <#assign iconBack><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6L9 12L15 18" /></svg></#assign>
