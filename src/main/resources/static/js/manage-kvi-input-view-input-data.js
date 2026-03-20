@@ -115,11 +115,9 @@ const KviInputPage = {
   gridManagerBootstrapped: false,
   gridManagerInitScheduled: false,
   apiBaseUrl: '',
-  controlUpdateUrl: '',
 
   init() {
     this.apiBaseUrl = (window.API_BASE_URL || '').replace(/\/$/, '');
-    this.controlUpdateUrl = String(window.KVI_INPUT_CONTROL_UPDATE_URL || '').trim();
     this.cacheDom();
     this.bindTabs();
     this.bindToolbarActions();
@@ -1191,14 +1189,9 @@ const KviInputPage = {
 
   persistControlRowUpdate(rowData) {
     const payload = this.buildControlUpdatePayload(rowData);
-    if (!this.controlUpdateUrl) {
-      return this.transformControlRow({
-        kviInputUpdateDate: this.toApiDate(rowData.kviInputUpdateDate),
-        kviInputIncludeMonth: rowData.kviInputIncludeMonth
-      });
-    }
+    const controlUpdateUrl = this.resolveApiUrl('/api/v1/kviInputControl');
 
-    return fetch(this.controlUpdateUrl, {
+    return fetch(controlUpdateUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
