@@ -636,7 +636,7 @@ const CustomerGpoAdjustmentsAddPage = {
 
   updateBatchInfoCount(count) {
     if (!this.batchInfoText) return;
-    this.batchInfoText.textContent = `You Have [${count}] Unfinished Uploads.`;
+    this.batchInfoText.textContent = `You have [${count}] batches to review.`;
   },
 
   escapeHtml(value) {
@@ -1066,13 +1066,17 @@ const CustomerGpoAdjustmentsAddPage = {
       ? `${this.getBulkUploadBaseUrl()}/jobs/resubmit?jobId=${encodeURIComponent(this.selectedJobId)}&createNewJob=false`
       : `${this.getBulkUploadBaseUrl()}/grid?entityName=${encodeURIComponent(this.entityName)}`;
 
-    const payload = {
-      records: rows.map((row) => this.toBackendRecord(row))
-    };
-
-    if (mode !== 'resubmit') {
-      payload.source = 'GRID';
-    }
+    const payload = mode === 'resubmit'
+      ? {
+          correctedRecords: rows.map((row) => ({
+            rowNumber: row.rowNumber,
+            data: this.toBackendRecord(row)
+          }))
+        }
+      : {
+          records: rows.map((row) => this.toBackendRecord(row)),
+          source: 'GRID'
+        };
 
     return this.fetchJson(endpoint, {
       method: 'POST',

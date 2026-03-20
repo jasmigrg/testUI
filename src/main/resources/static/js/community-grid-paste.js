@@ -54,7 +54,7 @@
 
       const headerPaste = resolveHeaderPaste(matrix);
       if (requireHeaderMapping && !headerPaste) {
-        showInfo('Paste must include the header row so columns can be mapped correctly.', 'error');
+        showInfo('Paste directly from Excel and include the header row.', 'error');
         event.preventDefault();
         event.stopPropagation();
         return;

@@ -81,7 +81,7 @@
           <div class="bulk-upload-batch-info-row">
             <div class="bulk-upload-batch-info-left">
               <span class="bulk-upload-batch-info-icon" aria-hidden="true">i</span>
-              <span class="bulk-upload-batch-info-text">You Have [0] Unfinished Uploads.</span>
+              <span class="bulk-upload-batch-info-text">You have [0] batches to review.</span>
             </div>
             <button type="button" class="bulk-upload-batch-collapse-btn" id="bulkUploadBatchCollapseBtn" aria-label="Expand unfinished uploads" aria-expanded="false">
               <svg viewBox="0 0 20 20" aria-hidden="true" class="bulk-upload-batch-chevron">
