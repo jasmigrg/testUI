@@ -47,3 +47,9 @@
 .kvi-input-page .ag-theme-alpine .ag-filter-apply-panel .ag-standard-button:last-child:hover {
   background: #eef8fa;
 }
+
+.kvi-input-page .ag-theme-alpine .ag-cell.kvi-input-cell-error {
+  background: #fdecec;
+  border-color: #dc2626;
+  color: #991b1b;
+}

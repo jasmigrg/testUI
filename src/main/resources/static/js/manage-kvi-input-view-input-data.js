@@ -662,7 +662,10 @@ const KviInputPage = {
         field: 'kviInputIncludeMonth',
         headerName: 'KVI Input Include Month',
         minWidth: 210,
-        editable: true
+        editable: true,
+        cellClassRules: {
+          'kvi-input-cell-error': (params) => Boolean(params?.data?._controlMonthInvalid)
+        }
       }
     ].map((column) => this.buildFilterableColumn(column));
   },
@@ -1096,9 +1099,20 @@ const KviInputPage = {
     const nextValue = event.newValue;
     if (String(previousValue ?? '') === String(nextValue ?? '')) return;
 
+    if (!this.isValidControlMonth(nextValue)) {
+      this.applyControlRowUpdate(event.node, {
+        ...event.data,
+        kviInputIncludeMonth: nextValue,
+        _controlMonthInvalid: true
+      });
+      this.showInfo('KVI Input Include Month must be a whole number between 1 and 12.', 'error');
+      return;
+    }
+
     const updatedRow = {
       ...event.data,
-      kviInputIncludeMonth: nextValue,
+      kviInputIncludeMonth: String(nextValue).trim(),
+      _controlMonthInvalid: false,
       kviInputUpdateDate: this.getTodayUsDate()
     };
 
@@ -1112,7 +1126,8 @@ const KviInputPage = {
           console.error('KVI input control update failed:', error);
           this.applyControlRowUpdate(event.node, {
             ...event.data,
-            kviInputIncludeMonth: previousValue
+            kviInputIncludeMonth: previousValue,
+            _controlMonthInvalid: false
           });
           this.showInfo('Failed to save KVI Input Include Month.', 'error');
         });
@@ -1161,19 +1176,30 @@ const KviInputPage = {
     if (!rowNode?.data || !rowData) return;
     Object.assign(rowNode.data, {
       kviInputUpdateDate: rowData.kviInputUpdateDate,
-      kviInputIncludeMonth: rowData.kviInputIncludeMonth
+      kviInputIncludeMonth: rowData.kviInputIncludeMonth,
+      _controlMonthInvalid: Boolean(rowData._controlMonthInvalid)
     });
     rowNode.setData({ ...rowNode.data });
+  },
+
+  isValidControlMonth(value) {
+    const raw = String(value ?? '').trim();
+    if (!/^\d+$/.test(raw)) return false;
+    const numeric = Number(raw);
+    return Number.isInteger(numeric) && numeric >= 1 && numeric <= 12;
   },
 
   persistControlRowUpdate(rowData) {
     const payload = this.buildControlUpdatePayload(rowData);
     if (!this.controlUpdateUrl) {
-      return this.transformControlRow(payload);
+      return this.transformControlRow({
+        kviInputUpdateDate: this.toApiDate(rowData.kviInputUpdateDate),
+        kviInputIncludeMonth: rowData.kviInputIncludeMonth
+      });
     }
 
     return fetch(this.controlUpdateUrl, {
-      method: 'PUT',
+      method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Accept: 'application/json'
@@ -1194,15 +1220,19 @@ const KviInputPage = {
         if (responseBody?.data && !Array.isArray(responseBody.data)) {
           return this.transformControlRow(responseBody.data);
         }
-        return this.transformControlRow(payload);
+        return this.transformControlRow({
+          kviInputUpdateDate: this.toApiDate(rowData.kviInputUpdateDate),
+          kviInputIncludeMonth: rowData.kviInputIncludeMonth
+        });
       });
   },
 
   buildControlUpdatePayload(rowData) {
-    return {
-      kvi_input_update_date: this.toApiDate(rowData.kviInputUpdateDate),
-      kvi_input_include_month: rowData.kviInputIncludeMonth
-    };
+    return [
+      {
+        kviInputIncludeMonth: Number(String(rowData.kviInputIncludeMonth).trim())
+      }
+    ];
   },
 
   getTodayUsDate() {
