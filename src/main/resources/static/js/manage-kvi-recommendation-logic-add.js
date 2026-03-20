@@ -297,31 +297,11 @@ const KviRecommendationLogicAddPage = {
       initialNextLabel: 'Upload',
       uploadLabel: 'Upload',
       validateFile: (file) => /\.csv$/i.test(file.name) || file.type === 'text/csv',
-      onUpload: async (file, controls) => {
-        const headerValidation = await this.validateCsvHeadersForUpload(file);
-        if (!headerValidation.isValid) {
-          this.showBulkUploadError(headerValidation.message);
-          return false;
-        }
-        const success = await this.processUploadedCsv(file);
+      onUpload: (file, controls) => this.processUploadedCsv(file).then((success) => {
         if (success) controls.close();
         return success;
-      }
+      })
     });
-  },
-
-  showBulkUploadError(message) {
-    const errorEl = document.getElementById('bulkUploadError');
-    if (!errorEl) return;
-    errorEl.textContent = String(message || 'Invalid file.');
-    errorEl.hidden = false;
-  },
-
-  clearBulkUploadError() {
-    const errorEl = document.getElementById('bulkUploadError');
-    if (!errorEl) return;
-    errorEl.textContent = 'Only CSV files are allowed.';
-    errorEl.hidden = true;
   },
 
   bindBulkUploadAction() {
@@ -571,7 +551,7 @@ const KviRecommendationLogicAddPage = {
 
   updateBatchInfoCount(count) {
     if (!this.batchInfoText) return;
-    this.batchInfoText.textContent = `You Have [${count}] Unfinished Uploads.`;
+    this.batchInfoText.textContent = `You have [${count}] batches to review.`;
   },
 
   escapeHtml(value) {
@@ -1013,7 +993,7 @@ const KviRecommendationLogicAddPage = {
     return String(header || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
   },
 
-  resolvePasteHeaderField(header, allowedFields = []) {
+  resolvePasteHeaderField(header, allowedFields = null) {
     const normalizedHeader = this.normalizeHeader(header);
     if (!normalizedHeader) return '';
 
@@ -1021,63 +1001,13 @@ const KviRecommendationLogicAddPage = {
       this.normalizeHeader(field) === normalizedHeader || this.normalizeHeader(headerName) === normalizedHeader
     ));
 
-    return match && allowedFields.includes(match.field) ? match.field : '';
-  },
-
-  getExpectedCsvHeaderMap() {
-    return new Map(
-      KVI_RECOMMENDATION_FIELD_DEFS.map(({ field, headerName }) => [
-        this.normalizeHeader(headerName),
-        { field, headerName }
-      ])
-    );
-  },
-
-  validateParsedCsvHeaders(parsed) {
-    const normalizedHeaders = Array.isArray(parsed?.normalizedHeaders) ? parsed.normalizedHeaders : [];
-    const expectedHeaderMap = this.getExpectedCsvHeaderMap();
-    const missingHeaders = [];
-    expectedHeaderMap.forEach((value, normalizedHeader) => {
-      if (!normalizedHeaders.includes(normalizedHeader)) {
-        missingHeaders.push(value.headerName);
-      }
-    });
-
-    const unexpectedHeaders = (Array.isArray(parsed?.headers) ? parsed.headers : []).filter((header, index) => {
-      const normalizedHeader = normalizedHeaders[index];
-      return normalizedHeader && !expectedHeaderMap.has(normalizedHeader);
-    });
-
-    if (missingHeaders.length === 0 && unexpectedHeaders.length === 0) {
-      return { isValid: true, message: '' };
+    if (!match) return '';
+    if (Array.isArray(allowedFields) && allowedFields.length > 0 && !allowedFields.includes(match.field)) {
+      return '';
     }
-
-    const missingMessage = missingHeaders.length > 0
-      ? `Missing: ${missingHeaders.join(', ')}.`
-      : '';
-    const unexpectedMessage = unexpectedHeaders.length > 0
-      ? `Unexpected: ${unexpectedHeaders.join(', ')}.`
-      : '';
-
-    return {
-      isValid: false,
-      message: `This CSV template does not match KVI Recommendation Parameter. ${missingMessage} ${unexpectedMessage}`.trim()
-    };
+    return match.field;
   },
 
-  async validateCsvHeadersForUpload(file) {
-    this.clearBulkUploadError();
-    const csvText = await file.text();
-    const parsed = window.CsvUploadUtils?.parseCsvText
-      ? window.CsvUploadUtils.parseCsvText(csvText)
-      : { headers: [], normalizedHeaders: [], rows: [] };
-
-    if (!parsed.headers.length) {
-      return { isValid: false, message: 'CSV must include a header row.' };
-    }
-
-    return this.validateParsedCsvHeaders(parsed);
-  },
 
   toUsDate(value) {
     if (window.CsvUploadUtils?.toUsDate) return window.CsvUploadUtils.toUsDate(value);
@@ -1160,8 +1090,6 @@ const KviRecommendationLogicAddPage = {
       ? window.CsvUploadUtils.parseCsvText(csvText)
       : { normalizedHeaders: [], rows: [] };
 
-    const headerValidation = this.validateParsedCsvHeaders(parsed);
-    if (!headerValidation.isValid) throw new Error(headerValidation.message);
     if (parsed.rows.length < 1) throw new Error('CSV must include header and at least one data row');
 
     const indexByHeader = {};
