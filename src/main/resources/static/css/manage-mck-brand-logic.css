@@ -1,7 +1,3 @@
-.mck-brand-logic-shell {
-  gap: 14px;
-}
-
 .mck-brand-logic-tabs {
   flex-wrap: nowrap;
   align-items: stretch;
@@ -26,15 +22,6 @@
 
 .mck-brand-logic-tabs .screen-tab-btn.is-active {
   top: 0;
-}
-
-.mck-brand-logic-title-card {
-  padding: 2px 0 0;
-}
-
-.mck-brand-logic-title {
-  margin: 0;
-  font-size: 15px;
 }
 
 .mck-brand-logic-page .screen-grid-empty-state[hidden] {
