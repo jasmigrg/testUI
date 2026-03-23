@@ -1186,7 +1186,7 @@ const CustomerGpoAdjustmentsAddPage = {
     return String(header || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
   },
 
-  resolvePasteHeaderField(header, allowedFields = []) {
+  resolvePasteHeaderField(header, allowedFields = null) {
     const normalizedHeader = this.normalizeHeader(header);
     if (!normalizedHeader) return '';
 
@@ -1198,7 +1198,10 @@ const CustomerGpoAdjustmentsAddPage = {
     });
 
     if (!match) return '';
-    return allowedFields.includes(match.field) ? match.field : '';
+    if (Array.isArray(allowedFields) && allowedFields.length > 0 && !allowedFields.includes(match.field)) {
+      return '';
+    }
+    return match.field;
   },
 
   toUsDate(value) {

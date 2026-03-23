@@ -28,21 +28,27 @@
 
     function resolveHeaderPaste(matrix) {
       if (!resolveHeaderField || !Array.isArray(matrix) || matrix.length === 0) return null;
-      const headerRow = Array.isArray(matrix[0]) ? matrix[0] : [];
-      if (headerRow.length === 0) return null;
+      const maxHeaderScanRows = Math.min(matrix.length, 5);
 
-      const mappedFields = headerRow.map((header) => {
-        const resolvedField = resolveHeaderField(String(header == null ? '' : header));
-        return fields.includes(resolvedField) ? resolvedField : '';
-      });
-      const matchedCount = mappedFields.filter(Boolean).length;
-      if (matchedCount < headerMatchThreshold) return null;
+      for (let rowIndex = 0; rowIndex < maxHeaderScanRows; rowIndex += 1) {
+        const headerRow = Array.isArray(matrix[rowIndex]) ? matrix[rowIndex] : [];
+        if (headerRow.length === 0) continue;
 
-      return {
-        mappedFields,
-        rows: matrix.slice(1),
-        matchedCount
-      };
+        const mappedFields = headerRow.map((header) => {
+          const resolvedField = resolveHeaderField(String(header == null ? '' : header));
+          return fields.includes(resolvedField) ? resolvedField : '';
+        });
+        const matchedCount = mappedFields.filter(Boolean).length;
+        if (matchedCount < headerMatchThreshold) continue;
+
+        return {
+          mappedFields,
+          rows: matrix.slice(rowIndex + 1),
+          matchedCount
+        };
+      }
+
+      return null;
     }
 
     const handler = (event) => {
