@@ -172,9 +172,7 @@
             </div>
           </section>
 
-          <section class="mck-brand-logic-title-card" aria-live="polite">
-            <h2 class="screen-panel-title mck-brand-logic-title" id="mckActiveTabTitle">GM Core MCKB Price Scoring Weighting</h2>
-          </section>
+          <h2 class="screen-panel-title" id="mckActiveTabTitle" aria-live="polite">GM Core MCKB Price Scoring Weighting</h2>
 
           <section
             class="screen-tab-panel is-active"
