@@ -330,6 +330,7 @@ function createGridManager(gridApi, gridId, configOverrides = {}) {
       });
 
       columnsMenuBody.innerHTML = html;
+      this.initDragAndDrop();
       console.log('Successfully populated columns menu for grid:', this.gridId);
     },
 
@@ -558,7 +559,6 @@ function createGridManager(gridApi, gridId, configOverrides = {}) {
         }
       });
 
-      this.initDragAndDrop();
     },
 
     initDragAndDrop() {

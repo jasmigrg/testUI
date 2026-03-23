@@ -155,6 +155,7 @@
   border: none;
   border-radius: 0;
   background: transparent;
+  padding-bottom: 8px;
 }
 
 .bulk-upload-batch-section.is-collapsed .bulk-upload-batch-grid {

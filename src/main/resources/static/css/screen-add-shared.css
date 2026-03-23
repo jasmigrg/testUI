@@ -193,9 +193,37 @@
   }
 }
 
+.screen-add-page .bulk-upload-batch-grid {
+  box-sizing: border-box;
+  padding-bottom: 6px;
+  scrollbar-gutter: stable both-edges;
+}
+
+.screen-add-page .grid-wrapper {
+  box-sizing: border-box;
+  padding-bottom: 8px;
+  overflow-x: auto;
+  overflow-y: visible;
+}
+
+.screen-add-page .screen-grid {
+  display: block;
+  width: 100%;
+}
+
+.screen-add-page .bulk-upload-batch-grid,
+.screen-add-page .grid-wrapper {
+  max-width: 100%;
+}
+
 @media (max-width: 1380px) {
+  .screen-add-page .content {
+    overflow-x: auto;
+    overflow-y: visible;
+  }
+
   .screen-add-page .content-card {
-    overflow-x: hidden;
+    overflow: visible;
   }
 
   .screen-add-page .gt-grid-controls {
@@ -215,14 +243,19 @@
   }
 
   .screen-add-page .bulk-upload-batch-grid {
-    min-width: 980px;
+    min-width: 0;
   }
 
   .screen-add-page .grid-wrapper {
     overflow-x: auto;
+    overflow-y: visible;
   }
 
-  .screen-add-page .screen-grid {
-    min-width: 960px;
+}
+
+@supports not (scrollbar-gutter: stable) {
+  .screen-add-page .bulk-upload-batch-grid,
+  .screen-add-page .grid-wrapper {
+    padding-bottom: 10px;
   }
 }

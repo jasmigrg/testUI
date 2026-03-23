@@ -208,8 +208,7 @@ const KviMappingLogicPage = {
     this.cacheDom();
     this.bindTabs();
     this.bindToolbarActions();
-    this.initGridForTab('parameter');
-    this.initGridForTab('output');
+    this.initGridForTab(this.activeTab);
     this.syncTabUi();
     this.syncToolbarForTab();
     this.syncGridManager();

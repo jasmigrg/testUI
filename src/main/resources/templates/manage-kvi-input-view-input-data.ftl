@@ -22,7 +22,6 @@
     window.API_BASE_URL = window.API_BASE_URL || '${(apiBaseUrl!'')?js_string}';
     window.GRID_PREF_TEST_USER_ID = window.GRID_PREF_TEST_USER_ID || '${(userId!'defaultUser')?js_string}';
     window.KVI_INPUT_EXCLUSION_ADD_PAGE_URL = window.KVI_INPUT_EXCLUSION_ADD_PAGE_URL || '${ctx}/kvi-input-exclusion/add';
-    window.KVI_INPUT_CONTROL_UPDATE_URL = window.KVI_INPUT_CONTROL_UPDATE_URL || '';
     window.GRID_PREF_SCREEN_ID_BY_GRID = Object.assign({}, window.GRID_PREF_SCREEN_ID_BY_GRID, {
       kviInputControlGrid: 'id_kvi_input_control',
       kviInputDataGrid: 'id_kvi_input_data',

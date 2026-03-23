@@ -121,9 +121,7 @@ const KviInputPage = {
     this.cacheDom();
     this.bindTabs();
     this.bindToolbarActions();
-    this.initGridForTab('control');
-    this.initGridForTab('data');
-    this.initGridForTab('exclusion');
+    this.initGridForTab(this.activeTab);
     this.syncTabUi();
     this.syncToolbarForTab();
     this.syncGridManager();
@@ -1038,8 +1036,18 @@ const KviInputPage = {
     if (!row || typeof row !== 'object') return row;
     return {
       kviInputUpdateDate: this.formatDateValue(this.getValue(row, ['kviInputUpdateDate', 'kvi_input_update_date'])),
-      kviInputIncludeMonth: this.getValue(row, ['kviInputIncludeMonth', 'kvi_input_include_month'])
+      kviInputIncludeMonth: this.formatControlMonthDisplay(
+        this.getValue(row, ['kviInputIncludeMonth', 'kvi_input_include_month'])
+      )
     };
+  },
+
+  formatControlMonthDisplay(value) {
+    const raw = String(value ?? '').trim();
+    if (!/^\d+$/.test(raw)) return raw;
+    const numeric = Number(raw);
+    if (!Number.isInteger(numeric) || numeric < 1 || numeric > 12) return raw;
+    return String(numeric).padStart(2, '0');
   },
 
   transformDataRow(row) {
@@ -1109,7 +1117,7 @@ const KviInputPage = {
 
     const updatedRow = {
       ...event.data,
-      kviInputIncludeMonth: String(nextValue).trim(),
+      kviInputIncludeMonth: this.formatControlMonthDisplay(nextValue),
       _controlMonthInvalid: false,
       kviInputUpdateDate: this.getTodayUsDate()
     };
@@ -1192,7 +1200,7 @@ const KviInputPage = {
     const controlUpdateUrl = this.resolveApiUrl('/api/v1/kviInputControl');
 
     return fetch(controlUpdateUrl, {
-      method: 'POST',
+      method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
         Accept: 'application/json'
@@ -1221,11 +1229,9 @@ const KviInputPage = {
   },
 
   buildControlUpdatePayload(rowData) {
-    return [
-      {
-        kviInputIncludeMonth: Number(String(rowData.kviInputIncludeMonth).trim())
-      }
-    ];
+    return {
+      kviInputIncludeMonth: Number(String(rowData.kviInputIncludeMonth).trim())
+    };
   },
 
   getTodayUsDate() {
