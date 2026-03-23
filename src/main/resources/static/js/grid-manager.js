@@ -236,7 +236,8 @@ function resolveGridPreferenceStore(context) {
   if (typeof window !== 'undefined' && window.GridManagerPreferenceStore) {
     return window.GridManagerPreferenceStore;
   }
-  if (GridManagerApiPreferenceStore.isEnabled(context)) {
+  const apiPersistenceEnabled = typeof window !== 'undefined' && window.GRID_PREF_ENABLE_API === true;
+  if (apiPersistenceEnabled && GridManagerApiPreferenceStore.isEnabled(context)) {
     return GridManagerApiPreferenceStore;
   }
   return GridManagerLocalPreferenceStore;
