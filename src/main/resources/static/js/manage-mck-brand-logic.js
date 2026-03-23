@@ -494,11 +494,13 @@ const MckBrandLogicPage = {
       throw new Error('Update action is not configured for this tab.');
     }
 
+    const requestPayload = Array.isArray(payload) ? payload : [payload];
+
     const response = await fetch(this.resolveApiUrl(activeTabConfig.updateEndpoint), {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       credentials: 'same-origin',
-      body: JSON.stringify(payload)
+      body: JSON.stringify(requestPayload)
     });
 
     const responseBody = await this.readJsonSafely(response);
@@ -655,13 +657,22 @@ const MckBrandLogicPage = {
     return `${month}/${day}/${year}`;
   },
 
+  formatDateAsIso(date) {
+    if (!(date instanceof Date) || Number.isNaN(date.getTime())) return '';
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${year}-${month}-${day}`;
+  },
+
   openTerminationDatePicker() {
     this.cacheUpdateTerminationModalElements();
     if (!this.updateTerminationDateNativeInput) return;
+    this.updateTerminationDateNativeInput.min = this.formatDateAsIso(this.getTodayDateOnly());
     const currentValue = this.updateTerminationDateInput?.value.trim();
     const parsedDate = currentValue ? this.parseMmDdYyyyDate(currentValue) : null;
     if (parsedDate) {
-      this.updateTerminationDateNativeInput.value = `${parsedDate.getFullYear()}-${String(parsedDate.getMonth() + 1).padStart(2, '0')}-${String(parsedDate.getDate()).padStart(2, '0')}`;
+      this.updateTerminationDateNativeInput.value = this.formatDateAsIso(parsedDate);
     }
     if (typeof this.updateTerminationDateNativeInput.showPicker === 'function') {
       this.updateTerminationDateNativeInput.showPicker();
@@ -1580,8 +1591,16 @@ const MckBrandLogicPage = {
   normalizeDateValueForRequest(value) {
     const raw = String(value == null ? '' : value).trim();
     const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ].*)?$/);
-    if (!isoMatch) return raw;
-    return `${isoMatch[2]}/${isoMatch[3]}/${isoMatch[1]}`;
+    if (isoMatch) return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+
+    const usMatch = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (usMatch) {
+      const month = String(Number(usMatch[1])).padStart(2, '0');
+      const day = String(Number(usMatch[2])).padStart(2, '0');
+      return `${usMatch[3]}-${month}-${day}`;
+    }
+
+    return raw;
   },
 
   mapFilterOperator(type, filterType) {
