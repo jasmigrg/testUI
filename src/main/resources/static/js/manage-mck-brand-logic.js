@@ -383,6 +383,9 @@ const MckBrandLogicPage = {
       exportName: 'gm-core-output-brand-multiplier.csv',
       apiEndpoint: '/api/v1/brand-multiplier/paginated',
       exportEndpoint: '/api/v1/brand-multiplier/export-csv',
+      allowAdd: false,
+      allowDisable: false,
+      allowUpdateTerminationDate: false,
       paginationType: 'server',
       columns: [
         { field: 'uniqueId', headerName: 'Unique ID', minWidth: 140 },
@@ -407,9 +410,10 @@ const MckBrandLogicPage = {
     this.cacheDom();
     this.bindTabs();
     this.bindToolbarActions();
-    Object.keys(this.tabs).forEach((tabKey) => this.initGridForTab(tabKey));
+    this.initGridForTab(this.activeTab);
     this.syncTabUi();
     this.syncTitle();
+    this.syncToolbarActions();
     this.syncGridManager();
     this.applyActiveDensity();
   },
@@ -437,8 +441,32 @@ const MckBrandLogicPage = {
       .filter((value) => value != null && String(value).trim() !== '');
   },
 
+  extractDateYear(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return null;
+
+    const usMatch = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (usMatch) return Number(usMatch[3]);
+
+    const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ].*)?$/);
+    if (isoMatch) return Number(isoMatch[1]);
+
+    return null;
+  },
+
+  isPlaceholderLockDate(value) {
+    const year = this.extractDateYear(value);
+    return year === 2099;
+  },
+
   isActionLockedRow(row) {
-    return String(row?.disableDate || '').trim() !== '' || String(row?.terminationDate || '').trim() !== '';
+    const disableDate = String(row?.disableDate || '').trim();
+    const terminationDate = String(row?.terminationDate || '').trim();
+
+    const hasRealDisableDate = disableDate && !this.isPlaceholderLockDate(disableDate);
+    const hasRealTerminationDate = terminationDate && !this.isPlaceholderLockDate(terminationDate);
+
+    return hasRealDisableDate || hasRealTerminationDate;
   },
 
   hasLockedRowsSelected() {
@@ -901,6 +929,7 @@ const MckBrandLogicPage = {
     this.activeTab = tabKey;
     this.syncTabUi();
     this.syncTitle();
+    this.syncToolbarActions();
     this.initGridForTab(tabKey);
     this.syncGridManager();
     this.applyActiveDensity();
@@ -926,6 +955,34 @@ const MckBrandLogicPage = {
   syncTitle() {
     if (!this.activeTabTitle) return;
     this.activeTabTitle.textContent = this.tabs[this.activeTab]?.title || '';
+  },
+
+  syncToolbarActions() {
+    const scope = this.pageShell;
+    if (!scope) return;
+
+    const tabConfig = this.tabs[this.activeTab] || {};
+    const addEnabled = tabConfig.allowAdd !== false;
+    const disableEnabled = tabConfig.allowDisable !== false;
+    const updateTerminationEnabled = tabConfig.allowUpdateTerminationDate !== false;
+
+    scope.querySelectorAll('.gt-action-btn[data-action="add"]').forEach((button) => {
+      button.hidden = !addEnabled;
+      button.style.display = addEnabled ? '' : 'none';
+      button.setAttribute('aria-hidden', String(!addEnabled));
+    });
+
+    scope.querySelectorAll('.gt-action-btn[data-action="disable"]').forEach((button) => {
+      button.hidden = !disableEnabled;
+      button.style.display = disableEnabled ? '' : 'none';
+      button.setAttribute('aria-hidden', String(!disableEnabled));
+    });
+
+    scope.querySelectorAll('.gt-action-btn[data-action="update-termination-date"]').forEach((button) => {
+      button.hidden = !updateTerminationEnabled;
+      button.style.display = updateTerminationEnabled ? '' : 'none';
+      button.setAttribute('aria-hidden', String(!updateTerminationEnabled));
+    });
   },
 
   getActiveGrid() {
@@ -1665,20 +1722,9 @@ const MckBrandLogicPage = {
     const field = String(column?.field || '').trim();
     if (!field) return column;
 
-    const isDateField = ['effectiveDate', 'terminationDate', 'disableDate'].includes(field);
-    const isNumericField = [
-      'uniqueId',
-      'itemNum',
-      'relativeProfitabilityWeighting',
-      'relativeShareWeighting',
-      'relativeQualityWeighting',
-      'qualityScore',
-      'relativeAllowableMinPrice',
-      'relativeAllowableMaxPrice',
-      'mckBrandPriceChangeCap'
-    ].includes(field);
+    const filterKind = this.getFieldFilterKind(field);
 
-    if (isDateField) {
+    if (filterKind === 'date') {
       return {
         ...column,
         filter: 'agDateColumnFilter',
@@ -1699,7 +1745,7 @@ const MckBrandLogicPage = {
       };
     }
 
-    if (isNumericField) {
+    if (filterKind === 'number') {
       return {
         ...column,
         filter: 'agNumberColumnFilter',
@@ -1728,7 +1774,7 @@ const MckBrandLogicPage = {
         closeOnApply: true,
         maxNumConditions: 1,
         numAlwaysVisibleConditions: 1,
-        filterOptions: ['contains', 'equals', 'notEqual', 'notContains', 'startsWith', 'endsWith']
+        filterOptions: ['contains', 'equals', 'notEqual', 'notContains', 'startsWith', 'endsWith', 'blank', 'notBlank']
       }
     };
   }
