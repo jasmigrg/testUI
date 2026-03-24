@@ -235,7 +235,7 @@
   .screen-add-page .gt-grid-manager-tools {
     width: 100%;
     justify-content: flex-start;
-    overflow-x: auto;
+    overflow: visible;
   }
 
   .screen-add-page .bulk-upload-batch-section {

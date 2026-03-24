@@ -893,9 +893,16 @@ const KviInputExclusionAddPage = {
   },
 
   async submitGridRows(rows, mode = 'grid') {
+    const context = this.resolveUploadContext();
+    const gridParams = new URLSearchParams({
+      entityName: this.entityName,
+      userId: context.userId,
+      programId: context.programId,
+      workStationId: context.workStationId
+    });
     const endpoint = mode === 'resubmit' && this.selectedJobId
       ? `${this.getBulkUploadBaseUrl()}/jobs/resubmit?jobId=${encodeURIComponent(this.selectedJobId)}&createNewJob=false`
-      : `${this.getBulkUploadBaseUrl()}/grid?entityName=${encodeURIComponent(this.entityName)}`;
+      : `${this.getBulkUploadBaseUrl()}/grid?${gridParams.toString()}`;
 
     const payload = mode === 'resubmit'
       ? {
