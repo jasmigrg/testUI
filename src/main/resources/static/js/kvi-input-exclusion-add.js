@@ -874,9 +874,24 @@ const KviInputExclusionAddPage = {
     return `${this.entityName}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}${extension}`;
   },
 
+  async cloneUploadFile(file, uploadFileName = '') {
+    if (!file || typeof file.arrayBuffer !== 'function') return file;
+    const bytes = await file.arrayBuffer();
+    const normalizedName = String(uploadFileName || file.name || 'upload.csv').trim() || 'upload.csv';
+    try {
+      return new File([bytes], normalizedName, {
+        type: file.type || 'text/csv',
+        lastModified: Date.now()
+      });
+    } catch (error) {
+      return new Blob([bytes], { type: file.type || 'text/csv' });
+    }
+  },
+
   async requestSignedUrlUpload(file) {
     const context = this.resolveUploadContext();
     const uploadFileName = this.getBulkUploadFileName(file);
+    const uploadBody = await this.cloneUploadFile(file, uploadFileName);
     const response = await this.fetchJson(`${this.getBulkUploadBaseUrl()}/request-signed-url`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -895,7 +910,7 @@ const KviInputExclusionAddPage = {
     const uploadResponse = await fetch(response.signedUrl, {
       method: uploadRequest.method,
       headers: uploadRequest.headers,
-      body: file
+      body: uploadBody
     });
     if (!uploadResponse.ok) throw new Error(`Signed upload failed: ${uploadResponse.status}`);
 
