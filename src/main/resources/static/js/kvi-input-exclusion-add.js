@@ -878,13 +878,34 @@ const KviInputExclusionAddPage = {
     if (!file || typeof file.arrayBuffer !== 'function') return file;
     const bytes = await file.arrayBuffer();
     const normalizedName = String(uploadFileName || file.name || 'upload.csv').trim() || 'upload.csv';
+    console.debug('[KviInputExclusionAdd] cloneUploadFile:source', {
+      selectedFileName: file.name,
+      selectedFileSize: file.size,
+      selectedFileType: file.type,
+      selectedLastModified: file.lastModified,
+      uploadFileName: normalizedName,
+      byteLength: bytes.byteLength
+    });
     try {
-      return new File([bytes], normalizedName, {
+      const clonedFile = new File([bytes], normalizedName, {
         type: file.type || 'text/csv',
         lastModified: Date.now()
       });
+      console.debug('[KviInputExclusionAdd] cloneUploadFile:cloned-file', {
+        uploadFileName: clonedFile.name,
+        uploadFileSize: clonedFile.size,
+        uploadFileType: clonedFile.type,
+        uploadLastModified: clonedFile.lastModified
+      });
+      return clonedFile;
     } catch (error) {
-      return new Blob([bytes], { type: file.type || 'text/csv' });
+      const clonedBlob = new Blob([bytes], { type: file.type || 'text/csv' });
+      console.debug('[KviInputExclusionAdd] cloneUploadFile:cloned-blob', {
+        uploadFileName: normalizedName,
+        uploadFileSize: clonedBlob.size,
+        uploadFileType: clonedBlob.type
+      });
+      return clonedBlob;
     }
   },
 
@@ -892,6 +913,16 @@ const KviInputExclusionAddPage = {
     const context = this.resolveUploadContext();
     const uploadFileName = this.getBulkUploadFileName(file);
     const uploadBody = await this.cloneUploadFile(file, uploadFileName);
+    console.debug('[KviInputExclusionAdd] requestSignedUrlUpload:request', {
+      entityName: this.entityName,
+      selectedFileName: file?.name,
+      selectedFileSize: file?.size,
+      selectedLastModified: file?.lastModified,
+      uploadFileName,
+      userId: context.userId,
+      programId: context.programId,
+      workStationId: context.workStationId
+    });
     const response = await this.fetchJson(`${this.getBulkUploadBaseUrl()}/request-signed-url`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -905,12 +936,30 @@ const KviInputExclusionAddPage = {
     });
 
     if (!response?.signedUrl) throw new Error('Signed URL missing from response');
+    console.debug('[KviInputExclusionAdd] requestSignedUrlUpload:response', {
+      jobId: response.jobId,
+      signedUrl: response.signedUrl,
+      uploadInstructions: response.uploadInstructions
+    });
 
     const uploadRequest = this.resolveUploadInstructions(response, file);
+    console.debug('[KviInputExclusionAdd] requestSignedUrlUpload:put-start', {
+      jobId: response.jobId,
+      uploadFileName,
+      method: uploadRequest.method,
+      headers: uploadRequest.headers,
+      bodySize: uploadBody?.size
+    });
     const uploadResponse = await fetch(response.signedUrl, {
       method: uploadRequest.method,
       headers: uploadRequest.headers,
       body: uploadBody
+    });
+    console.debug('[KviInputExclusionAdd] requestSignedUrlUpload:put-finish', {
+      jobId: response.jobId,
+      uploadFileName,
+      status: uploadResponse.status,
+      ok: uploadResponse.ok
     });
     if (!uploadResponse.ok) throw new Error(`Signed upload failed: ${uploadResponse.status}`);
 
