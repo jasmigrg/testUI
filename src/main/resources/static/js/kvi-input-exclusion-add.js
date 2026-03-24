@@ -23,6 +23,13 @@ const KVI_INPUT_EXCLUSION_BACKEND_ALIASES = {
   invalidPrcaFlag: []
 };
 
+const KVI_INPUT_EXCLUSION_FLAG_FIELDS = new Set([
+  'itemDiscontinuedFlag',
+  'itemSequesteredCoramApriaFlag',
+  'itemUsedBiomedFlag',
+  'invalidPrcaFlag'
+]);
+
 const KviInputExclusionAddPage = {
   entityName: '',
   gridApi: null,
@@ -197,6 +204,9 @@ const KviInputExclusionAddPage = {
     if (column.type === 'number') {
       config.filter = 'agNumberColumnFilter';
       config.filterValueGetter = (params) => this.numberFilterValue(params?.data?.[column.field]);
+    } else if (KVI_INPUT_EXCLUSION_FLAG_FIELDS.has(column.field)) {
+      config.filter = 'agTextColumnFilter';
+      config.valueSetter = (params) => this.setFlagCellValue(params, column.field);
     } else {
       config.filter = 'agTextColumnFilter';
     }
@@ -861,7 +871,7 @@ const KviInputExclusionAddPage = {
     const rawExtension = String(file?.name || '').trim().split('.').pop();
     const hasExtension = rawExtension && rawExtension !== String(file?.name || '').trim();
     const extension = hasExtension ? `.${rawExtension}` : '.csv';
-    return `${this.entityName}${extension}`;
+    return `${this.entityName}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}${extension}`;
   },
 
   async requestSignedUrlUpload(file) {
@@ -932,6 +942,10 @@ const KviInputExclusionAddPage = {
 
     if (normalizedRows.length === 0) {
       this.showInfo(selectedRows.length > 0 ? 'Selected row(s) are empty.' : 'Paste or enter at least one row before processing.', 'error');
+      return;
+    }
+
+    if (!this.validateRowsForSubmit(normalizedRows)) {
       return;
     }
 
@@ -1031,6 +1045,24 @@ const KviInputExclusionAddPage = {
     return String(value || '').trim();
   },
 
+  normalizeFlagValue(value) {
+    const raw = String(value ?? '').trim().toUpperCase();
+    if (!raw) return '';
+    if (raw === 'Y' || raw === 'N') return raw;
+    return null;
+  },
+
+  setFlagCellValue(params, field) {
+    if (!params?.data || !field) return false;
+    const normalized = this.normalizeFlagValue(params.newValue);
+    if (normalized == null) {
+      this.showInfo('Flag fields only accept Y or N.', 'error');
+      return false;
+    }
+    params.data[field] = normalized;
+    return true;
+  },
+
   numberFilterValue(value) {
     const raw = String(value ?? '').replace(/,/g, '').trim();
     if (!raw) return null;
@@ -1041,12 +1073,33 @@ const KviInputExclusionAddPage = {
   normalizeRow(row) {
     const normalized = { ...this.createBlankRow(), ...row };
     normalized.organization = this.toDisplayText(normalized.organization);
-    normalized.itemDiscontinuedFlag = this.toDisplayText(normalized.itemDiscontinuedFlag);
-    normalized.itemSequesteredCoramApriaFlag = this.toDisplayText(normalized.itemSequesteredCoramApriaFlag);
-    normalized.itemUsedBiomedFlag = this.toDisplayText(normalized.itemUsedBiomedFlag);
+    normalized.itemDiscontinuedFlag =
+      this.normalizeFlagValue(normalized.itemDiscontinuedFlag) ?? this.toDisplayText(normalized.itemDiscontinuedFlag);
+    normalized.itemSequesteredCoramApriaFlag =
+      this.normalizeFlagValue(normalized.itemSequesteredCoramApriaFlag) ?? this.toDisplayText(normalized.itemSequesteredCoramApriaFlag);
+    normalized.itemUsedBiomedFlag =
+      this.normalizeFlagValue(normalized.itemUsedBiomedFlag) ?? this.toDisplayText(normalized.itemUsedBiomedFlag);
     normalized.histRevenue = this.toDisplayText(normalized.histRevenue).replace(/,/g, '');
-    normalized.invalidPrcaFlag = this.toDisplayText(normalized.invalidPrcaFlag);
+    normalized.invalidPrcaFlag =
+      this.normalizeFlagValue(normalized.invalidPrcaFlag) ?? this.toDisplayText(normalized.invalidPrcaFlag);
     return normalized;
+  },
+
+  validateRowsForSubmit(rows) {
+    const invalidFlagColumn = KVI_INPUT_EXCLUSION_FIELD_DEFS.find(({ field }) =>
+      KVI_INPUT_EXCLUSION_FLAG_FIELDS.has(field)
+        && rows.some((row) => {
+          const value = String(row?.[field] ?? '').trim();
+          return value && this.normalizeFlagValue(value) == null;
+        })
+    );
+
+    if (invalidFlagColumn) {
+      this.showInfo(`${invalidFlagColumn.headerName} only accepts Y or N.`, 'error');
+      return false;
+    }
+
+    return true;
   },
 
   isRowEmpty(row) {

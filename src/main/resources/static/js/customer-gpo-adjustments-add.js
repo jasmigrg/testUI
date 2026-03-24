@@ -991,7 +991,7 @@ const CustomerGpoAdjustmentsAddPage = {
     const rawExtension = String(file?.name || '').trim().split('.').pop();
     const hasExtension = rawExtension && rawExtension !== String(file?.name || '').trim();
     const extension = hasExtension ? `.${rawExtension}` : '.csv';
-    return `${this.entityName}${extension}`;
+    return `${this.entityName}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}${extension}`;
   },
 
   async requestSignedUrlUpload(file) {
