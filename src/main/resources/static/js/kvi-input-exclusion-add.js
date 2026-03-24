@@ -327,7 +327,11 @@ const KviInputExclusionAddPage = {
 
       switch (actionButton.dataset.action) {
         case 'back':
-          window.location.href = window.KVI_LIST_PAGE_URL || '/manage-kvi-input-view-input-data';
+          {
+            const listUrl = String(window.KVI_LIST_PAGE_URL || '/manage-kvi-input-view-input-data').trim();
+            const separator = listUrl.includes('?') ? '&' : '?';
+            window.location.href = `${listUrl}${separator}tab=exclusion`;
+          }
           break;
         case 'delete':
           this.deleteSelectedRows();

@@ -118,6 +118,7 @@ const KviInputPage = {
 
   init() {
     this.apiBaseUrl = (window.API_BASE_URL || '').replace(/\/$/, '');
+    this.activeTab = this.resolveInitialTab();
     this.cacheDom();
     this.bindTabs();
     this.bindToolbarActions();
@@ -137,6 +138,15 @@ const KviInputPage = {
       data: document.getElementById('kviInputDataEmptyState'),
       exclusion: document.getElementById('kviInputExclusionEmptyState')
     };
+  },
+
+  resolveInitialTab() {
+    const params = new URLSearchParams(window.location.search || '');
+    const requestedTab = String(params.get('tab') || '').trim().toLowerCase();
+    if (requestedTab === 'control' || requestedTab === 'data' || requestedTab === 'exclusion') {
+      return requestedTab;
+    }
+    return 'control';
   },
 
   bindTabs() {

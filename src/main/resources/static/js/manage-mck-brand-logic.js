@@ -383,6 +383,7 @@ const MckBrandLogicPage = {
       exportName: 'gm-core-output-brand-multiplier.csv',
       apiEndpoint: '/api/v1/brand-multiplier/paginated',
       exportEndpoint: '/api/v1/brand-multiplier/export-csv',
+      allowSelection: false,
       allowAdd: false,
       allowDisable: false,
       allowUpdateTerminationDate: false,
@@ -1325,6 +1326,7 @@ const MckBrandLogicPage = {
         'is-selection-locked': (params) => this.isActionLockedRow(params?.data)
       }
     };
+    const useSelectionColumn = tabConfig.allowSelection !== false;
     const datasource = tabConfig.paginationType === 'server' ? this.buildDatasource(tabConfig) : null;
 
     const gridApi = DynamicGrid.createGrid({
@@ -1354,9 +1356,11 @@ const MckBrandLogicPage = {
           if (tabConfig.paginationType !== 'server') return;
           params.api.setGridOption('datasource', datasource);
         },
-        rowSelection: 'multiple',
-        suppressRowClickSelection: true,
-        isRowSelectable: (rowNode) => !this.isActionLockedRow(rowNode?.data),
+        rowSelection: useSelectionColumn ? 'multiple' : undefined,
+        suppressRowClickSelection: useSelectionColumn,
+        isRowSelectable: useSelectionColumn
+          ? (rowNode) => !this.isActionLockedRow(rowNode?.data)
+          : undefined,
         components: {
           gtPageSelectHeader: GtPageSelectHeader,
           manualApplyFloatingFilter: MckManualFloatingFilter
@@ -1382,7 +1386,10 @@ const MckBrandLogicPage = {
           }
         }
       },
-      columns: [selectionColumn, ...tabConfig.columns.map((column) => this.buildFilterableColumn(column))]
+      columns: [
+        ...(useSelectionColumn ? [selectionColumn] : []),
+        ...tabConfig.columns.map((column) => this.buildFilterableColumn(column))
+      ]
     });
 
     const gridElement = document.getElementById(tabConfig.gridElementId);

@@ -40,7 +40,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.1/dist/ag-grid-community.min.js"></script>
 </head>
-<body class="screen-page mck-brand-logic-page">
+<body class="mfi-page screen-page mck-brand-logic-page">
 
   <#include "/components/header.ftl">
   <#import "/components/sidebar.ftl" as sidebar>
@@ -57,7 +57,7 @@
       <div class="content-card">
         <@pageHeader.render
           title="Manage McK Brand Logic"
-          crumbs=[{"label":"Home","href":"${ctx}/"},{"label":"Guidance Model Management"},{"label":"Manage McK Brand Logic"}]
+          crumbs=[{"label":"Home","href":"${ctx}/"},{"label":"Manage McK Brand Logic"}]
         />
 
         <section class="screen-page-shell mck-brand-logic-shell" aria-label="Manage McK Brand Logic">

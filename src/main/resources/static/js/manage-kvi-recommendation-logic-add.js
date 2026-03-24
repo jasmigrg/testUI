@@ -915,7 +915,7 @@ const KviRecommendationLogicAddPage = {
     if (normalizedRows.length === 0) {
       this.showInfo(selectedRows.length > 0 ? 'Selected row(s) are empty.' : 'Paste or enter at least one row before processing.', 'error');
       return;
-    }s
+    }
 
     const submitRows = normalizedRows.map((row) => ({
       ...row,
