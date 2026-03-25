@@ -298,6 +298,7 @@ const MckBrandLogicPage = {
     weighting: {
       title: 'GM Core MCKB Price Scoring Weighting',
       gridElementId: 'mckWeightingGrid',
+      addPageUrl: '/manage-mck-brand-logic/add/weighting',
       exportName: 'gm-core-mckb-price-scoring-weighting.csv',
       apiEndpoint: '/api/v1/scoring-weightings/paginated',
       updateEndpoint: '/api/v1/scoring-weightings/updateScoringWeightings',
@@ -308,7 +309,7 @@ const MckBrandLogicPage = {
         { field: 'effectiveDate', headerName: 'Effective Date', minWidth: 150 },
         { field: 'terminationDate', headerName: 'Termination Date', minWidth: 170 },
         { field: 'itemCategory', headerName: 'Item Category', minWidth: 170 },
-        { field: 'itemNum', headerName: 'Item NUM', minWidth: 150 },
+        { field: 'itemNum', headerName: 'Item Num', minWidth: 150 },
         { field: 'relativeProfitabilityWeighting', headerName: 'Relative Profitability Weighting', minWidth: 250 },
         { field: 'relativeShareWeighting', headerName: 'Relative  Share Weighting', minWidth: 220 },
         { field: 'relativeQualityWeighting', headerName: 'Relative Quality Weighting', minWidth: 220 },
@@ -320,6 +321,7 @@ const MckBrandLogicPage = {
     'quality-tier': {
       title: 'GM Core Paramter MCKB Quality Tiers',
       gridElementId: 'mckQualityTierGrid',
+      addPageUrl: '/manage-mck-brand-logic/add/quality-tier',
       exportName: 'gm-core-paramter-mckb-quality-tiers.csv',
       apiEndpoint: '/api/v1/quality-tiers/paginated',
       updateEndpoint: '/api/v1/quality-tiers/updateQualityTiers',
@@ -331,7 +333,7 @@ const MckBrandLogicPage = {
         { field: 'disableDate', headerName: 'Disable Date', minWidth: 150 },
         { field: 'terminationDate', headerName: 'Termination Date', minWidth: 170 },
         { field: 'itemSubCategory', headerName: 'Item Sub Category', minWidth: 190 },
-        { field: 'itemNum', headerName: 'Item NUM', minWidth: 150 },
+        { field: 'itemNum', headerName: 'Item Num', minWidth: 150 },
         { field: 'qualityScore', headerName: 'Quality Score', minWidth: 170 },
         { field: 'qualityTier', headerName: 'Quality Tier', minWidth: 170 },
         { field: 'notes', headerName: 'Notes', minWidth: 220 },
@@ -341,6 +343,7 @@ const MckBrandLogicPage = {
     'relative-delta': {
       title: 'GM Core Paramter MCKB Relative Price Delta',
       gridElementId: 'mckRelativeDeltaGrid',
+      addPageUrl: '/manage-mck-brand-logic/add/relative-delta',
       exportName: 'gm-core-paramter-mckb-relative-price-delta.csv',
       apiEndpoint: '/api/v1/relative-price-delta/paginated',
       updateEndpoint: '/api/v1/relative-price-delta/updateRelativePriceDelta',
@@ -361,6 +364,7 @@ const MckBrandLogicPage = {
     'price-cap': {
       title: 'GM Core Parameter MCKB Price Change CAP',
       gridElementId: 'mckPriceCapGrid',
+      addPageUrl: '/manage-mck-brand-logic/add/price-cap',
       exportName: 'gm-core-parameter-mckb-price-change-cap.csv',
       apiEndpoint: '/api/v1/price-change-cap/paginated',
       updateEndpoint: '/api/v1/price-change-cap/updatePriceChangeCap',
@@ -411,6 +415,7 @@ const MckBrandLogicPage = {
     this.cacheDom();
     this.bindTabs();
     this.bindToolbarActions();
+    this.applyInitialTabFromUrl();
     this.initGridForTab(this.activeTab);
     this.syncTabUi();
     this.syncTitle();
@@ -821,7 +826,12 @@ const MckBrandLogicPage = {
 
     scope.querySelectorAll('.gt-action-btn[data-action="add"]').forEach((button) => {
       button.addEventListener('click', () => {
-        this.showInfo('Add flow for this screen is not configured yet.', 'warning');
+        const addPageUrl = this.tabs[this.activeTab]?.addPageUrl;
+        if (!addPageUrl) {
+          this.showInfo('Add flow for this screen is not configured yet.', 'warning');
+          return;
+        }
+        window.location.href = addPageUrl;
       });
     });
 
@@ -929,6 +939,14 @@ const MckBrandLogicPage = {
     container.className = 'app-page-toast-layer';
     document.body.appendChild(container);
     return container;
+  },
+
+  applyInitialTabFromUrl() {
+    const params = new URLSearchParams(window.location.search || '');
+    const requestedTab = String(params.get('tab') || '').trim();
+    if (requestedTab && this.tabs[requestedTab]) {
+      this.activeTab = requestedTab;
+    }
   },
 
   activateTab(tabKey) {

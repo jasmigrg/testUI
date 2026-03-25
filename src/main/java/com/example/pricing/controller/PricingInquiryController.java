@@ -60,6 +60,30 @@ public class PricingInquiryController {
     return "manage-mck-brand-logic";
   }
 
+  @GetMapping("/manage-mck-brand-logic/add/weighting")
+  public String manageMckBrandLogicWeightingAdd(Model model) {
+    model.addAttribute("apiBaseUrl", apiBaseUrl);
+    return "manage-mck-brand-logic-weighting-add";
+  }
+
+  @GetMapping("/manage-mck-brand-logic/add/quality-tier")
+  public String manageMckBrandLogicQualityTierAdd(Model model) {
+    model.addAttribute("apiBaseUrl", apiBaseUrl);
+    return "manage-mck-brand-logic-quality-tier-add";
+  }
+
+  @GetMapping("/manage-mck-brand-logic/add/relative-delta")
+  public String manageMckBrandLogicRelativeDeltaAdd(Model model) {
+    model.addAttribute("apiBaseUrl", apiBaseUrl);
+    return "manage-mck-brand-logic-relative-delta-add";
+  }
+
+  @GetMapping("/manage-mck-brand-logic/add/price-cap")
+  public String manageMckBrandLogicPriceCapAdd(Model model) {
+    model.addAttribute("apiBaseUrl", apiBaseUrl);
+    return "manage-mck-brand-logic-price-cap-add";
+  }
+
   @GetMapping({"/manage-kvi-input-view-input-data", "/manageKVIInputAndViewInputData"})
   public String manageKviInputViewInputData(Model model) {
     model.addAttribute("apiBaseUrl", apiBaseUrl);
