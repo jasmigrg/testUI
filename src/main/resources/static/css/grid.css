@@ -148,6 +148,20 @@
   border-right: 1px solid #e0e0e0 !important;
 }
 
+.ag-theme-alpine .ag-cell.cell-align-left,
+.ag-theme-alpine .ag-cell.cell-align-left .ag-cell-value {
+  text-align: left;
+}
+
+.ag-theme-alpine .ag-cell.cell-align-right,
+.ag-theme-alpine .ag-cell.cell-align-right .ag-cell-value {
+  text-align: right;
+}
+
+.ag-theme-alpine .ag-cell.cell-align-right .ag-cell-wrapper {
+  justify-content: flex-end;
+}
+
 /* Checkbox column styling for AG-Grid */
 .ag-theme-alpine .ag-checkbox-input-wrapper {
   width: 18px;

@@ -252,6 +252,7 @@ const CustomerGpoAdjustmentsAddPage = {
       field: column.field,
       headerName: column.headerName,
       minWidth: column.minWidth,
+      cellClass: column.type === 'date' || column.type === 'number' ? 'cell-align-right' : 'cell-align-left',
       editable: column.editable !== false ? (params) => this.isEditableCell(params, column.field) : false,
       cellClassRules: this.validationCellRules(column.field),
       tooltipValueGetter: (params) => this.getCellErrorTooltip(params, column.field)
@@ -991,7 +992,7 @@ const CustomerGpoAdjustmentsAddPage = {
     const rawExtension = String(file?.name || '').trim().split('.').pop();
     const hasExtension = rawExtension && rawExtension !== String(file?.name || '').trim();
     const extension = hasExtension ? `.${rawExtension}` : '.csv';
-    return `${this.entityName}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}${extension}`;
+    return `${this.entityName}${extension}`;
   },
 
   async requestSignedUrlUpload(file) {

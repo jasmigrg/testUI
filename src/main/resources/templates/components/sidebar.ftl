@@ -54,6 +54,11 @@
                         <span class="text">Manage KVI Input and View Input Data</span>
                     </a>
                 </li>
+                <li class="submenu-item">
+                    <a href="/manage-uom-diff-input-view-input-data" class="submenu-link" title="Manage UOM Diff Input and View Input Data">
+                        <span class="text">Manage UOM Diff Input and View Input Data</span>
+                    </a>
+                </li>
             </ul>
         </li>
     </ul>

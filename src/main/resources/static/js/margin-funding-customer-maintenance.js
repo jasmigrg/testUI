@@ -607,8 +607,7 @@ const MarginFundingCustomerMaintenanceManager = {
         suppressRowClickSelection: true,
         isRowSelectable: (rowNode) => {
           const row = rowNode?.data;
-          return String(row?.disableDate || '').trim() === ''
-            && String(row?.terminationDate || '').trim() === '';
+          return String(row?.disableDate || '').trim() === '';
         },
         icons: {
           sortUnSort:
@@ -640,8 +639,7 @@ const MarginFundingCustomerMaintenanceManager = {
           cellClassRules: {
             'is-selection-locked': (params) => {
               const row = params?.data;
-              return String(row?.disableDate || '').trim() !== ''
-                || String(row?.terminationDate || '').trim() !== '';
+              return String(row?.disableDate || '').trim() !== '';
             }
           },
           headerComponent: 'gtPageSelectHeader',

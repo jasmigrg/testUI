@@ -15,7 +15,7 @@
     if (!modal) return null;
 
     const dropzone = document.getElementById(config.dropzoneId);
-    let input = document.getElementById(config.inputId);
+    const input = document.getElementById(config.inputId);
     const browseBtn = document.getElementById(config.browseBtnId);
     const nextBtn = document.getElementById(config.nextBtnId);
     const errorEl = document.getElementById(config.errorId);
@@ -32,22 +32,6 @@
 
     let selectedFile = null;
     let uploadInFlight = false;
-
-    function bindInputChangeListener(fileInput) {
-      fileInput?.addEventListener('change', (event) => {
-        applyFile(event.target.files && event.target.files[0] ? event.target.files[0] : null);
-      });
-    }
-
-    function rebuildInput() {
-      if (!input?.parentNode) return input;
-      const freshInput = input.cloneNode(false);
-      freshInput.value = '';
-      input.parentNode.replaceChild(freshInput, input);
-      input = freshInput;
-      bindInputChangeListener(input);
-      return input;
-    }
 
     function setFileCardVisible(isVisible) {
       if (!fileCard) return;
@@ -78,7 +62,6 @@
     }
 
     function open() {
-      rebuildInput();
       modal.hidden = false;
       modal.setAttribute('aria-hidden', 'false');
       clearState();
@@ -87,14 +70,6 @@
 
     function applyFile(file) {
       if (!file) return;
-
-      console.debug('[BulkUploadModal] applyFile', {
-        modalId: config.modalId,
-        fileName: file.name,
-        fileSize: file.size,
-        fileType: file.type,
-        lastModified: file.lastModified
-      });
 
       if (!validateFile(file)) {
         selectedFile = null;
@@ -118,10 +93,10 @@
       setFileCardVisible(true);
     }
 
-    browseBtn?.addEventListener('click', () => {
-      rebuildInput()?.click();
+    browseBtn?.addEventListener('click', () => input?.click());
+    input?.addEventListener('change', (event) => {
+      applyFile(event.target.files && event.target.files[0] ? event.target.files[0] : null);
     });
-    bindInputChangeListener(input);
     removeBtn?.addEventListener('click', clearState);
 
     dropzone?.addEventListener('dragover', (event) => {

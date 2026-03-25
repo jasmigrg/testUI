@@ -72,6 +72,12 @@ public class PricingInquiryController {
     return "kvi-input-exclusion-add";
   }
 
+  @GetMapping("/manage-uom-diff-input-view-input-data")
+  public String manageUomDiffInputViewInputData(Model model) {
+    model.addAttribute("apiBaseUrl", apiBaseUrl);
+    return "manage-uom-diff-input-view-input-data";
+  }
+
   @GetMapping("/price-rules-reason-codes")
   public String priceRulesReasonCodes() {
     return "pricing/price-rules-reason-codes";

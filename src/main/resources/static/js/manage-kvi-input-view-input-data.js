@@ -974,13 +974,15 @@ const KviInputPage = {
 
   buildFilterableColumn(column) {
     const field = String(column?.field || '').trim();
-    if (!field) return column;
+    if (!field || field === 'select') return column;
 
     const kind = this.getFieldFilterKind(field);
+    const alignmentClass = kind === 'text' ? 'cell-align-left' : 'cell-align-right';
 
     if (kind === 'date') {
       return {
         ...column,
+        cellClass: alignmentClass,
         filter: 'agDateColumnFilter',
         filterParams: {
           buttons: ['apply', 'reset'],
@@ -1002,6 +1004,7 @@ const KviInputPage = {
     if (kind === 'number') {
       return {
         ...column,
+        cellClass: alignmentClass,
         filter: 'agNumberColumnFilter',
         filterParams: {
           buttons: ['apply', 'reset'],
@@ -1022,6 +1025,7 @@ const KviInputPage = {
 
     return {
       ...column,
+      cellClass: alignmentClass,
       filter: 'agTextColumnFilter',
       filterParams: {
         buttons: ['apply', 'reset'],

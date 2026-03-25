@@ -462,12 +462,8 @@ const MckBrandLogicPage = {
 
   isActionLockedRow(row) {
     const disableDate = String(row?.disableDate || '').trim();
-    const terminationDate = String(row?.terminationDate || '').trim();
-
     const hasRealDisableDate = disableDate && !this.isPlaceholderLockDate(disableDate);
-    const hasRealTerminationDate = terminationDate && !this.isPlaceholderLockDate(terminationDate);
-
-    return hasRealDisableDate || hasRealTerminationDate;
+    return hasRealDisableDate;
   },
 
   hasLockedRowsSelected() {
@@ -783,7 +779,7 @@ const MckBrandLogicPage = {
       return;
     }
     if (this.hasLockedRowsSelected()) {
-      this.showInfo('Disabled or terminated rows cannot be edited. Remove them from selection.', 'error');
+      this.showInfo('Disabled rows cannot be edited. Remove them from selection.', 'error');
       return;
     }
     this.openDisableModal(ids);
@@ -801,7 +797,7 @@ const MckBrandLogicPage = {
       return;
     }
     if (this.hasLockedRowsSelected()) {
-      this.showInfo('Disabled or terminated rows cannot be edited. Remove them from selection.', 'error');
+      this.showInfo('Disabled rows cannot be edited. Remove them from selection.', 'error');
       return;
     }
     this.openUpdateTerminationModal(ids);
@@ -1746,13 +1742,15 @@ const MckBrandLogicPage = {
 
   buildFilterableColumn(column) {
     const field = String(column?.field || '').trim();
-    if (!field) return column;
+    if (!field || field === 'select') return column;
 
     const filterKind = this.getFieldFilterKind(field);
+    const alignmentClass = filterKind === 'text' ? 'cell-align-left' : 'cell-align-right';
 
     if (filterKind === 'date') {
       return {
         ...column,
+        cellClass: alignmentClass,
         filter: 'agDateColumnFilter',
         filterParams: {
           buttons: ['apply', 'reset'],
@@ -1774,6 +1772,7 @@ const MckBrandLogicPage = {
     if (filterKind === 'number') {
       return {
         ...column,
+        cellClass: alignmentClass,
         filter: 'agNumberColumnFilter',
         filterParams: {
           buttons: ['apply', 'reset'],
@@ -1794,6 +1793,7 @@ const MckBrandLogicPage = {
 
     return {
       ...column,
+      cellClass: alignmentClass,
       filter: 'agTextColumnFilter',
       filterParams: {
         buttons: ['apply', 'reset'],

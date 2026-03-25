@@ -196,6 +196,7 @@ const KviInputExclusionAddPage = {
       field: column.field,
       headerName: column.headerName,
       minWidth: column.minWidth,
+      cellClass: column.type === 'date' || column.type === 'number' ? 'cell-align-right' : 'cell-align-left',
       editable: (params) => this.isEditableCell(params, column.field),
       cellClassRules: this.validationCellRules(column.field),
       tooltipValueGetter: (params) => this.getCellErrorTooltip(params, column.field)
@@ -871,58 +872,12 @@ const KviInputExclusionAddPage = {
     const rawExtension = String(file?.name || '').trim().split('.').pop();
     const hasExtension = rawExtension && rawExtension !== String(file?.name || '').trim();
     const extension = hasExtension ? `.${rawExtension}` : '.csv';
-    return `${this.entityName}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}${extension}`;
-  },
-
-  async cloneUploadFile(file, uploadFileName = '') {
-    if (!file || typeof file.arrayBuffer !== 'function') return file;
-    const bytes = await file.arrayBuffer();
-    const normalizedName = String(uploadFileName || file.name || 'upload.csv').trim() || 'upload.csv';
-    console.debug('[KviInputExclusionAdd] cloneUploadFile:source', {
-      selectedFileName: file.name,
-      selectedFileSize: file.size,
-      selectedFileType: file.type,
-      selectedLastModified: file.lastModified,
-      uploadFileName: normalizedName,
-      byteLength: bytes.byteLength
-    });
-    try {
-      const clonedFile = new File([bytes], normalizedName, {
-        type: file.type || 'text/csv',
-        lastModified: Date.now()
-      });
-      console.debug('[KviInputExclusionAdd] cloneUploadFile:cloned-file', {
-        uploadFileName: clonedFile.name,
-        uploadFileSize: clonedFile.size,
-        uploadFileType: clonedFile.type,
-        uploadLastModified: clonedFile.lastModified
-      });
-      return clonedFile;
-    } catch (error) {
-      const clonedBlob = new Blob([bytes], { type: file.type || 'text/csv' });
-      console.debug('[KviInputExclusionAdd] cloneUploadFile:cloned-blob', {
-        uploadFileName: normalizedName,
-        uploadFileSize: clonedBlob.size,
-        uploadFileType: clonedBlob.type
-      });
-      return clonedBlob;
-    }
+    return `${this.entityName}${extension}`;
   },
 
   async requestSignedUrlUpload(file) {
     const context = this.resolveUploadContext();
     const uploadFileName = this.getBulkUploadFileName(file);
-    const uploadBody = await this.cloneUploadFile(file, uploadFileName);
-    console.debug('[KviInputExclusionAdd] requestSignedUrlUpload:request', {
-      entityName: this.entityName,
-      selectedFileName: file?.name,
-      selectedFileSize: file?.size,
-      selectedLastModified: file?.lastModified,
-      uploadFileName,
-      userId: context.userId,
-      programId: context.programId,
-      workStationId: context.workStationId
-    });
     const response = await this.fetchJson(`${this.getBulkUploadBaseUrl()}/request-signed-url`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -936,30 +891,12 @@ const KviInputExclusionAddPage = {
     });
 
     if (!response?.signedUrl) throw new Error('Signed URL missing from response');
-    console.debug('[KviInputExclusionAdd] requestSignedUrlUpload:response', {
-      jobId: response.jobId,
-      signedUrl: response.signedUrl,
-      uploadInstructions: response.uploadInstructions
-    });
 
     const uploadRequest = this.resolveUploadInstructions(response, file);
-    console.debug('[KviInputExclusionAdd] requestSignedUrlUpload:put-start', {
-      jobId: response.jobId,
-      uploadFileName,
-      method: uploadRequest.method,
-      headers: uploadRequest.headers,
-      bodySize: uploadBody?.size
-    });
     const uploadResponse = await fetch(response.signedUrl, {
       method: uploadRequest.method,
       headers: uploadRequest.headers,
-      body: uploadBody
-    });
-    console.debug('[KviInputExclusionAdd] requestSignedUrlUpload:put-finish', {
-      jobId: response.jobId,
-      uploadFileName,
-      status: uploadResponse.status,
-      ok: uploadResponse.ok
+      body: file
     });
     if (!uploadResponse.ok) throw new Error(`Signed upload failed: ${uploadResponse.status}`);
 

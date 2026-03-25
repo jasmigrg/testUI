@@ -58,13 +58,13 @@
 
     const slashMatch = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
     if (slashMatch) {
-      return `${String(slashMatch[1]).padStart(2, '0')}/${String(slashMatch[2]).padStart(2, '0')}/${slashMatch[3]}`;
+      return raw;
     }
 
     const shortYearMatch = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})$/);
     if (shortYearMatch) {
       const year = 2000 + Number(shortYearMatch[3]);
-      return `${String(shortYearMatch[1]).padStart(2, '0')}/${String(shortYearMatch[2]).padStart(2, '0')}/${year}`;
+      return `${Number(shortYearMatch[1])}/${Number(shortYearMatch[2])}/${year}`;
     }
 
     return raw;
@@ -72,7 +72,7 @@
 
   function isValidUsDate(value) {
     const raw = String(value || '').trim();
-    const match = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    const match = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
     if (!match) return false;
 
     const month = Number(match[1]);
