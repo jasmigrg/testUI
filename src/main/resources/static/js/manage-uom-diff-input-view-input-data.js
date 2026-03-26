@@ -1603,6 +1603,7 @@ const UomDiffPage = {
       return {
         ...base,
         filter: 'agNumberColumnFilter',
+        filterValueGetter: (params) => this.getNumericFilterValue(params?.data?.[field]),
         filterParams: {
           buttons: ['apply', 'reset'],
           closeOnApply: true,
@@ -1633,6 +1634,14 @@ const UomDiffPage = {
         filterOptions: ['contains', 'equals', 'notEqual', 'notContains', 'startsWith', 'endsWith', 'blank', 'notBlank']
       }
     };
+  },
+
+  getNumericFilterValue(value) {
+    const raw = String(value ?? '').trim();
+    if (!raw) return null;
+    const normalized = raw.replace(/[%,$\s]/g, '').replace(/,/g, '');
+    const numeric = Number(normalized);
+    return Number.isNaN(numeric) ? null : numeric;
   },
 
   dateFilterComparator(filterLocalDateAtMidnight, cellValue) {
