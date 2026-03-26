@@ -186,7 +186,7 @@
   border-color: #0b7884;
 }
 
-@media (max-width: 1500px) {
+@media (max-width: 1180px) {
   .screen-add-page .gt-action-toolbar {
     flex-wrap: wrap;
     row-gap: 8px;
@@ -216,7 +216,7 @@
   max-width: 100%;
 }
 
-@media (max-width: 1380px) {
+@media (max-width: 1180px) {
   .screen-add-page .content {
     overflow-x: auto;
     overflow-y: visible;

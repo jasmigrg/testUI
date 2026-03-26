@@ -201,6 +201,7 @@ const UomDiffPage = {
   toolbarScope: '.screen-page-shell',
   gridManagerBootstrapped: false,
   gridManagerInitScheduled: false,
+  gridPreferenceStateByGrid: {},
   apiBaseUrl: '',
   controlApiEndpoint: '/api/v1/gm-uom-diff-input-control/paginated',
   controlDownloadEndpoint: '/api/v1/gm-uom-diff-input-control/download',
@@ -443,6 +444,7 @@ const UomDiffPage = {
       columnDefs: tabConfig.columns,
       rowData: tabConfig.rowData,
       rowSelection: tabConfig.rowSelection,
+      isRowSelectable: (rowNode) => this.isRowSelectable(tabKey, rowNode?.data),
       suppressRowClickSelection: tabConfig.suppressRowClickSelection,
       animateRows: false,
       pagination: true,
@@ -541,6 +543,13 @@ const UomDiffPage = {
     const instance = window.GridManager.currentInstance;
     if (!activeGrid?.api || !instance) return;
 
+    if (instance.gridId) {
+      this.gridPreferenceStateByGrid[instance.gridId] = {
+        key: instance.currentPreferenceKey || 'default',
+        preferenceId: instance.currentPreferenceId || null
+      };
+    }
+
     instance.gridApi = activeGrid.api;
     instance.gridId = activeGrid.gridElementId;
     instance.apiConfig.screenId = `id_${activeGrid.gridElementId}`;
@@ -559,6 +568,18 @@ const UomDiffPage = {
     if (typeof instance.fetchPreferences === 'function') {
       Promise.resolve(instance.fetchPreferences())
         .then(() => {
+          const savedState = this.gridPreferenceStateByGrid[activeGrid.gridElementId];
+          const targetKey = savedState?.key || instance.currentPreferenceKey || 'default';
+          const resolvedKey = instance.savedPreferences?.[targetKey] ? targetKey : 'default';
+          const targetPreference = instance.savedPreferences?.[resolvedKey];
+
+          if (targetPreference && typeof instance.applyPreference === 'function') {
+            instance.currentPreferenceKey = resolvedKey;
+            instance.currentPreferenceId = resolvedKey === 'default'
+              ? null
+              : (savedState?.preferenceId || targetPreference.preferenceId || null);
+            instance.applyPreference(targetPreference);
+          }
           if (typeof instance.loadPreferencesList === 'function') {
             instance.loadPreferencesList();
           }
@@ -583,6 +604,15 @@ const UomDiffPage = {
     const activeGrid = this.getActiveGrid();
     if (!activeGrid?.api || typeof activeGrid.api.getSelectedRows !== 'function') return [];
     return activeGrid.api.getSelectedRows().filter(Boolean);
+  },
+
+  isExclusionRowLocked(row) {
+    return String(row?.disableDate || '').trim() !== '';
+  },
+
+  isRowSelectable(tabKey, row) {
+    if (tabKey !== 'exclusion') return true;
+    return !this.isExclusionRowLocked(row);
   },
 
   getSelectedIds() {
@@ -1443,11 +1473,13 @@ const UomDiffPage = {
           'Content-Type': 'application/json'
         },
         credentials: 'same-origin',
-        body: JSON.stringify({
-          ids,
-          notes,
-          terminationDate: this.formatDateAsMmDdYyyy(parsedDate)
-        })
+        body: JSON.stringify([
+          {
+            ids,
+            notes,
+            terminationDate: this.formatDateAsMmDdYyyy(parsedDate)
+          }
+        ])
       });
       this.closeUpdateTerminationModal();
       await this.loadExclusionGridData();
@@ -1519,7 +1551,7 @@ const UomDiffPage = {
       resizable: false,
       suppressMenu: true,
       headerComponent: GtPageSelectHeader,
-      checkboxSelection: true
+      checkboxSelection: (params) => params?.node?.selectable !== false
     };
   },
 
@@ -1545,7 +1577,16 @@ const UomDiffPage = {
           closeOnApply: true,
           maxNumConditions: 1,
           numAlwaysVisibleConditions: 1,
-          comparator: this.dateFilterComparator
+          comparator: this.dateFilterComparator,
+          defaultOption: 'equals',
+          filterOptions: [
+            'equals',
+            'notEqual',
+            'greaterThan',
+            'lessThan',
+            'greaterThanOrEqual',
+            'lessThanOrEqual'
+          ]
         }
       };
     }
@@ -1558,7 +1599,16 @@ const UomDiffPage = {
           buttons: ['apply', 'reset'],
           closeOnApply: true,
           maxNumConditions: 1,
-          numAlwaysVisibleConditions: 1
+          numAlwaysVisibleConditions: 1,
+          defaultOption: 'equals',
+          filterOptions: [
+            'equals',
+            'notEqual',
+            'greaterThan',
+            'lessThan',
+            'greaterThanOrEqual',
+            'lessThanOrEqual'
+          ]
         }
       };
     }
@@ -1570,7 +1620,9 @@ const UomDiffPage = {
         buttons: ['apply', 'reset'],
         closeOnApply: true,
         maxNumConditions: 1,
-        numAlwaysVisibleConditions: 1
+        numAlwaysVisibleConditions: 1,
+        defaultOption: 'contains',
+        filterOptions: ['contains', 'equals', 'notEqual', 'notContains', 'startsWith', 'endsWith', 'blank', 'notBlank']
       }
     };
   },
@@ -1605,6 +1657,8 @@ const UomDiffPage = {
       [
         'uomDiffInputIncludeMonth',
         'histRevenue',
+        'orderCompany',
+        'orderNumber',
         'itemNum',
         'uomStructure',
         'convFactorFromTo',
