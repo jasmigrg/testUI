@@ -102,6 +102,12 @@ public class PricingInquiryController {
     return "manage-uom-diff-input-view-input-data";
   }
 
+  @GetMapping("/manage-uom-diff-input-view-input-data/exclusion/add")
+  public String manageUomDiffInputExclusionAdd(Model model) {
+    model.addAttribute("apiBaseUrl", apiBaseUrl);
+    return "manage-uom-diff-input-exclusion-add";
+  }
+
   @GetMapping("/price-rules-reason-codes")
   public String priceRulesReasonCodes() {
     return "pricing/price-rules-reason-codes";

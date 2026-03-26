@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="${ctx}/css/page-toast.css">
   <link rel="stylesheet" href="${ctx}/css/screen-shared.css">
   <link rel="stylesheet" href="${ctx}/css/manage-uom-diff-input-view-input-data.css">
+  <link rel="stylesheet" href="${ctx}/css/margin-funding-maintenance.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.1/styles/ag-grid.css">
@@ -21,7 +22,7 @@
   <script>
     window.API_BASE_URL = window.API_BASE_URL || '${(apiBaseUrl!'')?js_string}';
     window.GRID_PREF_TEST_USER_ID = window.GRID_PREF_TEST_USER_ID || '${(userId!'defaultUser')?js_string}';
-    window.UOM_DIFF_EXCLUSION_ADD_PAGE_URL = window.UOM_DIFF_EXCLUSION_ADD_PAGE_URL || '';
+    window.UOM_DIFF_EXCLUSION_ADD_PAGE_URL = window.UOM_DIFF_EXCLUSION_ADD_PAGE_URL || '${ctx}/manage-uom-diff-input-view-input-data/exclusion/add';
     window.GRID_PREF_SCREEN_ID_BY_GRID = Object.assign({}, window.GRID_PREF_SCREEN_ID_BY_GRID, {
       uomDiffControlGrid: 'id_uom_diff_input_control',
       uomDiffExclusionGrid: 'id_uom_diff_input_exclusion',
@@ -296,6 +297,46 @@
   </div>
 
   <@gridManager.preferenceModal />
+
+  <div id="updateTerminationDateModal" class="mf-action-modal" hidden>
+    <div class="mf-action-modal__backdrop" data-action="close-update-termination-modal"></div>
+    <div class="mf-action-modal__dialog mf-action-modal__dialog--update-termination" role="dialog" aria-modal="true" aria-labelledby="updateTerminationDateModalTitle">
+      <div class="mf-action-modal__header">
+        <h2 id="updateTerminationDateModalTitle" class="mf-action-modal__title">Update Termination Date</h2>
+        <button type="button" class="mf-action-modal__close" aria-label="Close" data-action="close-update-termination-modal">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" /></svg>
+        </button>
+      </div>
+      <div id="updateTerminationErrorMessage" class="mf-action-modal__error mf-action-modal__error--update" hidden></div>
+      <div class="mf-action-modal__row">
+        <label for="updateTerminationDateInput" class="mf-action-modal__label">Termination Date</label>
+        <div class="mf-action-modal__input-wrap">
+          <input
+            id="updateTerminationDateInput"
+            class="mf-action-modal__input"
+            type="text"
+            inputmode="numeric"
+            placeholder="mm/dd/yyyy"
+            maxlength="10"
+            required
+            aria-required="true"
+          />
+          <button type="button" class="mf-action-modal__date-btn" aria-label="Open date picker" data-action="open-termination-date-picker">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="2" /><path d="M8 3V7M16 3V7M4 10H20" /></svg>
+          </button>
+          <input id="updateTerminationDateNativeInput" class="mf-action-modal__native-date" type="date" tabindex="-1" aria-hidden="true" />
+        </div>
+      </div>
+      <div class="mf-action-modal__row">
+        <label for="updateTerminationNotesInput" class="mf-action-modal__label">Notes</label>
+        <input id="updateTerminationNotesInput" class="mf-action-modal__input" type="text" maxlength="250" required aria-required="true" />
+      </div>
+      <div class="mf-action-modal__actions">
+        <button type="button" class="mf-action-modal__btn mf-action-modal__btn--cancel" data-action="cancel-update-termination-modal">Cancel</button>
+        <button type="button" class="mf-action-modal__btn mf-action-modal__btn--save" data-action="save-update-termination-modal">Save</button>
+      </div>
+    </div>
+  </div>
 
 </body>
 </html>
