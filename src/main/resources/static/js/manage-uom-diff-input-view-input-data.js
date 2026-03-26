@@ -459,6 +459,12 @@ const UomDiffPage = {
         if (tabKey === 'main') this.loadMainGridData();
         if (tabKey === 'transaction') this.loadTransactionGridData();
       },
+      onFilterChanged: () => {
+        if (tabKey === 'control') this.loadControlGridData();
+        if (tabKey === 'exclusion') this.loadExclusionGridData();
+        if (tabKey === 'main') this.loadMainGridData();
+        if (tabKey === 'transaction') this.loadTransactionGridData();
+      },
       onGridReady: () => {
         this.refreshActiveGridLayout();
         if (tabKey === 'control') this.loadControlGridData();
@@ -960,6 +966,8 @@ const UomDiffPage = {
   toIsoDate(value) {
     const raw = String(value || '').trim();
     if (!raw) return '';
+    const isoDateTimeMatch = raw.match(/^(\d{4}-\d{2}-\d{2})(?:[ T].*)?$/);
+    if (isoDateTimeMatch) return isoDateTimeMatch[1];
     const usMatch = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
     if (usMatch) return `${usMatch[3]}-${usMatch[1]}-${usMatch[2]}`;
     return raw;
