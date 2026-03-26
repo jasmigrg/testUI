@@ -556,7 +556,7 @@ const UomDiffPage = {
       gridApi.applyPendingFloatingFilters = () => this.applyPendingFilters();
     }
 
-    this.setGridEmptyState(tabKey, Array.isArray(tabConfig.rowData) && tabConfig.rowData.length > 0 ? 'data' : 'empty');
+    this.setGridEmptyState(tabKey, 'hidden');
 
     if (!this.gridManagerBootstrapped && !this.gridManagerInitScheduled && gridApi && window.GridManager) {
       this.gridManagerInitScheduled = true;
