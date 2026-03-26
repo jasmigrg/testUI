@@ -310,20 +310,11 @@ const UomDiffPage = {
           activeGrid.api.applyPendingFloatingFilters();
           return;
         }
-        if (this.activeTab === 'control') {
-          this.loadControlGridData();
-          return;
+        if (typeof activeGrid.api.paginationGoToFirstPage === 'function') {
+          activeGrid.api.paginationGoToFirstPage();
         }
-        if (this.activeTab === 'exclusion') {
-          this.loadExclusionGridData();
-          return;
-        }
-        if (this.activeTab === 'main') {
-          this.loadMainGridData();
-          return;
-        }
-        if (this.activeTab === 'transaction') {
-          this.loadTransactionGridData();
+        if (typeof activeGrid.api.refreshInfiniteCache === 'function') {
+          activeGrid.api.refreshInfiniteCache();
           return;
         }
         if (typeof activeGrid.api.onFilterChanged === 'function') {
@@ -408,6 +399,7 @@ const UomDiffPage = {
         gridElementId: 'uomDiffControlGrid',
         columns: this.controlColumns(),
         rowData: [],
+        apiEndpoint: this.controlApiEndpoint,
         rowSelection: 'single',
         suppressRowClickSelection: true
       },
@@ -415,6 +407,7 @@ const UomDiffPage = {
         gridElementId: 'uomDiffExclusionGrid',
         columns: this.exclusionColumns(),
         rowData: [],
+        apiEndpoint: this.exclusionApiEndpoint,
         rowSelection: 'multiple',
         suppressRowClickSelection: true
       },
@@ -422,6 +415,7 @@ const UomDiffPage = {
         gridElementId: 'uomDiffDataMainGrid',
         columns: this.mainColumns(),
         rowData: [],
+        apiEndpoint: this.mainApiEndpoint,
         rowSelection: 'single',
         suppressRowClickSelection: true
       },
@@ -429,6 +423,7 @@ const UomDiffPage = {
         gridElementId: 'uomDiffTransactionGrid',
         columns: this.transactionColumns(),
         rowData: [],
+        apiEndpoint: this.transactionApiEndpoint,
         rowSelection: 'single',
         suppressRowClickSelection: true
       }
@@ -450,27 +445,65 @@ const UomDiffPage = {
       pagination: true,
       paginationPageSize: 10,
       paginationPageSizeSelector: [10, 20, 50],
+      rowModelType: tabConfig.apiEndpoint ? 'infinite' : 'clientSide',
+      cacheBlockSize: 10,
+      maxBlocksInCache: 10,
       suppressNoRowsOverlay: true,
       suppressCellFocus: false,
       onCellValueChanged: (event) => this.handleCellValueChanged(tabKey, event),
       onSortChanged: () => {
-        if (tabKey === 'control') this.loadControlGridData();
-        if (tabKey === 'exclusion') this.loadExclusionGridData();
-        if (tabKey === 'main') this.loadMainGridData();
-        if (tabKey === 'transaction') this.loadTransactionGridData();
+        if (tabConfig.apiEndpoint) {
+          if (typeof gridApi.paginationGoToFirstPage === 'function') {
+            gridApi.paginationGoToFirstPage();
+          }
+          if (typeof gridApi.refreshInfiniteCache === 'function') {
+            gridApi.refreshInfiniteCache();
+          }
+          return;
+        }
+      },
+      onPaginationChanged: () => {
+        if (!tabConfig.apiEndpoint) return;
+        if (gridApi.__isUpdatingPageSize) return;
+        if (typeof gridApi.paginationGetPageSize !== 'function') return;
+
+        const newPageSize = gridApi.paginationGetPageSize();
+        const lastKnownPageSize = gridApi.__lastKnownPageSize || 10;
+        if (newPageSize === lastKnownPageSize) return;
+
+        gridApi.__isUpdatingPageSize = true;
+        gridApi.__lastKnownPageSize = newPageSize;
+
+        setTimeout(() => {
+          if (typeof gridApi.setGridOption === 'function') {
+            gridApi.setGridOption('cacheBlockSize', newPageSize);
+          }
+          if (typeof gridApi.paginationGoToFirstPage === 'function') {
+            gridApi.paginationGoToFirstPage();
+          }
+          if (typeof gridApi.refreshInfiniteCache === 'function') {
+            gridApi.refreshInfiniteCache();
+          }
+          gridApi.__isUpdatingPageSize = false;
+        }, 0);
       },
       onFilterChanged: () => {
-        if (tabKey === 'control') this.loadControlGridData();
-        if (tabKey === 'exclusion') this.loadExclusionGridData();
-        if (tabKey === 'main') this.loadMainGridData();
-        if (tabKey === 'transaction') this.loadTransactionGridData();
+        if (tabConfig.apiEndpoint) {
+          if (typeof gridApi.paginationGoToFirstPage === 'function') {
+            gridApi.paginationGoToFirstPage();
+          }
+          if (typeof gridApi.refreshInfiniteCache === 'function') {
+            gridApi.refreshInfiniteCache();
+          }
+          return;
+        }
       },
       onGridReady: () => {
         this.refreshActiveGridLayout();
-        if (tabKey === 'control') this.loadControlGridData();
-        if (tabKey === 'exclusion') this.loadExclusionGridData();
-        if (tabKey === 'main') this.loadMainGridData();
-        if (tabKey === 'transaction') this.loadTransactionGridData();
+        if (tabConfig.apiEndpoint) {
+          gridApi.__lastKnownPageSize = 10;
+          gridApi.setGridOption('datasource', this.buildDatasource(tabKey, tabConfig));
+        }
       },
       onFirstDataRendered: () => this.refreshActiveGridLayout(),
       icons: {
@@ -693,17 +726,8 @@ const UomDiffPage = {
     if (typeof activeGrid.api.deselectAll === 'function') {
       activeGrid.api.deselectAll();
     }
-    if (this.activeTab === 'control') {
-      this.loadControlGridData();
-    }
-    if (this.activeTab === 'exclusion') {
-      this.loadExclusionGridData();
-    }
-    if (this.activeTab === 'main') {
-      this.loadMainGridData();
-    }
-    if (this.activeTab === 'transaction') {
-      this.loadTransactionGridData();
+    if (typeof activeGrid.api.refreshInfiniteCache === 'function') {
+      activeGrid.api.refreshInfiniteCache();
     }
     this.refreshActiveGridLayout();
   },
@@ -895,6 +919,13 @@ const UomDiffPage = {
   extractPagePayload(payload) {
     if (payload?.data && typeof payload.data === 'object') return payload.data;
     return payload;
+  },
+
+  extractTotalFromResponse(payload) {
+    if (!payload || typeof payload !== 'object') return null;
+    if (typeof payload.totalElements === 'number') return payload.totalElements;
+    if (payload.data && typeof payload.data.totalElements === 'number') return payload.data.totalElements;
+    return null;
   },
 
   normalizeControlRow(row) {
@@ -1137,14 +1168,11 @@ const UomDiffPage = {
     const nextSerialized = JSON.stringify(nextModel);
 
     if (previousSerialized === nextSerialized) {
-      if (this.activeTab === 'control') {
-        this.loadControlGridData();
-      } else if (this.activeTab === 'exclusion') {
-        this.loadExclusionGridData();
-      } else if (this.activeTab === 'main') {
-        this.loadMainGridData();
-      } else if (this.activeTab === 'transaction') {
-        this.loadTransactionGridData();
+      if (typeof gridApi.paginationGoToFirstPage === 'function') {
+        gridApi.paginationGoToFirstPage();
+      }
+      if (typeof gridApi.refreshInfiniteCache === 'function') {
+        gridApi.refreshInfiniteCache();
       } else if (typeof gridApi.onFilterChanged === 'function') {
         gridApi.onFilterChanged();
       }
@@ -1152,14 +1180,11 @@ const UomDiffPage = {
     }
 
     gridApi.setFilterModel(nextModel);
-    if (this.activeTab === 'control') {
-      this.loadControlGridData();
-    } else if (this.activeTab === 'exclusion') {
-      this.loadExclusionGridData();
-    } else if (this.activeTab === 'main') {
-      this.loadMainGridData();
-    } else if (this.activeTab === 'transaction') {
-      this.loadTransactionGridData();
+    if (typeof gridApi.paginationGoToFirstPage === 'function') {
+      gridApi.paginationGoToFirstPage();
+    }
+    if (typeof gridApi.refreshInfiniteCache === 'function') {
+      gridApi.refreshInfiniteCache();
     }
   },
 
@@ -1237,132 +1262,59 @@ const UomDiffPage = {
     };
   },
 
-  async loadControlGridData() {
-    const controlGrid = this.grids.control;
-    if (!controlGrid?.api) return;
+  buildDatasource(tabKey, tabConfig) {
+    return {
+      rowCount: null,
+      getRows: async (params) => {
+        const pageSize = params.endRow - params.startRow || 10;
+        const page = Math.floor(params.startRow / pageSize);
+        const sortModel = Array.isArray(params.sortModel) ? params.sortModel[0] : null;
+        const urlParams = new URLSearchParams({
+          page: String(page),
+          size: String(pageSize),
+          sortBy: sortModel?.colId || 'uniqueId',
+          sortDirection: String(sortModel?.sort || 'asc').toUpperCase()
+        });
 
-    try {
-      const response = await fetch(`${this.resolveApiUrl(this.controlApiEndpoint)}?${this.getControlRequestParams().toString()}`, {
-        method: 'GET',
-        headers: { Accept: 'application/json' },
-        credentials: 'same-origin'
-      });
+        Object.entries(params.filterModel || {}).forEach(([field, model]) => {
+          const normalized = this.normalizeControlFilterModel(model);
+          if (!normalized) return;
+          urlParams.set(field, normalized.value);
+          urlParams.set(`${field}_op`, normalized.operator);
+        });
 
-      if (!response.ok) {
-        throw new Error(`Failed to load UOM Diff Input Control (${response.status})`);
+        try {
+          const response = await fetch(`${this.resolveApiUrl(tabConfig.apiEndpoint)}?${urlParams.toString()}`, {
+            method: 'GET',
+            headers: { Accept: 'application/json' },
+            credentials: 'same-origin'
+          });
+
+          if (!response.ok) {
+            throw new Error(`Failed to load ${tabConfig.gridElementId} (${response.status})`);
+          }
+
+          const payload = await response.json();
+          const pagePayload = this.extractPagePayload(payload);
+          let rows = Array.isArray(pagePayload?.content) ? pagePayload.content : [];
+
+          if (tabKey === 'control') rows = rows.map((row) => this.normalizeControlRow(row));
+          if (tabKey === 'exclusion') rows = rows.map((row) => this.normalizeExclusionRow(row));
+          if (tabKey === 'main') rows = rows.map((row) => this.normalizeMainRow(row));
+          if (tabKey === 'transaction') rows = rows.map((row) => this.normalizeTransactionRow(row));
+
+          const totalRows = this.extractTotalFromResponse(payload);
+          params.successCallback(rows, Number.isFinite(totalRows) ? totalRows : -1);
+          this.setGridEmptyState(tabKey, params.startRow === 0 && rows.length === 0 ? 'empty' : 'hidden');
+          this.refreshActiveGridLayout();
+        } catch (error) {
+          console.error(`Failed to load ${tabConfig.gridElementId}:`, error);
+          params.successCallback([], 0);
+          this.setGridEmptyState(tabKey, 'empty');
+          this.showInfo(error?.message || `Failed to load ${tabConfig.gridElementId}.`, 'error');
+        }
       }
-
-      const payload = await response.json();
-      const pagePayload = this.extractPagePayload(payload);
-      const rows = Array.isArray(pagePayload?.content)
-        ? pagePayload.content.map((row) => this.normalizeControlRow(row))
-        : [];
-
-      controlGrid.api.setGridOption('rowData', rows);
-      this.setGridEmptyState('control', rows.length > 0 ? 'data' : 'empty');
-      this.refreshActiveGridLayout();
-    } catch (error) {
-      console.error('Failed to load UOM Diff Input Control:', error);
-      controlGrid.api.setGridOption('rowData', []);
-      this.setGridEmptyState('control', 'empty');
-      this.showInfo(error?.message || 'Failed to load UOM Diff Input Control.', 'error');
-    }
-  },
-
-  async loadExclusionGridData() {
-    const exclusionGrid = this.grids.exclusion;
-    if (!exclusionGrid?.api) return;
-
-    try {
-      const response = await fetch(`${this.resolveApiUrl(this.exclusionApiEndpoint)}?${this.getExclusionRequestParams().toString()}`, {
-        method: 'GET',
-        headers: { Accept: 'application/json' },
-        credentials: 'same-origin'
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to load UOM Diff Input Exclusion (${response.status})`);
-      }
-
-      const payload = await response.json();
-      const pagePayload = this.extractPagePayload(payload);
-      const rows = Array.isArray(pagePayload?.content)
-        ? pagePayload.content.map((row) => this.normalizeExclusionRow(row))
-        : [];
-
-      exclusionGrid.api.setGridOption('rowData', rows);
-      this.setGridEmptyState('exclusion', rows.length > 0 ? 'data' : 'empty');
-      this.refreshActiveGridLayout();
-    } catch (error) {
-      console.error('Failed to load UOM Diff Input Exclusion:', error);
-      exclusionGrid.api.setGridOption('rowData', []);
-      this.setGridEmptyState('exclusion', 'empty');
-      this.showInfo(error?.message || 'Failed to load UOM Diff Input Exclusion.', 'error');
-    }
-  },
-
-  async loadMainGridData() {
-    const mainGrid = this.grids.main;
-    if (!mainGrid?.api) return;
-
-    try {
-      const response = await fetch(`${this.resolveApiUrl(this.mainApiEndpoint)}?${this.getMainRequestParams().toString()}`, {
-        method: 'GET',
-        headers: { Accept: 'application/json' },
-        credentials: 'same-origin'
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to load UOM Diff Input Main (${response.status})`);
-      }
-
-      const payload = await response.json();
-      const pagePayload = this.extractPagePayload(payload);
-      const rows = Array.isArray(pagePayload?.content)
-        ? pagePayload.content.map((row) => this.normalizeMainRow(row))
-        : [];
-
-      mainGrid.api.setGridOption('rowData', rows);
-      this.setGridEmptyState('main', rows.length > 0 ? 'data' : 'empty');
-      this.refreshActiveGridLayout();
-    } catch (error) {
-      console.error('Failed to load UOM Diff Input Main:', error);
-      mainGrid.api.setGridOption('rowData', []);
-      this.setGridEmptyState('main', 'empty');
-      this.showInfo(error?.message || 'Failed to load UOM Diff Input Main.', 'error');
-    }
-  },
-
-  async loadTransactionGridData() {
-    const transactionGrid = this.grids.transaction;
-    if (!transactionGrid?.api) return;
-
-    try {
-      const response = await fetch(`${this.resolveApiUrl(this.transactionApiEndpoint)}?${this.getTransactionRequestParams().toString()}`, {
-        method: 'GET',
-        headers: { Accept: 'application/json' },
-        credentials: 'same-origin'
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to load UOM Diff Input Transaction LVL (${response.status})`);
-      }
-
-      const payload = await response.json();
-      const pagePayload = this.extractPagePayload(payload);
-      const rows = Array.isArray(pagePayload?.content)
-        ? pagePayload.content.map((row) => this.normalizeTransactionRow(row))
-        : [];
-
-      transactionGrid.api.setGridOption('rowData', rows);
-      this.setGridEmptyState('transaction', rows.length > 0 ? 'data' : 'empty');
-      this.refreshActiveGridLayout();
-    } catch (error) {
-      console.error('Failed to load UOM Diff Input Transaction LVL:', error);
-      transactionGrid.api.setGridOption('rowData', []);
-      this.setGridEmptyState('transaction', 'empty');
-      this.showInfo(error?.message || 'Failed to load UOM Diff Input Transaction LVL.', 'error');
-    }
+    };
   },
 
   async handleDownloadAction() {
@@ -1490,7 +1442,10 @@ const UomDiffPage = {
         ])
       });
       this.closeUpdateTerminationModal();
-      await this.loadExclusionGridData();
+      const exclusionGrid = this.grids.exclusion;
+      if (typeof exclusionGrid?.api?.refreshInfiniteCache === 'function') {
+        exclusionGrid.api.refreshInfiniteCache();
+      }
       this.showInfo('Termination date updated successfully.', 'success');
     } catch (error) {
       console.error('UOM Diff exclusion update termination failed:', error);
@@ -1559,7 +1514,10 @@ const UomDiffPage = {
       resizable: false,
       suppressMenu: true,
       headerComponent: GtPageSelectHeader,
-      checkboxSelection: (params) => params?.node?.selectable !== false
+      checkboxSelection: true,
+      cellClassRules: {
+        'is-selection-locked': (params) => this.isExclusionRowLocked(params?.data)
+      }
     };
   },
 
