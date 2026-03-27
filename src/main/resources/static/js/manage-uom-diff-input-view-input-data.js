@@ -459,7 +459,9 @@ const UomDiffPage = {
         onGridReady: (params) => {
           this.refreshActiveGridLayout();
           if (tabConfig.apiEndpoint) {
-            params.api.setGridOption('datasource', this.buildDatasource(tabKey, tabConfig));
+            const datasource = this.buildDatasource(tabKey, tabConfig);
+            params.api.__dynamicGridCurrentDatasource = datasource;
+            params.api.setGridOption('datasource', datasource);
           }
         },
         onFirstDataRendered: () => this.refreshActiveGridLayout(),
