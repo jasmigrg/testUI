@@ -447,21 +447,15 @@ const UomDiffPage = {
     const tabConfig = configByTab[tabKey];
     if (!tabConfig) return;
 
-    const gridApi = window.DynamicGrid?.createGrid({
+    const gridApi = DynamicGrid.createGrid({
       gridElementId: tabConfig.gridElementId,
       pageSize: 20,
       paginationType: tabConfig.apiEndpoint ? 'server' : 'client',
-      manualFilterApply: true,
+      useSpringPagination: Boolean(tabConfig.apiEndpoint),
       floatingFilter: true,
+      manualFilterApply: true,
       gridOptions: {
         rowData: tabConfig.rowData,
-        rowSelection: tabConfig.rowSelection,
-        suppressRowClickSelection: tabConfig.suppressRowClickSelection,
-        isRowSelectable: (rowNode) => this.isRowSelectable(tabKey, rowNode?.data),
-        animateRows: false,
-        suppressNoRowsOverlay: true,
-        suppressCellFocus: false,
-        onCellValueChanged: (event) => this.handleCellValueChanged(tabKey, event),
         onGridReady: (params) => {
           this.refreshActiveGridLayout();
           if (tabConfig.apiEndpoint) {
@@ -469,6 +463,25 @@ const UomDiffPage = {
           }
         },
         onFirstDataRendered: () => this.refreshActiveGridLayout(),
+        rowSelection: tabConfig.rowSelection,
+        suppressRowClickSelection: tabConfig.suppressRowClickSelection,
+        isRowSelectable: (rowNode) => this.isRowSelectable(tabKey, rowNode?.data),
+        suppressNoRowsOverlay: true,
+        suppressCellFocus: false,
+        animateRows: false,
+        onCellValueChanged: (event) => this.handleCellValueChanged(tabKey, event),
+        components: {
+          gtPageSelectHeader: GtPageSelectHeader,
+          manualApplyFloatingFilter: UomDiffManualFloatingFilter
+        },
+        icons: {
+          sortUnSort:
+            '<span class="gt-sort-icon gt-sort-icon--none" aria-hidden="true"><svg viewBox="0 0 8 12" focusable="false"><path d="M4 1L7 4H1L4 1Z"></path><path d="M4 11L1 8H7L4 11Z"></path></svg></span>',
+          sortAscending:
+            '<span class="gt-sort-icon gt-sort-icon--asc" aria-hidden="true"><svg viewBox="0 0 8 12" focusable="false"><path d="M4 1L7 4H1L4 1Z"></path></svg></span>',
+          sortDescending:
+            '<span class="gt-sort-icon gt-sort-icon--desc" aria-hidden="true"><svg viewBox="0 0 8 12" focusable="false"><path d="M4 11L1 8H7L4 11Z"></path></svg></span>'
+        },
         localeText: {
           equals: 'Equals',
           notEqual: 'Does not equal',
@@ -483,22 +496,9 @@ const UomDiffPage = {
           startsWith: 'Begins with',
           endsWith: 'Ends with'
         },
-        components: {
-          gtPageSelectHeader: GtPageSelectHeader,
-          manualApplyFloatingFilter: UomDiffManualFloatingFilter
-        },
-        icons: {
-          sortUnSort:
-            '<span class="gt-sort-icon gt-sort-icon--none" aria-hidden="true"><svg viewBox="0 0 8 12" focusable="false"><path d="M4 1L7 4H1L4 1Z"></path><path d="M4 11L1 8H7L4 11Z"></path></svg></span>',
-          sortAscending:
-            '<span class="gt-sort-icon gt-sort-icon--asc" aria-hidden="true"><svg viewBox="0 0 8 12" focusable="false"><path d="M4 1L7 4H1L4 1Z"></path></svg></span>',
-          sortDescending:
-            '<span class="gt-sort-icon gt-sort-icon--desc" aria-hidden="true"><svg viewBox="0 0 8 12" focusable="false"><path d="M4 11L1 8H7L4 11Z"></path></svg></span>'
-        },
         defaultColDef: {
           sortable: true,
           unSortIcon: true,
-          resizable: true,
           wrapHeaderText: true,
           autoHeaderHeight: true,
           filterParams: {
@@ -1575,7 +1575,7 @@ const UomDiffPage = {
       filter: false,
       resizable: false,
       suppressMenu: true,
-      headerComponent: GtPageSelectHeader,
+      headerComponent: 'gtPageSelectHeader',
       checkboxSelection: true,
       cellClassRules: {
         'is-selection-locked': (params) => this.isExclusionRowLocked(params?.data)
