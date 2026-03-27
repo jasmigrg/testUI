@@ -482,14 +482,10 @@ const UomDiffPage = {
 
             if (currentPage > 0 && typeof params.api.paginationGoToFirstPage === 'function') {
               params.api.paginationGoToFirstPage();
+            } else if (typeof params.api.purgeInfiniteCache === 'function') {
+              params.api.purgeInfiniteCache();
             } else if (typeof params.api.refreshInfiniteCache === 'function') {
               params.api.refreshInfiniteCache();
-            } else {
-              const datasource = this.buildDatasource(tabKey, tabConfig);
-              params.api.__uomDatasource = datasource;
-              if (typeof params.api.setGridOption === 'function') {
-                params.api.setGridOption('datasource', datasource);
-              }
             }
 
             params.api.__isUpdatingPageSize = false;
