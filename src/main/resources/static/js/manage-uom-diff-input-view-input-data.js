@@ -456,11 +456,44 @@ const UomDiffPage = {
       manualFilterApply: true,
       gridOptions: {
         rowData: tabConfig.rowData,
+        onPaginationChanged: (params) => {
+          if (!tabConfig.apiEndpoint || !params?.api) return;
+          if (typeof params.api.paginationGetPageSize !== 'function') return;
+          if (params.api.__isUpdatingPageSize) return;
+
+          const newPageSize = params.api.paginationGetPageSize();
+          const lastKnownPageSize = params.api.__lastKnownPageSize || 20;
+          if (newPageSize === lastKnownPageSize) return;
+
+          params.api.__isUpdatingPageSize = true;
+          params.api.__lastKnownPageSize = newPageSize;
+
+          setTimeout(() => {
+            if (typeof params.api.updateGridOptions === 'function') {
+              params.api.updateGridOptions({ cacheBlockSize: newPageSize });
+            } else if (typeof params.api.setGridOption === 'function') {
+              params.api.setGridOption('cacheBlockSize', newPageSize);
+            }
+
+            const datasource = this.buildDatasource(tabKey, tabConfig);
+            params.api.__uomDatasource = datasource;
+            if (typeof params.api.paginationGoToFirstPage === 'function') {
+              params.api.paginationGoToFirstPage();
+            }
+            if (typeof params.api.setGridOption === 'function') {
+              params.api.setGridOption('datasource', datasource);
+            }
+
+            params.api.__isUpdatingPageSize = false;
+          }, 50);
+        },
         onGridReady: (params) => {
           this.refreshActiveGridLayout();
           if (tabConfig.apiEndpoint) {
             const datasource = this.buildDatasource(tabKey, tabConfig);
-            params.api.__dynamicGridCurrentDatasource = datasource;
+            params.api.__uomDatasource = datasource;
+            params.api.__lastKnownPageSize = 20;
+            params.api.__isUpdatingPageSize = false;
             params.api.setGridOption('datasource', datasource);
           }
         },
