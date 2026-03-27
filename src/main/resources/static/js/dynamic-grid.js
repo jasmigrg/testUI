@@ -348,15 +348,25 @@ const DynamicGrid = {
 
           params.api.__isUpdatingPageSize = false;
 
+          if (typeof params.api.paginationGoToFirstPage === 'function') {
+            params.api.paginationGoToFirstPage();
+          }
+
+          if (typeof params.api.purgeInfiniteCache === 'function') {
+            params.api.purgeInfiniteCache();
+            return;
+          }
+
           const currentDatasource = params.api.__dynamicGridCurrentDatasource || null;
           if (currentDatasource && typeof params.api.setGridOption === 'function') {
             params.api.setGridOption('datasource', currentDatasource);
-          } else {
-            this.setupDataSource(params.api, {
-              ...config,
-              pageSize: newPageSize
-            });
+            return;
           }
+
+          this.setupDataSource(params.api, {
+            ...config,
+            pageSize: newPageSize
+          });
         }, 50);
       };
 
