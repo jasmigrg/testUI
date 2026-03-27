@@ -317,7 +317,7 @@ const UomDiffPage = {
           return;
         }
         if (typeof activeGrid.api.refreshInfiniteCache === 'function') {
-          this.reloadInfiniteGrid(activeGrid.api, { resetPage: true });
+          activeGrid.api.refreshInfiniteCache();
           return;
         }
         if (typeof activeGrid.api.onFilterChanged === 'function') {
@@ -447,106 +447,73 @@ const UomDiffPage = {
     const tabConfig = configByTab[tabKey];
     if (!tabConfig) return;
 
-    const gridElement = document.getElementById(tabConfig.gridElementId);
-    if (!gridElement || !window.agGrid?.createGrid) return;
-
-    const gridApi = window.agGrid.createGrid(gridElement, {
-      columnDefs: tabConfig.columns,
-      rowData: tabConfig.rowData,
-      rowSelection: tabConfig.rowSelection,
-      isRowSelectable: (rowNode) => this.isRowSelectable(tabKey, rowNode?.data),
-      suppressRowClickSelection: tabConfig.suppressRowClickSelection,
-      animateRows: false,
-      pagination: true,
-      paginationPageSize: 10,
-      paginationPageSizeSelector: [10, 20, 50],
-      rowModelType: tabConfig.apiEndpoint ? 'infinite' : 'clientSide',
-      cacheBlockSize: 10,
-      maxBlocksInCache: 10,
-      suppressNoRowsOverlay: true,
-      suppressCellFocus: false,
-      onCellValueChanged: (event) => this.handleCellValueChanged(tabKey, event),
-      onSortChanged: () => {
-        if (tabConfig.apiEndpoint) {
-          this.reloadInfiniteGrid(gridApi, { resetPage: true });
-          return;
-        }
-      },
-      onPaginationChanged: () => {
-        if (!tabConfig.apiEndpoint) return;
-        if (gridApi.__isUpdatingPageSize) return;
-        if (typeof gridApi.paginationGetPageSize !== 'function') return;
-
-        const newPageSize = gridApi.paginationGetPageSize();
-        const lastKnownPageSize = gridApi.__lastKnownPageSize || 10;
-        if (newPageSize === lastKnownPageSize) return;
-
-        gridApi.__isUpdatingPageSize = true;
-        gridApi.__lastKnownPageSize = newPageSize;
-
-        setTimeout(() => {
-          if (typeof gridApi.setGridOption === 'function') {
-            gridApi.setGridOption('cacheBlockSize', newPageSize);
+    const gridApi = window.DynamicGrid?.createGrid({
+      gridElementId: tabConfig.gridElementId,
+      pageSize: 20,
+      paginationType: tabConfig.apiEndpoint ? 'server' : 'client',
+      manualFilterApply: true,
+      floatingFilter: true,
+      gridOptions: {
+        rowData: tabConfig.rowData,
+        rowSelection: tabConfig.rowSelection,
+        suppressRowClickSelection: tabConfig.suppressRowClickSelection,
+        isRowSelectable: (rowNode) => this.isRowSelectable(tabKey, rowNode?.data),
+        animateRows: false,
+        suppressNoRowsOverlay: true,
+        suppressCellFocus: false,
+        onCellValueChanged: (event) => this.handleCellValueChanged(tabKey, event),
+        onGridReady: (params) => {
+          this.refreshActiveGridLayout();
+          if (tabConfig.apiEndpoint) {
+            params.api.setGridOption('datasource', this.buildDatasource(tabKey, tabConfig));
           }
-          this.reloadInfiniteGrid(gridApi, { resetPage: true });
-          gridApi.__isUpdatingPageSize = false;
-        }, 0);
-      },
-      onFilterChanged: () => {
-        if (tabConfig.apiEndpoint) {
-          this.reloadInfiniteGrid(gridApi, { resetPage: true });
-          return;
+        },
+        onFirstDataRendered: () => this.refreshActiveGridLayout(),
+        localeText: {
+          equals: 'Equals',
+          notEqual: 'Does not equal',
+          greaterThan: 'Greater than',
+          lessThan: 'Less than',
+          after: 'Greater than',
+          before: 'Less than',
+          greaterThanOrEqual: 'Greater than or equal',
+          lessThanOrEqual: 'Less than or equal',
+          contains: 'Contains',
+          notContains: 'Does not contain',
+          startsWith: 'Begins with',
+          endsWith: 'Ends with'
+        },
+        components: {
+          gtPageSelectHeader: GtPageSelectHeader,
+          manualApplyFloatingFilter: UomDiffManualFloatingFilter
+        },
+        icons: {
+          sortUnSort:
+            '<span class="gt-sort-icon gt-sort-icon--none" aria-hidden="true"><svg viewBox="0 0 8 12" focusable="false"><path d="M4 1L7 4H1L4 1Z"></path><path d="M4 11L1 8H7L4 11Z"></path></svg></span>',
+          sortAscending:
+            '<span class="gt-sort-icon gt-sort-icon--asc" aria-hidden="true"><svg viewBox="0 0 8 12" focusable="false"><path d="M4 1L7 4H1L4 1Z"></path></svg></span>',
+          sortDescending:
+            '<span class="gt-sort-icon gt-sort-icon--desc" aria-hidden="true"><svg viewBox="0 0 8 12" focusable="false"><path d="M4 11L1 8H7L4 11Z"></path></svg></span>'
+        },
+        defaultColDef: {
+          sortable: true,
+          unSortIcon: true,
+          resizable: true,
+          wrapHeaderText: true,
+          autoHeaderHeight: true,
+          filterParams: {
+            buttons: ['apply', 'reset'],
+            closeOnApply: true,
+            maxNumConditions: 1,
+            numAlwaysVisibleConditions: 1
+          }
         }
       },
-      onGridReady: () => {
-        this.refreshActiveGridLayout();
-        if (tabConfig.apiEndpoint) {
-          gridApi.__lastKnownPageSize = 10;
-          gridApi.setGridOption('datasource', this.buildDatasource(tabKey, tabConfig));
-        }
-      },
-      onFirstDataRendered: () => this.refreshActiveGridLayout(),
-      icons: {
-        sortUnSort:
-          '<span class="gt-sort-icon gt-sort-icon--none" aria-hidden="true"><svg viewBox="0 0 8 12" focusable="false"><path d="M4 1L7 4H1L4 1Z"></path><path d="M4 11L1 8H7L4 11Z"></path></svg></span>',
-        sortAscending:
-          '<span class="gt-sort-icon gt-sort-icon--asc" aria-hidden="true"><svg viewBox="0 0 8 12" focusable="false"><path d="M4 1L7 4H1L4 1Z"></path></svg></span>',
-        sortDescending:
-          '<span class="gt-sort-icon gt-sort-icon--desc" aria-hidden="true"><svg viewBox="0 0 8 12" focusable="false"><path d="M4 11L1 8H7L4 11Z"></path></svg></span>'
-      },
-      localeText: {
-        equals: 'Equals',
-        notEqual: 'Does not equal',
-        greaterThan: 'Greater than',
-        lessThan: 'Less than',
-        after: 'Greater than',
-        before: 'Less than',
-        greaterThanOrEqual: 'Greater than or equal',
-        lessThanOrEqual: 'Less than or equal',
-        contains: 'Contains',
-        notContains: 'Does not contain',
-        startsWith: 'Begins with',
-        endsWith: 'Ends with'
-      },
-      components: {
-        manualApplyFloatingFilter: UomDiffManualFloatingFilter
-      },
-      defaultColDef: {
-        sortable: true,
-        unSortIcon: true,
-        filter: true,
-        floatingFilter: true,
-        resizable: true,
-        wrapHeaderText: true,
-        autoHeaderHeight: true,
-        filterParams: {
-          buttons: ['apply', 'reset'],
-          closeOnApply: true,
-          maxNumConditions: 1,
-          numAlwaysVisibleConditions: 1
-        }
-      }
+      columns: tabConfig.columns
     });
+
+    const gridElement = document.getElementById(tabConfig.gridElementId);
+    if (!gridElement || !gridApi) return;
 
     this.grids[tabKey] = {
       api: gridApi,
@@ -707,24 +674,6 @@ const UomDiffPage = {
     });
   },
 
-  reloadInfiniteGrid(gridApi, { resetPage = false } = {}) {
-    if (!gridApi) return;
-
-    const currentPage =
-      typeof gridApi.paginationGetCurrentPage === 'function'
-        ? gridApi.paginationGetCurrentPage()
-        : 0;
-
-    if (resetPage && currentPage > 0 && typeof gridApi.paginationGoToFirstPage === 'function') {
-      gridApi.paginationGoToFirstPage();
-      return;
-    }
-
-    if (typeof gridApi.refreshInfiniteCache === 'function') {
-      gridApi.refreshInfiniteCache();
-    }
-  },
-
   resetActiveGridState() {
     const activeGrid = this.getActiveGrid();
     if (!activeGrid?.api) return;
@@ -732,6 +681,9 @@ const UomDiffPage = {
     const currentFilterModel =
       typeof activeGrid.api.getFilterModel === 'function' ? activeGrid.api.getFilterModel() || {} : {};
     const hasFilters = Object.keys(currentFilterModel).length > 0;
+    const currentSortModel =
+      typeof activeGrid.api.getSortModel === 'function' ? activeGrid.api.getSortModel() || [] : [];
+    const hasSort = Array.isArray(currentSortModel) && currentSortModel.length > 0;
     const currentPage =
       typeof activeGrid.api.paginationGetCurrentPage === 'function'
         ? activeGrid.api.paginationGetCurrentPage()
@@ -740,11 +692,14 @@ const UomDiffPage = {
     if (hasFilters && typeof activeGrid.api.setFilterModel === 'function') {
       activeGrid.api.setFilterModel(null);
     }
+    if (!hasFilters && hasSort && typeof activeGrid.api.setSortModel === 'function') {
+      activeGrid.api.setSortModel(null);
+    }
+    if (!hasFilters && !hasSort && currentPage > 0 && typeof activeGrid.api.paginationGoToFirstPage === 'function') {
+      activeGrid.api.paginationGoToFirstPage();
+    }
     if (typeof activeGrid.api.deselectAll === 'function') {
       activeGrid.api.deselectAll();
-    }
-    if (!hasFilters) {
-      this.reloadInfiniteGrid(activeGrid.api, { resetPage: currentPage > 0 });
     }
     this.refreshActiveGridLayout();
   },
@@ -1246,7 +1201,7 @@ const UomDiffPage = {
 
     if (previousSerialized === nextSerialized) {
       if (typeof gridApi.refreshInfiniteCache === 'function') {
-        this.reloadInfiniteGrid(gridApi, { resetPage: true });
+        gridApi.refreshInfiniteCache();
       } else if (typeof gridApi.onFilterChanged === 'function') {
         gridApi.onFilterChanged();
       }
