@@ -1328,12 +1328,16 @@ const UomDiffPage = {
     return {
       rowCount: null,
       getRows: async (params) => {
-        const pageSize = params.endRow - params.startRow || 10;
-        const page = Math.floor(params.startRow / pageSize);
+        const requestedBlockSize = params.endRow - params.startRow || 10;
+        const selectedPageSize =
+          typeof params.api?.paginationGetPageSize === 'function'
+            ? params.api.paginationGetPageSize() || requestedBlockSize
+            : requestedBlockSize;
+        const page = Math.floor((params.startRow || 0) / selectedPageSize);
         const sortModel = Array.isArray(params.sortModel) ? params.sortModel[0] : null;
         const urlParams = new URLSearchParams({
           page: String(page),
-          size: String(pageSize),
+          size: String(selectedPageSize),
           sortBy: sortModel?.colId || 'uniqueId',
           sortDirection: String(sortModel?.sort || 'asc').toUpperCase()
         });
@@ -1345,31 +1349,54 @@ const UomDiffPage = {
           urlParams.set(`${field}_op`, normalized.operator);
         });
 
-        try {
-          const response = await fetch(`${this.resolveApiUrl(tabConfig.apiEndpoint)}?${urlParams.toString()}`, {
-            method: 'GET',
-            headers: { Accept: 'application/json' },
-            credentials: 'same-origin'
-          });
+        if (!params.api.__uomPageRequestCache) {
+          params.api.__uomPageRequestCache = new Map();
+        }
 
-          if (!response.ok) {
-            throw new Error(`Failed to load ${tabConfig.gridElementId} (${response.status})`);
+        const cacheKey = `${tabKey}:${urlParams.toString()}`;
+        let requestPromise = params.api.__uomPageRequestCache.get(cacheKey);
+
+        try {
+          if (!requestPromise) {
+            requestPromise = fetch(`${this.resolveApiUrl(tabConfig.apiEndpoint)}?${urlParams.toString()}`, {
+              method: 'GET',
+              headers: { Accept: 'application/json' },
+              credentials: 'same-origin'
+            }).then(async (response) => {
+              if (!response.ok) {
+                throw new Error(`Failed to load ${tabConfig.gridElementId} (${response.status})`);
+              }
+
+              const payload = await response.json();
+              const pagePayload = this.extractPagePayload(payload);
+              let rows = Array.isArray(pagePayload?.content) ? pagePayload.content : [];
+
+              if (tabKey === 'control') rows = rows.map((row) => this.normalizeControlRow(row));
+              if (tabKey === 'exclusion') rows = rows.map((row) => this.normalizeExclusionRow(row));
+              if (tabKey === 'main') rows = rows.map((row) => this.normalizeMainRow(row));
+              if (tabKey === 'transaction') rows = rows.map((row) => this.normalizeTransactionRow(row));
+
+              const totalRows = this.extractTotalFromResponse(payload);
+              return {
+                rows,
+                totalRows: Number.isFinite(totalRows) ? totalRows : -1
+              };
+            });
+
+            params.api.__uomPageRequestCache.set(cacheKey, requestPromise);
           }
 
-          const payload = await response.json();
-          const pagePayload = this.extractPagePayload(payload);
-          let rows = Array.isArray(pagePayload?.content) ? pagePayload.content : [];
+          const { rows, totalRows } = await requestPromise;
+          const pageStart = page * selectedPageSize;
+          const sliceStart = Math.max(0, (params.startRow || 0) - pageStart);
+          const sliceEnd = sliceStart + requestedBlockSize;
+          const blockRows = rows.slice(sliceStart, sliceEnd);
 
-          if (tabKey === 'control') rows = rows.map((row) => this.normalizeControlRow(row));
-          if (tabKey === 'exclusion') rows = rows.map((row) => this.normalizeExclusionRow(row));
-          if (tabKey === 'main') rows = rows.map((row) => this.normalizeMainRow(row));
-          if (tabKey === 'transaction') rows = rows.map((row) => this.normalizeTransactionRow(row));
-
-          const totalRows = this.extractTotalFromResponse(payload);
-          params.successCallback(rows, Number.isFinite(totalRows) ? totalRows : -1);
+          params.successCallback(blockRows, totalRows);
           this.setGridEmptyState(tabKey, params.startRow === 0 && rows.length === 0 ? 'empty' : 'hidden');
           this.refreshActiveGridLayout();
         } catch (error) {
+          params.api.__uomPageRequestCache.delete(cacheKey);
           console.error(`Failed to load ${tabConfig.gridElementId}:`, error);
           params.successCallback([], 0);
           this.setGridEmptyState(tabKey, 'empty');
