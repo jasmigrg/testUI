@@ -475,13 +475,21 @@ const UomDiffPage = {
               params.api.setGridOption('cacheBlockSize', newPageSize);
             }
 
-            const datasource = this.buildDatasource(tabKey, tabConfig);
-            params.api.__uomDatasource = datasource;
-            if (typeof params.api.paginationGoToFirstPage === 'function') {
+            const currentPage =
+              typeof params.api.paginationGetCurrentPage === 'function'
+                ? params.api.paginationGetCurrentPage()
+                : 0;
+
+            if (currentPage > 0 && typeof params.api.paginationGoToFirstPage === 'function') {
               params.api.paginationGoToFirstPage();
-            }
-            if (typeof params.api.setGridOption === 'function') {
-              params.api.setGridOption('datasource', datasource);
+            } else if (typeof params.api.refreshInfiniteCache === 'function') {
+              params.api.refreshInfiniteCache();
+            } else {
+              const datasource = this.buildDatasource(tabKey, tabConfig);
+              params.api.__uomDatasource = datasource;
+              if (typeof params.api.setGridOption === 'function') {
+                params.api.setGridOption('datasource', datasource);
+              }
             }
 
             params.api.__isUpdatingPageSize = false;

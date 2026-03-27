@@ -545,7 +545,6 @@ const KviInputPage = {
       gridOptions: {
         onGridReady: (params) => {
           const datasource = this.buildDatasource(tabConfig);
-          params.api.__dynamicGridCurrentDatasource = datasource;
           params.api.setGridOption('datasource', datasource);
         },
         onCellValueChanged: (event) => {
