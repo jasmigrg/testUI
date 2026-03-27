@@ -738,14 +738,29 @@ const UomDiffPage = {
     if (hasFilters && typeof activeGrid.api.setFilterModel === 'function') {
       activeGrid.api.setFilterModel(null);
     }
-    if (currentPage > 0 && typeof activeGrid.api.paginationGoToFirstPage === 'function') {
-      activeGrid.api.paginationGoToFirstPage();
-    }
     if (typeof activeGrid.api.deselectAll === 'function') {
       activeGrid.api.deselectAll();
     }
-    if (typeof activeGrid.api.refreshInfiniteCache === 'function') {
-      activeGrid.api.refreshInfiniteCache();
+    if (!hasFilters) {
+      if (currentPage > 0 && typeof activeGrid.api.paginationGoToFirstPage === 'function') {
+        activeGrid.api.paginationGoToFirstPage();
+      }
+      if (typeof activeGrid.api.refreshInfiniteCache === 'function') {
+        activeGrid.api.refreshInfiniteCache();
+      }
+    }
+    this.refreshActiveGridLayout();
+  },
+
+  refreshExclusionGridAfterMutation() {
+    const exclusionGrid = this.grids.exclusion;
+    if (!exclusionGrid?.api) return;
+
+    if (typeof exclusionGrid.api.deselectAll === 'function') {
+      exclusionGrid.api.deselectAll();
+    }
+    if (typeof exclusionGrid.api.refreshInfiniteCache === 'function') {
+      exclusionGrid.api.refreshInfiniteCache();
     }
     this.refreshActiveGridLayout();
   },
@@ -1180,7 +1195,10 @@ const UomDiffPage = {
       greaterThanOrEqual: 'greaterThanOrEqual',
       lessThan: 'lessThan',
       lessThanOrEqual: 'lessThanOrEqual',
-      contains: 'contains'
+      contains: 'contains',
+      notContains: 'notContains',
+      startsWith: 'startsWith',
+      endsWith: 'endsWith'
     };
 
     return {
@@ -1487,10 +1505,7 @@ const UomDiffPage = {
         ])
       });
       this.closeDisableModal();
-      const exclusionGrid = this.grids.exclusion;
-      if (typeof exclusionGrid?.api?.refreshInfiniteCache === 'function') {
-        exclusionGrid.api.refreshInfiniteCache();
-      }
+      this.refreshExclusionGridAfterMutation();
       this.showInfo('Selected rows disabled successfully.', 'success');
     } catch (error) {
       console.error('UOM Diff exclusion disable failed:', error);
@@ -1549,10 +1564,7 @@ const UomDiffPage = {
         ])
       });
       this.closeUpdateTerminationModal();
-      const exclusionGrid = this.grids.exclusion;
-      if (typeof exclusionGrid?.api?.refreshInfiniteCache === 'function') {
-        exclusionGrid.api.refreshInfiniteCache();
-      }
+      this.refreshExclusionGridAfterMutation();
       this.showInfo('Termination date updated successfully.', 'success');
     } catch (error) {
       console.error('UOM Diff exclusion update termination failed:', error);
@@ -1696,7 +1708,7 @@ const UomDiffPage = {
         maxNumConditions: 1,
         numAlwaysVisibleConditions: 1,
         defaultOption: 'contains',
-        filterOptions: ['contains', 'equals', 'notEqual', 'notContains', 'startsWith', 'endsWith', 'blank', 'notBlank']
+        filterOptions: ['contains', 'equals', 'notEqual', 'notContains', 'startsWith', 'endsWith']
       }
     };
   },
