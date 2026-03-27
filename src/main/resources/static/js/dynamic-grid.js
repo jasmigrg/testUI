@@ -340,10 +340,23 @@ const DynamicGrid = {
         lastKnownPageSize = newPageSize;
 
         setTimeout(() => {
-          params.api.__isUpdatingPageSize = false;
-          setTimeout(() => {
+          if (typeof params.api.updateGridOptions === 'function') {
             params.api.updateGridOptions({ cacheBlockSize: newPageSize });
-          }, 50);
+          } else if (typeof params.api.setGridOption === 'function') {
+            params.api.setGridOption('cacheBlockSize', newPageSize);
+          }
+
+          params.api.__isUpdatingPageSize = false;
+
+          const currentDatasource = params.api.__dynamicGridCurrentDatasource || null;
+          if (currentDatasource && typeof params.api.setGridOption === 'function') {
+            params.api.setGridOption('datasource', currentDatasource);
+          } else {
+            this.setupDataSource(params.api, {
+              ...config,
+              pageSize: newPageSize
+            });
+          }
         }, 50);
       };
 
@@ -559,6 +572,7 @@ const DynamicGrid = {
       }
     };
 
+    gridApi.__dynamicGridCurrentDatasource = dataSource;
     gridApi.setGridOption('datasource', dataSource);
   },
 
