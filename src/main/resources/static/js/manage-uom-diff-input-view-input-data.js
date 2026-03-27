@@ -316,11 +316,8 @@ const UomDiffPage = {
           activeGrid.api.applyPendingFloatingFilters();
           return;
         }
-        if (typeof activeGrid.api.paginationGoToFirstPage === 'function') {
-          activeGrid.api.paginationGoToFirstPage();
-        }
         if (typeof activeGrid.api.refreshInfiniteCache === 'function') {
-          activeGrid.api.refreshInfiniteCache();
+          this.reloadInfiniteGrid(activeGrid.api, { resetPage: true });
           return;
         }
         if (typeof activeGrid.api.onFilterChanged === 'function') {
@@ -471,12 +468,7 @@ const UomDiffPage = {
       onCellValueChanged: (event) => this.handleCellValueChanged(tabKey, event),
       onSortChanged: () => {
         if (tabConfig.apiEndpoint) {
-          if (typeof gridApi.paginationGoToFirstPage === 'function') {
-            gridApi.paginationGoToFirstPage();
-          }
-          if (typeof gridApi.refreshInfiniteCache === 'function') {
-            gridApi.refreshInfiniteCache();
-          }
+          this.reloadInfiniteGrid(gridApi, { resetPage: true });
           return;
         }
       },
@@ -496,23 +488,13 @@ const UomDiffPage = {
           if (typeof gridApi.setGridOption === 'function') {
             gridApi.setGridOption('cacheBlockSize', newPageSize);
           }
-          if (typeof gridApi.paginationGoToFirstPage === 'function') {
-            gridApi.paginationGoToFirstPage();
-          }
-          if (typeof gridApi.refreshInfiniteCache === 'function') {
-            gridApi.refreshInfiniteCache();
-          }
+          this.reloadInfiniteGrid(gridApi, { resetPage: true });
           gridApi.__isUpdatingPageSize = false;
         }, 0);
       },
       onFilterChanged: () => {
         if (tabConfig.apiEndpoint) {
-          if (typeof gridApi.paginationGoToFirstPage === 'function') {
-            gridApi.paginationGoToFirstPage();
-          }
-          if (typeof gridApi.refreshInfiniteCache === 'function') {
-            gridApi.refreshInfiniteCache();
-          }
+          this.reloadInfiniteGrid(gridApi, { resetPage: true });
           return;
         }
       },
@@ -537,6 +519,8 @@ const UomDiffPage = {
         notEqual: 'Does not equal',
         greaterThan: 'Greater than',
         lessThan: 'Less than',
+        after: 'Greater than',
+        before: 'Less than',
         greaterThanOrEqual: 'Greater than or equal',
         lessThanOrEqual: 'Less than or equal',
         contains: 'Contains',
@@ -723,6 +707,24 @@ const UomDiffPage = {
     });
   },
 
+  reloadInfiniteGrid(gridApi, { resetPage = false } = {}) {
+    if (!gridApi) return;
+
+    const currentPage =
+      typeof gridApi.paginationGetCurrentPage === 'function'
+        ? gridApi.paginationGetCurrentPage()
+        : 0;
+
+    if (resetPage && currentPage > 0 && typeof gridApi.paginationGoToFirstPage === 'function') {
+      gridApi.paginationGoToFirstPage();
+      return;
+    }
+
+    if (typeof gridApi.refreshInfiniteCache === 'function') {
+      gridApi.refreshInfiniteCache();
+    }
+  },
+
   resetActiveGridState() {
     const activeGrid = this.getActiveGrid();
     if (!activeGrid?.api) return;
@@ -742,12 +744,7 @@ const UomDiffPage = {
       activeGrid.api.deselectAll();
     }
     if (!hasFilters) {
-      if (currentPage > 0 && typeof activeGrid.api.paginationGoToFirstPage === 'function') {
-        activeGrid.api.paginationGoToFirstPage();
-      }
-      if (typeof activeGrid.api.refreshInfiniteCache === 'function') {
-        activeGrid.api.refreshInfiniteCache();
-      }
+      this.reloadInfiniteGrid(activeGrid.api, { resetPage: currentPage > 0 });
     }
     this.refreshActiveGridLayout();
   },
@@ -1248,11 +1245,8 @@ const UomDiffPage = {
     const nextSerialized = JSON.stringify(nextModel);
 
     if (previousSerialized === nextSerialized) {
-      if (typeof gridApi.paginationGoToFirstPage === 'function') {
-        gridApi.paginationGoToFirstPage();
-      }
       if (typeof gridApi.refreshInfiniteCache === 'function') {
-        gridApi.refreshInfiniteCache();
+        this.reloadInfiniteGrid(gridApi, { resetPage: true });
       } else if (typeof gridApi.onFilterChanged === 'function') {
         gridApi.onFilterChanged();
       }
@@ -1260,12 +1254,6 @@ const UomDiffPage = {
     }
 
     gridApi.setFilterModel(nextModel);
-    if (typeof gridApi.paginationGoToFirstPage === 'function') {
-      gridApi.paginationGoToFirstPage();
-    }
-    if (typeof gridApi.refreshInfiniteCache === 'function') {
-      gridApi.refreshInfiniteCache();
-    }
   },
 
   parseInlineFilterExpression(rawValue, defaultType) {
