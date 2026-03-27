@@ -212,6 +212,7 @@ const UomDiffPage = {
   transactionApiEndpoint: '/api/v1/gm-uom-diff-input-transactionlvl/paginated',
   transactionDownloadEndpoint: '/api/v1/gm-uom-diff-input-transactionlvl/download',
   exclusionUpdateEndpoint: '/api/v1/gm-uom-diff-input-exclusion/updateGmUomDiffInputExclusion',
+  pendingDisableIds: [],
   pendingTerminationUpdateIds: [],
 
   init() {
@@ -283,7 +284,12 @@ const UomDiffPage = {
 
     this.pageShell.querySelectorAll('.gt-action-btn[data-action="disable"]').forEach((button) => {
       button.addEventListener('click', () => {
-        this.showInfo('Disable action will be wired once the exclusion APIs are ready.', 'warning');
+        const ids = this.getSelectedIds();
+        if (!ids.length) {
+          this.showInfo('Select at least one row to disable.', 'error');
+          return;
+        }
+        this.openDisableModal(ids);
       });
     });
 
@@ -329,6 +335,18 @@ const UomDiffPage = {
 
     const downloadBtn = this.pageShell.querySelector('.gt-view-btn[data-action="download"]');
     downloadBtn?.addEventListener('click', () => this.handleDownloadAction());
+
+    this.cacheDisableModalElements();
+    this.disableCancelBtn?.addEventListener('click', () => this.closeDisableModal());
+    this.disableCloseEls?.forEach((el) => el.addEventListener('click', () => this.closeDisableModal()));
+    this.disableSaveBtn?.addEventListener('click', () => this.handleDisableSave());
+    this.disableNotesInput?.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') this.closeDisableModal();
+      if (event.key === 'Enter') this.handleDisableSave();
+    });
+    this.disableNotesInput?.addEventListener('input', () => {
+      if (this.disableNotesInput?.value.trim()) this.clearDisableInlineError();
+    });
 
     this.cacheUpdateTerminationModalElements();
     this.updateTerminationCancelBtn?.addEventListener('click', () => this.closeUpdateTerminationModal());
@@ -803,6 +821,50 @@ const UomDiffPage = {
     this.updateTerminationCloseEls = this.updateTerminationModal
       ? Array.from(this.updateTerminationModal.querySelectorAll('[data-action="close-update-termination-modal"]'))
       : [];
+  },
+
+  cacheDisableModalElements() {
+    if (this.disableModal) return;
+    this.disableModal = document.getElementById('disableRecordModal');
+    this.disableDialog = this.disableModal?.querySelector('.mf-action-modal__dialog');
+    this.disableNotesInput = document.getElementById('disableRecordNotesInput');
+    this.disableErrorMessage = document.getElementById('disableRecordErrorMessage');
+    this.disableSaveBtn = this.disableModal?.querySelector('[data-action="save-disable-modal"]');
+    this.disableCancelBtn = this.disableModal?.querySelector('[data-action="cancel-disable-modal"]');
+    this.disableCloseEls = this.disableModal
+      ? Array.from(this.disableModal.querySelectorAll('[data-action="close-disable-modal"]'))
+      : [];
+  },
+
+  showDisableInlineError() {
+    if (this.disableErrorMessage) this.disableErrorMessage.hidden = false;
+    this.disableDialog?.classList.add('has-inline-error');
+  },
+
+  clearDisableInlineError() {
+    if (this.disableErrorMessage) this.disableErrorMessage.hidden = true;
+    this.disableDialog?.classList.remove('has-inline-error');
+  },
+
+  openDisableModal(ids) {
+    this.cacheDisableModalElements();
+    if (!this.disableModal) return;
+    this.pendingDisableIds = ids;
+    if (this.disableNotesInput) {
+      this.disableNotesInput.value = '';
+      this.disableNotesInput.focus();
+    }
+    this.clearDisableInlineError();
+    this.disableModal.hidden = false;
+  },
+
+  closeDisableModal() {
+    this.cacheDisableModalElements();
+    if (!this.disableModal) return;
+    this.disableModal.hidden = true;
+    this.pendingDisableIds = [];
+    if (this.disableNotesInput) this.disableNotesInput.value = '';
+    this.clearDisableInlineError();
   },
 
   showUpdateTerminationInlineError(message) {
@@ -1391,6 +1453,51 @@ const UomDiffPage = {
     link.click();
     link.remove();
     setTimeout(() => URL.revokeObjectURL(downloadUrl), 0);
+  },
+
+  async handleDisableSave() {
+    const ids = this.pendingDisableIds || [];
+    if (!ids.length) {
+      this.closeDisableModal();
+      return;
+    }
+
+    const notes = (this.disableNotesInput?.value ?? '').trim();
+    if (!notes) {
+      this.showDisableInlineError();
+      this.disableNotesInput?.focus();
+      return;
+    }
+
+    this.clearDisableInlineError();
+    try {
+      if (this.disableSaveBtn) this.disableSaveBtn.disabled = true;
+      await this.fetchJson(this.resolveApiUrl(this.exclusionUpdateEndpoint), {
+        method: 'PATCH',
+        headers: {
+          Accept: '*/*',
+          'Content-Type': 'application/json'
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify([
+          {
+            ids,
+            notes
+          }
+        ])
+      });
+      this.closeDisableModal();
+      const exclusionGrid = this.grids.exclusion;
+      if (typeof exclusionGrid?.api?.refreshInfiniteCache === 'function') {
+        exclusionGrid.api.refreshInfiniteCache();
+      }
+      this.showInfo('Selected rows disabled successfully.', 'success');
+    } catch (error) {
+      console.error('UOM Diff exclusion disable failed:', error);
+      this.showInfo(error?.message || 'Failed to disable selected rows.', 'error');
+    } finally {
+      if (this.disableSaveBtn) this.disableSaveBtn.disabled = false;
+    }
   },
 
   async handleUpdateTerminationDateSave() {

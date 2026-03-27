@@ -298,6 +298,27 @@
 
   <@gridManager.preferenceModal />
 
+  <div id="disableRecordModal" class="mf-action-modal" hidden>
+    <div class="mf-action-modal__backdrop" data-action="close-disable-modal"></div>
+    <div class="mf-action-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="disableRecordModalTitle">
+      <div class="mf-action-modal__header">
+        <h2 id="disableRecordModalTitle" class="mf-action-modal__title">Disable Record</h2>
+        <button type="button" class="mf-action-modal__close" aria-label="Close" data-action="close-disable-modal">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" /></svg>
+        </button>
+      </div>
+      <div id="disableRecordErrorMessage" class="mf-action-modal__error" hidden>Please enter notes to disable the selected record(s).</div>
+      <div class="mf-action-modal__row">
+        <label for="disableRecordNotesInput" class="mf-action-modal__label">Notes</label>
+        <input id="disableRecordNotesInput" class="mf-action-modal__input" type="text" maxlength="250" required aria-required="true" />
+      </div>
+      <div class="mf-action-modal__actions">
+        <button type="button" class="mf-action-modal__btn mf-action-modal__btn--cancel" data-action="cancel-disable-modal">Cancel</button>
+        <button type="button" class="mf-action-modal__btn mf-action-modal__btn--save" data-action="save-disable-modal">Save</button>
+      </div>
+    </div>
+  </div>
+
   <div id="updateTerminationDateModal" class="mf-action-modal" hidden>
     <div class="mf-action-modal__backdrop" data-action="close-update-termination-modal"></div>
     <div class="mf-action-modal__dialog mf-action-modal__dialog--update-termination" role="dialog" aria-modal="true" aria-labelledby="updateTerminationDateModalTitle">
