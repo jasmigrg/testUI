@@ -92,30 +92,119 @@ class GtPageSelectHeader {
 const MarginFundingCustomerMaintenanceManager = {
   gridApi: null,
   gridElement: null,
+  apiBaseUrl: '',
+  customerApiEndpoint: '/api/v1/margin-funding/customer',
   disableEndpoint: '/api/margin-funding/customer-maintenance/disable',
   updateTerminationDateEndpoint: '/api/margin-funding/customer-maintenance/update-termination-date',
   pendingDisableUniqueKeys: [],
   pendingTerminationUpdateUniqueKeys: [],
 
-  buildRows() {
-    return Array.from({ length: 16 }, (_, i) => ({
-      uniqueKey: `UK-${1000 + i}`,
-      vendorFamilyNumber: `VF-${200 + (i % 6)}`,
-      vendorFamilyName: `Vendor Family ${String.fromCharCode(65 + (i % 6))}`,
-      vendorProgram: `Program ${1 + (i % 4)}`,
-      itemNumber: `${10001 + i}`,
-      itemDescription: `Item Description ${i + 1}`,
-      distributionNonContract: (5 + (i % 3)).toFixed(2),
-      distributionContract: (3 + (i % 4)).toFixed(2),
-      marginFundingPercentType: i % 2 === 0 ? 'Flat' : 'Tiered',
-      effectiveFrom: '01/01/2026',
-      effectiveThru: '12/31/2026',
-      userId: `USER${100 + (i % 8)}`,
-      dateUpdated: '01/15/2026',
-      timeUpdated: `${String(9 + (i % 8)).padStart(2, '0')}:30:00`,
-      workStnId: `WS${200 + (i % 6)}`,
-      programId: `PGM-${3000 + (i % 12)}`
-    }));
+  resolveApiUrl(path) {
+    const normalizedPath = String(path || '').trim();
+    if (!normalizedPath) return this.apiBaseUrl;
+    if (/^https?:\/\//i.test(normalizedPath)) return normalizedPath;
+    if (!this.apiBaseUrl) return normalizedPath;
+    const base = this.apiBaseUrl.replace(/\/$/, '');
+    const suffix = normalizedPath.startsWith('/') ? normalizedPath : `/${normalizedPath}`;
+    return `${base}${suffix}`;
+  },
+
+  formatDateFromTimestamp(timestamp) {
+    if (!timestamp) return '';
+    const parsed = new Date(timestamp);
+    if (Number.isNaN(parsed.getTime())) return '';
+    const month = String(parsed.getMonth() + 1).padStart(2, '0');
+    const day = String(parsed.getDate()).padStart(2, '0');
+    const year = parsed.getFullYear();
+    return `${month}/${day}/${year}`;
+  },
+
+  formatUpdatedAt(timestamp) {
+    if (!timestamp) return '';
+    const parsed = new Date(timestamp);
+    if (Number.isNaN(parsed.getTime())) return '';
+    return `${this.formatDateFromTimestamp(timestamp)} ${parsed.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    })}`;
+  },
+
+  parseInlineFilterExpression(rawValue, defaultType = 'contains') {
+    const raw = String(rawValue ?? '').trim();
+    if (!raw) return { value: '', type: defaultType };
+
+    const operators = ['!=', '<>', '>=', '<=', '>', '<', '='];
+    const token = operators.find((op) => raw.startsWith(op));
+    if (!token) {
+      return { value: raw, type: defaultType };
+    }
+
+    const value = raw.slice(token.length).trim();
+    let type = defaultType;
+    if (token === '=') type = 'equals';
+    else if (token === '>') type = 'greaterThan';
+    else if (token === '>=') type = 'greaterThanOrEqual';
+    else if (token === '<') type = 'lessThan';
+    else if (token === '<=') type = 'lessThanOrEqual';
+    else if (token === '!=' || token === '<>') type = 'notEqual';
+    return { value, type };
+  },
+
+  mapColumnToApiField(colId) {
+    if (colId === 'updatedAtDisplay') return 'updatedAt';
+    return colId;
+  },
+
+  buildDatasource() {
+    return {
+      rowCount: null,
+      getRows: async (params) => {
+        const pageSize = params.endRow - params.startRow || 50;
+        const page = Math.floor((params.startRow || 0) / pageSize);
+        const sortModel = Array.isArray(params.sortModel) ? params.sortModel[0] : null;
+        const queryParams = new URLSearchParams({
+          page: String(page),
+          size: String(pageSize)
+        });
+
+        if (sortModel?.colId) {
+          queryParams.set('sortBy', this.mapColumnToApiField(sortModel.colId));
+          queryParams.set('sortDirection', String(sortModel.sort || 'asc').toUpperCase());
+        }
+
+        Object.entries(params.filterModel || {}).forEach(([field, model]) => {
+          const rawValue = String(model?.filter ?? '').trim();
+          if (!rawValue) return;
+          const parsed = this.parseInlineFilterExpression(rawValue, 'contains');
+          if (!parsed.value) return;
+          const apiField = this.mapColumnToApiField(field);
+          queryParams.set(apiField, parsed.value);
+          queryParams.set(`${apiField}_op`, parsed.type);
+        });
+
+        try {
+          const response = await fetch(`${this.resolveApiUrl(this.customerApiEndpoint)}?${queryParams.toString()}`, {
+            method: 'GET',
+            headers: { Accept: 'application/json' },
+            credentials: 'same-origin'
+          });
+
+          if (!response.ok) {
+            throw new Error(`Failed to load margin funding customer data (${response.status})`);
+          }
+
+          const payload = await response.json();
+          const rows = Array.isArray(payload?.content) ? payload.content : [];
+          const totalRows = Number(payload?.totalElements ?? payload?.total_elements ?? rows.length ?? 0);
+          params.successCallback(rows, totalRows);
+        } catch (error) {
+          console.error('Margin funding customer maintenance load failed:', error);
+          params.failCallback();
+        }
+      }
+    };
   },
 
   resetGridState() {
@@ -140,7 +229,7 @@ const MarginFundingCustomerMaintenanceManager = {
   getSelectedUniqueKeys() {
     if (!this.gridApi || typeof this.gridApi.getSelectedRows !== 'function') return [];
     return this.gridApi.getSelectedRows()
-      .map((row) => row?.uniqueKey)
+      .map((row) => row?.uniqueKeyIdInternal)
       .filter(Boolean);
   },
 
@@ -592,16 +681,16 @@ const MarginFundingCustomerMaintenanceManager = {
   },
 
   init() {
+    this.apiBaseUrl = String(window.API_BASE_URL || '').trim().replace(/\/$/, '');
     this.gridElement = document.getElementById('mfcGrid');
 
     const gridConfig = {
       gridElementId: 'mfcGrid',
-      pageSize: 20,
+      pageSize: 50,
       floatingFilter: true,
       manualFilterApply: true,
       paginationType: 'server',
       useSpringPagination: true,
-      apiEndpoint: '/api/margin-funding/customer-maintenance/paginated',
       gridOptions: {
         rowSelection: 'multiple',
         suppressRowClickSelection: true,
@@ -653,26 +742,33 @@ const MarginFundingCustomerMaintenanceManager = {
           resizable: false,
           suppressSizeToFit: true
         },
-        { field: 'uniqueKey', headerName: 'Unique Key', minWidth: 150 },
-        { field: 'vendorFamilyNumber', headerName: 'Vendor Family Number', minWidth: 170 },
-        { field: 'vendorFamilyName', headerName: 'Vendor Family Name', minWidth: 190 },
-        { field: 'vendorProgram', headerName: 'Vendor Program', minWidth: 160 },
-        { field: 'accountType', headerName: 'Account Type', minWidth: 140 },
-        { field: 'customerNumber', headerName: 'Customer Number', minWidth: 160 },
-        { field: 'customerName', headerName: 'Customer Name', minWidth: 180 },
-        { field: 'ieFlag', headerName: 'I E', minWidth: 100 },
-        { field: 'effectiveFrom', headerName: 'Effective From', minWidth: 140 },
-        { field: 'effectiveThru', headerName: 'Effective Thru', minWidth: 140 },
+        { field: 'uniqueKeyIdInternal', headerName: 'Unique Key', minWidth: 150 },
+        { field: 'userId', headerName: 'User ID', minWidth: 120 },
+        { field: 'programId', headerName: 'Program ID', minWidth: 140 },
+        { field: 'effectiveDate', headerName: 'Effective Date', minWidth: 150 },
         { field: 'terminationDate', headerName: 'Termination Date', minWidth: 160 },
         { field: 'disableDate', headerName: 'Disable Date', minWidth: 140 },
-        { field: 'notes', headerName: 'Notes', minWidth: 180 },
-        { field: 'programId', headerName: 'Program ID', minWidth: 130 },
-        { field: 'workStnId', headerName: 'Work Stn ID', minWidth: 130 },
-        { field: 'userId', headerName: 'User ID', minWidth: 120 }
+        {
+          field: 'updatedAt',
+          colId: 'updatedAtDisplay',
+          headerName: 'Updated At',
+          minWidth: 220,
+          valueFormatter: (params) => this.formatUpdatedAt(params.value)
+        },
+        { field: 'workStationId', headerName: 'Workstation ID', minWidth: 150 },
+        { field: 'recordId', headerName: 'Vendor Program', minWidth: 150 },
+        { field: 'vendorFamilyNo', headerName: 'Vendor Family Number', minWidth: 180 },
+        { field: 'accountType', headerName: 'Account Type', minWidth: 140 },
+        { field: 'customerNumber', headerName: 'Customer Number', minWidth: 160 },
+        { field: 'includeExclude', headerName: 'I/E', minWidth: 100 },
+        { field: 'customerName', headerName: 'Customer Name', minWidth: 180 },
+        { field: 'vendorFamilyName', headerName: 'Vendor Family Name', minWidth: 190 },
+        { field: 'notes', headerName: 'Notes', minWidth: 180 }
       ]
     };
 
     this.gridApi = DynamicGrid.createGrid(gridConfig);
+    this.gridApi?.setGridOption?.('datasource', this.buildDatasource());
 
     window.gridApi = this.gridApi;
     this.initViewActions();
