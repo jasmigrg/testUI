@@ -16,13 +16,21 @@ public class PricingInquiryController {
   }
 
   @GetMapping("/margin-funding-maintenance")
-  public String marginFundingMaintenance() {
+  public String marginFundingMaintenance(Model model) {
+    model.addAttribute("apiBaseUrl", apiBaseUrl);
     return "margin-funding-maintenance";
   }
 
   @GetMapping("/margin-funding-customer-maintenance")
-  public String marginFundingCustomerMaintenance() {
+  public String marginFundingCustomerMaintenance(Model model) {
+    model.addAttribute("apiBaseUrl", apiBaseUrl);
     return "margin-funding-customer-maintenance";
+  }
+
+  @GetMapping("/margin-funding-customer-maintenance/add")
+  public String marginFundingCustomerMaintenanceAdd(Model model) {
+    model.addAttribute("apiBaseUrl", apiBaseUrl);
+    return "margin-funding-customer-maintenance-add";
   }
 
   @GetMapping("/cams-eligibility")
