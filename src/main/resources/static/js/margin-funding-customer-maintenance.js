@@ -99,6 +99,39 @@ const MarginFundingCustomerMaintenanceManager = {
   pendingDisableUniqueKeys: [],
   pendingTerminationUpdateUniqueKeys: [],
 
+  showInfo(message, type = 'success') {
+    if (!window.PageToast?.show) return;
+
+    const container = this.ensureToastContainer();
+    if (!container) return;
+
+    const normalizedType = ['success', 'error', 'warning'].includes(type) ? type : 'success';
+    const title = normalizedType === 'error'
+      ? 'Action required'
+      : normalizedType === 'warning'
+        ? 'Heads up'
+        : 'Success';
+
+    window.PageToast.show({
+      container,
+      type: normalizedType,
+      title,
+      subtitle: String(message || '').trim(),
+      duration: normalizedType === 'error' ? 3200 : 2400
+    });
+  },
+
+  ensureToastContainer() {
+    let container = document.getElementById('marginFundingCustomerMaintenancePageToastLayer');
+    if (container) return container;
+
+    container = document.createElement('div');
+    container.id = 'marginFundingCustomerMaintenancePageToastLayer';
+    container.className = 'page-toast-layer';
+    document.body.appendChild(container);
+    return container;
+  },
+
   resolveApiUrl(path) {
     const normalizedPath = String(path || '').trim();
     if (!normalizedPath) return this.apiBaseUrl;
@@ -635,13 +668,10 @@ const MarginFundingCustomerMaintenanceManager = {
       });
       this.closeUpdateTerminationModal();
       this.refreshGridData();
-      window.GridManager?.currentInstance?.showToast?.('Termination date updated successfully.', 'success');
+      this.showInfo('Termination date updated successfully.', 'success');
     } catch (error) {
       console.error('Update termination date failed:', error);
-      window.GridManager?.currentInstance?.showToast?.(
-        error?.message || 'Failed to update termination date.',
-        'error'
-      );
+      this.showInfo(error?.message || 'Failed to update termination date.', 'error');
     } finally {
       if (this.updateTerminationSaveBtn) this.updateTerminationSaveBtn.disabled = false;
     }
@@ -667,13 +697,10 @@ const MarginFundingCustomerMaintenanceManager = {
       await this.postGridAction(this.disableEndpoint, { uniqueKeys, notes });
       this.closeDisableModal();
       this.refreshGridData();
-      window.GridManager?.currentInstance?.showToast?.('Selected rows disabled successfully.', 'success');
+      this.showInfo('Selected rows disabled successfully.', 'success');
     } catch (error) {
       console.error('Disable action failed:', error);
-      window.GridManager?.currentInstance?.showToast?.(
-        error?.message || 'Failed to disable selected rows.',
-        'error'
-      );
+      this.showInfo(error?.message || 'Failed to disable selected rows.', 'error');
     } finally {
       if (this.disableSaveBtn) this.disableSaveBtn.disabled = false;
     }
@@ -682,14 +709,11 @@ const MarginFundingCustomerMaintenanceManager = {
   handleDisableAction() {
     const uniqueKeys = this.getSelectedUniqueKeys();
     if (!uniqueKeys.length) {
-      window.GridManager?.currentInstance?.showToast?.('Select at least one row to disable.', 'error');
+      this.showInfo('Select at least one row to disable.', 'error');
       return;
     }
     if (this.hasDisabledRowsSelected()) {
-      window.GridManager?.currentInstance?.showToast?.(
-        'Disabled rows cannot be edited. Remove already-disabled rows from selection.',
-        'error'
-      );
+      this.showInfo('Disabled rows cannot be edited. Remove already-disabled rows from selection.', 'error');
       return;
     }
     this.openDisableModal(uniqueKeys);
@@ -698,14 +722,11 @@ const MarginFundingCustomerMaintenanceManager = {
   handleUpdateTerminationDateAction() {
     const uniqueKeys = this.getSelectedUniqueKeys();
     if (!uniqueKeys.length) {
-      window.GridManager?.currentInstance?.showToast?.('Select at least one row to update termination date.', 'error');
+      this.showInfo('Select at least one row to update termination date.', 'error');
       return;
     }
     if (this.hasDisabledRowsSelected()) {
-      window.GridManager?.currentInstance?.showToast?.(
-        'Disabled rows cannot be edited. Remove already-disabled rows from selection.',
-        'error'
-      );
+      this.showInfo('Disabled rows cannot be edited. Remove already-disabled rows from selection.', 'error');
       return;
     }
     this.openUpdateTerminationModal(uniqueKeys);
@@ -744,6 +765,11 @@ const MarginFundingCustomerMaintenanceManager = {
     const refreshBtn = document.querySelector('.gt-action-btn[data-action="refresh"]');
     if (refreshBtn) {
       refreshBtn.addEventListener('click', () => this.resetGridState());
+    }
+
+    const favoriteBtn = document.querySelector('.gt-action-btn[data-action="favorite"]');
+    if (favoriteBtn) {
+      favoriteBtn.addEventListener('click', () => this.showInfo('Favorite action is not configured yet.', 'warning'));
     }
 
     const disableBtn = document.querySelector('.gt-action-btn[data-action="disable"]');
