@@ -157,6 +157,123 @@ const MarginFundingCustomerMaintenanceManager = {
     return colId;
   },
 
+  getFieldFilterKind(field) {
+    const normalizedField = String(field || '').trim();
+
+    if (['effectiveDate', 'terminationDate', 'disableDate', 'updatedAt', 'updatedAtDisplay'].includes(normalizedField)) {
+      return 'date';
+    }
+
+    if (['uniqueKeyIdInternal', 'recordId', 'vendorFamilyNo', 'customerNumber'].includes(normalizedField)) {
+      return 'number';
+    }
+
+    return 'text';
+  },
+
+  buildAlignedColumn(column) {
+    const field = String(column?.field || column?.colId || '').trim();
+    if (!field || field === 'select') return column;
+
+    const kind = this.getFieldFilterKind(field);
+    return {
+      ...column,
+      cellClass: kind === 'text' ? 'cell-align-left' : 'cell-align-right'
+    };
+  },
+
+  getNumericFilterValue(value) {
+    const raw = String(value ?? '').trim();
+    if (!raw) return null;
+    const normalized = raw.replace(/[%,$\s]/g, '').replace(/,/g, '');
+    const numeric = Number(normalized);
+    return Number.isNaN(numeric) ? null : numeric;
+  },
+
+  dateFilterComparator(filterLocalDateAtMidnight, cellValue) {
+    const raw = String(cellValue || '').trim();
+    const usDateMatch = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (usDateMatch) {
+      const cellDate = new Date(Number(usDateMatch[3]), Number(usDateMatch[1]) - 1, Number(usDateMatch[2]));
+      const cellTime = cellDate.setHours(0, 0, 0, 0);
+      const filterTime = filterLocalDateAtMidnight.setHours(0, 0, 0, 0);
+      if (cellTime === filterTime) return 0;
+      return cellTime < filterTime ? -1 : 1;
+    }
+
+    const timestamp = Date.parse(raw);
+    if (Number.isNaN(timestamp)) return 0;
+    const cellDate = new Date(timestamp);
+    const cellTime = cellDate.setHours(0, 0, 0, 0);
+    const filterTime = filterLocalDateAtMidnight.setHours(0, 0, 0, 0);
+    if (cellTime === filterTime) return 0;
+    return cellTime < filterTime ? -1 : 1;
+  },
+
+  buildFilterableColumn(column) {
+    const field = String(column?.field || column?.colId || '').trim();
+    if (!field || field === 'select') return column;
+
+    const aligned = this.buildAlignedColumn(column);
+    const kind = this.getFieldFilterKind(field);
+
+    if (kind === 'date') {
+      return {
+        ...aligned,
+        filter: 'agDateColumnFilter',
+        filterParams: {
+          buttons: ['apply', 'reset'],
+          closeOnApply: true,
+          maxNumConditions: 1,
+          numAlwaysVisibleConditions: 1,
+          comparator: this.dateFilterComparator,
+          filterOptions: [
+            'equals',
+            'notEqual',
+            'greaterThan',
+            'lessThan',
+            'greaterThanOrEqual',
+            'lessThanOrEqual'
+          ]
+        }
+      };
+    }
+
+    if (kind === 'number') {
+      return {
+        ...aligned,
+        filter: 'agNumberColumnFilter',
+        filterValueGetter: (params) => this.getNumericFilterValue(params?.data?.[field]),
+        filterParams: {
+          buttons: ['apply', 'reset'],
+          closeOnApply: true,
+          maxNumConditions: 1,
+          numAlwaysVisibleConditions: 1,
+          filterOptions: [
+            'equals',
+            'notEqual',
+            'greaterThan',
+            'lessThan',
+            'greaterThanOrEqual',
+            'lessThanOrEqual'
+          ]
+        }
+      };
+    }
+
+    return {
+      ...aligned,
+      filter: 'agTextColumnFilter',
+      filterParams: {
+        buttons: ['apply', 'reset'],
+        closeOnApply: true,
+        maxNumConditions: 1,
+        numAlwaysVisibleConditions: 1,
+        filterOptions: ['contains', 'equals', 'notEqual', 'notContains', 'startsWith', 'endsWith']
+      }
+    };
+  },
+
   buildDatasource() {
     return {
       rowCount: null,
@@ -723,6 +840,20 @@ const MarginFundingCustomerMaintenanceManager = {
         components: {
           gtPageSelectHeader: GtPageSelectHeader
         },
+        localeText: {
+          equals: 'Equals',
+          notEqual: 'Does not equal',
+          greaterThan: 'Greater than',
+          lessThan: 'Less than',
+          after: 'Greater than',
+          before: 'Less than',
+          greaterThanOrEqual: 'Greater than or equal',
+          lessThanOrEqual: 'Less than or equal',
+          contains: 'Contains',
+          notContains: 'Does not contain',
+          startsWith: 'Begins with',
+          endsWith: 'Ends with'
+        },
         defaultColDef: {
           sortable: true,
           unSortIcon: true,
@@ -778,7 +909,7 @@ const MarginFundingCustomerMaintenanceManager = {
         { field: 'customerName', headerName: 'Customer Name', minWidth: 180 },
         { field: 'vendorFamilyName', headerName: 'Vendor Family Name', minWidth: 190 },
         { field: 'notes', headerName: 'Notes', minWidth: 180 }
-      ]
+      ].map((column) => this.buildFilterableColumn(column))
     };
 
     this.gridApi = DynamicGrid.createGrid(gridConfig);

@@ -53,6 +53,14 @@
   font-size: var(--mfi-cell-font-size, 13px);
 }
 
+#mfcGrid .ag-cell.cell-align-left {
+  text-align: left;
+}
+
+#mfcGrid .ag-cell.cell-align-right {
+  text-align: right;
+}
+
 .mf-action-modal[hidden] {
   display: none !important;
 }
