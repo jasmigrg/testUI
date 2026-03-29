@@ -201,10 +201,11 @@ const MarginFundingCustomerMaintenanceManager = {
   gridElement: null,
   apiBaseUrl: '',
   customerApiEndpoint: '/api/v1/margin-funding/customer',
-  disableEndpoint: '/api/margin-funding/customer-maintenance/disable',
-  updateTerminationDateEndpoint: '/api/margin-funding/customer-maintenance/update-termination-date',
+  bulkUpdateEndpoint: '/api/v1/margin-funding/customer/bulk-update',
+  downloadEndpoint: '/api/v1/margin-funding/customer/download-csv',
   pendingDisableUniqueKeys: [],
   pendingTerminationUpdateUniqueKeys: [],
+  pageRequestCache: new Map(),
 
   showInfo(message, type = 'success') {
     if (!window.PageToast?.show) return;
@@ -234,7 +235,7 @@ const MarginFundingCustomerMaintenanceManager = {
 
     container = document.createElement('div');
     container.id = 'marginFundingCustomerMaintenancePageToastLayer';
-    container.className = 'page-toast-layer';
+    container.className = 'app-page-toast-layer';
     document.body.appendChild(container);
     return container;
   },
@@ -488,12 +489,16 @@ const MarginFundingCustomerMaintenanceManager = {
     return {
       rowCount: null,
       getRows: async (params) => {
-        const pageSize = params.endRow - params.startRow || 50;
-        const page = Math.floor((params.startRow || 0) / pageSize);
+        const requestedBlockSize = params.endRow - params.startRow || 10;
+        const selectedPageSize =
+          typeof this.gridApi?.paginationGetPageSize === 'function'
+            ? this.gridApi.paginationGetPageSize() || requestedBlockSize
+            : requestedBlockSize;
+        const page = Math.floor((params.startRow || 0) / selectedPageSize);
         const sortModel = Array.isArray(params.sortModel) ? params.sortModel[0] : null;
         const queryParams = new URLSearchParams({
           page: String(page),
-          size: String(pageSize),
+          size: String(selectedPageSize),
           sortBy: this.mapColumnToApiField(sortModel?.colId || 'uniqueKeyIdInternal'),
           sortDirection: String(sortModel?.sort || 'asc').toUpperCase()
         });
@@ -507,24 +512,45 @@ const MarginFundingCustomerMaintenanceManager = {
         });
 
         try {
-          const requestUrl = `${this.resolveApiUrl(this.customerApiEndpoint)}?${queryParams.toString()}`;
-          const response = await fetch(requestUrl, {
-            method: 'GET',
-            headers: { Accept: 'application/json' },
-            credentials: 'same-origin'
-          });
+          const cacheKey = queryParams.toString();
+          let requestPromise = this.pageRequestCache.get(cacheKey);
 
-          if (!response.ok) {
-            throw new Error(`Failed to load margin funding customer data (${response.status})`);
+          if (!requestPromise) {
+            const requestUrl = `${this.resolveApiUrl(this.customerApiEndpoint)}?${queryParams.toString()}`;
+            requestPromise = fetch(requestUrl, {
+              method: 'GET',
+              headers: { Accept: 'application/json' },
+              credentials: 'same-origin'
+            }).then(async (response) => {
+              if (!response.ok) {
+                throw new Error(`Failed to load margin funding customer data (${response.status})`);
+              }
+
+              const payload = await response.json();
+              const rows = Array.isArray(payload?.content) ? payload.content : [];
+              const totalRows = Number(payload?.totalElements ?? payload?.total_elements ?? rows.length ?? 0);
+              return {
+                rows,
+                totalRows
+              };
+            });
+
+            this.pageRequestCache.set(cacheKey, requestPromise);
           }
 
-          const payload = await response.json();
-          const rows = Array.isArray(payload?.content) ? payload.content : [];
-          const totalRows = Number(payload?.totalElements ?? payload?.total_elements ?? rows.length ?? 0);
-          params.successCallback(rows, totalRows);
+          const { rows, totalRows } = await requestPromise;
+          const pageStart = page * selectedPageSize;
+          const sliceStart = Math.max(0, (params.startRow || 0) - pageStart);
+          const sliceEnd = Math.min(sliceStart + requestedBlockSize, rows.length);
+          const blockRows = rows.slice(sliceStart, sliceEnd);
+          params.successCallback(blockRows, totalRows);
         } catch (error) {
+          this.pageRequestCache.delete(queryParams.toString());
           console.error('Margin funding customer maintenance load failed:', error);
-          params.failCallback();
+          params.successCallback([], 0);
+          if (typeof this.gridApi?.showNoRowsOverlay === 'function') {
+            this.gridApi.showNoRowsOverlay();
+          }
         }
       }
     };
@@ -532,6 +558,7 @@ const MarginFundingCustomerMaintenanceManager = {
 
   resetGridState() {
     if (!this.gridApi) return;
+    this.pageRequestCache = new Map();
     if (typeof this.gridApi.setFilterModel === 'function') {
       this.gridApi.setFilterModel(null);
     }
@@ -567,6 +594,7 @@ const MarginFundingCustomerMaintenanceManager = {
 
   refreshGridData() {
     if (!this.gridApi) return;
+    this.pageRequestCache = new Map();
     if (typeof this.gridApi.refreshInfiniteCache === 'function') {
       this.gridApi.refreshInfiniteCache();
     } else if (typeof this.gridApi.refreshServerSideStore === 'function') {
@@ -578,8 +606,8 @@ const MarginFundingCustomerMaintenanceManager = {
   },
 
   async postGridAction(url, payload) {
-    const response = await fetch(url, {
-      method: 'POST',
+    const response = await fetch(this.resolveApiUrl(url), {
+      method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
@@ -591,6 +619,93 @@ const MarginFundingCustomerMaintenanceManager = {
       throw new Error(errorMessage);
     }
     return responseBody;
+  },
+
+  getCurrentRequestParams() {
+    const sortModel = typeof this.gridApi?.getSortModel === 'function'
+      ? (this.gridApi.getSortModel() || [])[0]
+      : null;
+    const pageSize = typeof this.gridApi?.paginationGetPageSize === 'function'
+      ? this.gridApi.paginationGetPageSize() || 10
+      : 10;
+    const page = typeof this.gridApi?.paginationGetCurrentPage === 'function'
+      ? this.gridApi.paginationGetCurrentPage() || 0
+      : 0;
+
+    const queryParams = new URLSearchParams({
+      page: String(page),
+      size: String(pageSize),
+      sortBy: this.mapColumnToApiField(sortModel?.colId || 'uniqueKeyIdInternal'),
+      sortDirection: String(sortModel?.sort || 'asc').toUpperCase()
+    });
+
+    const filterModel = typeof this.gridApi?.getFilterModel === 'function'
+      ? this.gridApi.getFilterModel() || {}
+      : {};
+
+    Object.entries(filterModel).forEach(([field, model]) => {
+      const parsed = this.normalizeFilterModel(field, model);
+      if (!parsed?.value) return;
+      const apiField = this.mapColumnToApiField(field);
+      queryParams.set(apiField, parsed.value);
+      queryParams.set(`${apiField}_op`, parsed.operator);
+    });
+
+    return queryParams;
+  },
+
+  getDownloadFileNameFromResponse(response) {
+    const disposition = response?.headers?.get?.('content-disposition') || '';
+    if (!disposition) return '';
+
+    const utfMatch = disposition.match(/filename\*\s*=\s*UTF-8''([^;]+)/i);
+    if (utfMatch?.[1]) {
+      try {
+        return decodeURIComponent(utfMatch[1].trim());
+      } catch (error) {
+        return utfMatch[1].trim();
+      }
+    }
+
+    const plainMatch = disposition.match(/filename\s*=\s*"?([^\";]+)"?/i);
+    return plainMatch?.[1]?.trim() || '';
+  },
+
+  triggerFileDownload(blob, fileName) {
+    const downloadUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = fileName || 'margin-funding-customer-maintenance.csv';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(downloadUrl), 0);
+  },
+
+  async handleDownloadAction() {
+    try {
+      const queryParams = this.getCurrentRequestParams();
+      const response = await fetch(
+        `${this.resolveApiUrl(this.downloadEndpoint)}?${queryParams.toString()}`,
+        {
+          method: 'GET',
+          headers: { Accept: '*/*' },
+          credentials: 'same-origin'
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Download failed (${response.status})`);
+      }
+
+      const blob = await response.blob();
+      const fileName =
+        this.getDownloadFileNameFromResponse(response) || 'margin-funding-customer-maintenance.csv';
+      this.triggerFileDownload(blob, fileName);
+    } catch (error) {
+      console.error('Margin funding customer maintenance download failed:', error);
+      this.showInfo(error?.message || 'Download failed.', 'error');
+    }
   },
 
   async readJsonSafely(response) {
@@ -820,11 +935,11 @@ const MarginFundingCustomerMaintenanceManager = {
 
     try {
       if (this.updateTerminationSaveBtn) this.updateTerminationSaveBtn.disabled = true;
-      await this.postGridAction(this.updateTerminationDateEndpoint, {
-        uniqueKeys,
-        terminationDate: this.formatDateAsMmDdYyyy(parsedDate),
+      await this.postGridAction(this.bulkUpdateEndpoint, uniqueKeys.map((uniqueKeyIdInternal) => ({
+        uniqueKeyIdInternal,
+        terminationDate: this.formatDateAsYmd(parsedDate),
         notes
-      });
+      })));
       this.closeUpdateTerminationModal();
       this.refreshGridData();
       this.showInfo('Termination date updated successfully.', 'success');
@@ -853,7 +968,12 @@ const MarginFundingCustomerMaintenanceManager = {
 
     try {
       if (this.disableSaveBtn) this.disableSaveBtn.disabled = true;
-      await this.postGridAction(this.disableEndpoint, { uniqueKeys, notes });
+      const disableDate = this.formatDateAsYmd(this.getTodayDateOnly());
+      await this.postGridAction(this.bulkUpdateEndpoint, uniqueKeys.map((uniqueKeyIdInternal) => ({
+        uniqueKeyIdInternal,
+        disableDate,
+        notes
+      })));
       this.closeDisableModal();
       this.refreshGridData();
       this.showInfo('Selected rows disabled successfully.', 'success');
@@ -906,10 +1026,6 @@ const MarginFundingCustomerMaintenanceManager = {
         defaultMode: 'compact',
         densityClassPrefix: 'mfi-density'
       });
-      window.GridToolbar.bindDownloadControl({
-        gridApi: this.gridApi,
-      fileName: 'margin-funding-customer-maintenance.csv'
-      });
     }
 
     const executeBtn = document.querySelector('.gt-action-btn[data-action="execute"]');
@@ -924,6 +1040,11 @@ const MarginFundingCustomerMaintenanceManager = {
     const refreshBtn = document.querySelector('.gt-action-btn[data-action="refresh"]');
     if (refreshBtn) {
       refreshBtn.addEventListener('click', () => this.resetGridState());
+    }
+
+    const downloadBtn = document.querySelector('.gt-view-btn[data-action="download"]');
+    if (downloadBtn) {
+      downloadBtn.addEventListener('click', () => this.handleDownloadAction());
     }
 
     const favoriteBtn = document.querySelector('.gt-action-btn[data-action="favorite"]');
@@ -1002,12 +1123,51 @@ const MarginFundingCustomerMaintenanceManager = {
 
     const gridConfig = {
       gridElementId: 'mfcGrid',
-      pageSize: 50,
+      pageSize: 10,
       floatingFilter: true,
       manualFilterApply: true,
       paginationType: 'server',
       useSpringPagination: true,
       gridOptions: {
+        onPaginationChanged: (params) => {
+          if (!params?.api || typeof params.api.paginationGetPageSize !== 'function') return;
+          if (params.api.__isUpdatingPageSize) return;
+
+          const newPageSize = params.api.paginationGetPageSize();
+          const lastKnownPageSize = params.api.__lastKnownPageSize || 10;
+          if (newPageSize === lastKnownPageSize) return;
+
+          params.api.__isUpdatingPageSize = true;
+          params.api.__lastKnownPageSize = newPageSize;
+          this.pageRequestCache = new Map();
+
+          setTimeout(() => {
+            if (typeof params.api.updateGridOptions === 'function') {
+              params.api.updateGridOptions({ cacheBlockSize: newPageSize });
+            } else if (typeof params.api.setGridOption === 'function') {
+              params.api.setGridOption('cacheBlockSize', newPageSize);
+            }
+
+            const currentPage =
+              typeof params.api.paginationGetCurrentPage === 'function'
+                ? params.api.paginationGetCurrentPage()
+                : 0;
+
+            if (currentPage > 0 && typeof params.api.paginationGoToFirstPage === 'function') {
+              params.api.paginationGoToFirstPage();
+            } else if (typeof params.api.purgeInfiniteCache === 'function') {
+              params.api.purgeInfiniteCache();
+            } else if (typeof params.api.refreshInfiniteCache === 'function') {
+              params.api.refreshInfiniteCache();
+            }
+
+            params.api.__isUpdatingPageSize = false;
+          }, 50);
+        },
+        onGridReady: (params) => {
+          params.api.__lastKnownPageSize = 10;
+          params.api.__isUpdatingPageSize = false;
+        },
         rowSelection: 'multiple',
         suppressRowClickSelection: true,
         isRowSelectable: (rowNode) => {
