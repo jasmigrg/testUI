@@ -202,6 +202,7 @@ const UomDiffPage = {
   gridManagerBootstrapped: false,
   gridManagerInitScheduled: false,
   gridPreferenceStateByGrid: {},
+  pageRequestCacheByTab: {},
   apiBaseUrl: '',
   controlApiEndpoint: '/api/v1/gm-uom-diff-input-control/paginated',
   controlDownloadEndpoint: '/api/v1/gm-uom-diff-input-control/download',
@@ -463,33 +464,17 @@ const UomDiffPage = {
 
           const newPageSize = params.api.paginationGetPageSize();
           const lastKnownPageSize = params.api.__lastKnownPageSize || 20;
-          console.log('[UOM][paginationChanged]', {
-            tabKey,
-            newPageSize,
-            lastKnownPageSize,
-            currentPage: typeof params.api.paginationGetCurrentPage === 'function'
-              ? params.api.paginationGetCurrentPage()
-              : null,
-            isUpdatingPageSize: Boolean(params.api.__isUpdatingPageSize)
-          });
           if (newPageSize === lastKnownPageSize) return;
 
           params.api.__isUpdatingPageSize = true;
           params.api.__lastKnownPageSize = newPageSize;
+          this.pageRequestCacheByTab[tabKey] = new Map();
 
           setTimeout(() => {
-            console.log('[UOM][paginationChanged][applyPageSize]', {
-              tabKey,
-              newPageSize
-            });
             if (typeof params.api.updateGridOptions === 'function') {
               params.api.updateGridOptions({ cacheBlockSize: newPageSize });
             } else if (typeof params.api.setGridOption === 'function') {
               params.api.setGridOption('cacheBlockSize', newPageSize);
-            }
-
-            if (params.api.__uomPageRequestCache instanceof Map) {
-              params.api.__uomPageRequestCache.clear();
             }
 
             const currentPage =
@@ -498,25 +483,10 @@ const UomDiffPage = {
                 : 0;
 
             if (currentPage > 0 && typeof params.api.paginationGoToFirstPage === 'function') {
-              console.log('[UOM][paginationChanged][goToFirstPage]', {
-                tabKey,
-                currentPage,
-                newPageSize
-              });
               params.api.paginationGoToFirstPage();
             } else if (typeof params.api.purgeInfiniteCache === 'function') {
-              console.log('[UOM][paginationChanged][purgeInfiniteCache]', {
-                tabKey,
-                currentPage,
-                newPageSize
-              });
               params.api.purgeInfiniteCache();
             } else if (typeof params.api.refreshInfiniteCache === 'function') {
-              console.log('[UOM][paginationChanged][refreshInfiniteCache]', {
-                tabKey,
-                currentPage,
-                newPageSize
-              });
               params.api.refreshInfiniteCache();
             }
 
@@ -526,6 +496,7 @@ const UomDiffPage = {
         onGridReady: (params) => {
           this.refreshActiveGridLayout();
           if (tabConfig.apiEndpoint) {
+            this.pageRequestCacheByTab[tabKey] = new Map();
             const datasource = this.buildDatasource(tabKey, tabConfig);
             params.api.__uomDatasource = datasource;
             params.api.__lastKnownPageSize = 20;
@@ -1362,8 +1333,8 @@ const UomDiffPage = {
       getRows: async (params) => {
         const requestedBlockSize = params.endRow - params.startRow || 10;
         const selectedPageSize =
-          typeof params.api?.paginationGetPageSize === 'function'
-            ? params.api.paginationGetPageSize() || requestedBlockSize
+          typeof this.grids?.[tabKey]?.api?.paginationGetPageSize === 'function'
+            ? this.grids[tabKey].api.paginationGetPageSize() || requestedBlockSize
             : requestedBlockSize;
         const page = Math.floor((params.startRow || 0) / selectedPageSize);
         const sortModel = Array.isArray(params.sortModel) ? params.sortModel[0] : null;
@@ -1381,23 +1352,13 @@ const UomDiffPage = {
           urlParams.set(`${field}_op`, normalized.operator);
         });
 
-        if (!(params.api?.__uomPageRequestCache instanceof Map)) {
-          params.api.__uomPageRequestCache = new Map();
+        if (!(this.pageRequestCacheByTab[tabKey] instanceof Map)) {
+          this.pageRequestCacheByTab[tabKey] = new Map();
         }
 
-        const cacheKey = `${tabKey}:${urlParams.toString()}`;
-        let requestPromise = params.api.__uomPageRequestCache.get(cacheKey);
-        console.log('[UOM][getRows][request]', {
-          tabKey,
-          startRow: params.startRow,
-          endRow: params.endRow,
-          requestedBlockSize,
-          selectedPageSize,
-          page,
-          cacheKey,
-          cacheHit: Boolean(requestPromise),
-          url: `${this.resolveApiUrl(tabConfig.apiEndpoint)}?${urlParams.toString()}`
-        });
+        const cache = this.pageRequestCacheByTab[tabKey];
+        const cacheKey = urlParams.toString();
+        let requestPromise = cache.get(cacheKey);
 
         try {
           if (!requestPromise) {
@@ -1426,32 +1387,20 @@ const UomDiffPage = {
               };
             });
 
-            params.api.__uomPageRequestCache.set(cacheKey, requestPromise);
+            cache.set(cacheKey, requestPromise);
           }
 
           const { rows, totalRows } = await requestPromise;
           const pageStart = page * selectedPageSize;
           const sliceStart = Math.max(0, (params.startRow || 0) - pageStart);
           const sliceEnd = Math.min(sliceStart + requestedBlockSize, rows.length);
-          const slicedRows = rows.slice(sliceStart, sliceEnd);
-          console.log('[UOM][getRows][response]', {
-            tabKey,
-            startRow: params.startRow,
-            endRow: params.endRow,
-            selectedPageSize,
-            page,
-            totalRows,
-            fetchedRows: rows.length,
-            returnedRows: slicedRows.length,
-            sliceStart,
-            sliceEnd
-          });
+          const blockRows = rows.slice(sliceStart, sliceEnd);
 
-          params.successCallback(slicedRows, totalRows);
+          params.successCallback(blockRows, totalRows);
           this.setGridEmptyState(tabKey, params.startRow === 0 && rows.length === 0 ? 'empty' : 'hidden');
           this.refreshActiveGridLayout();
         } catch (error) {
-          params.api?.__uomPageRequestCache?.delete?.(cacheKey);
+          cache.delete(cacheKey);
           console.error(`Failed to load ${tabConfig.gridElementId}:`, error);
           params.successCallback([], 0);
           this.setGridEmptyState(tabKey, 'empty');
