@@ -166,13 +166,10 @@ const MarginFundingCustomerMaintenanceManager = {
         const sortModel = Array.isArray(params.sortModel) ? params.sortModel[0] : null;
         const queryParams = new URLSearchParams({
           page: String(page),
-          size: String(pageSize)
+          size: String(pageSize),
+          sortBy: this.mapColumnToApiField(sortModel?.colId || 'uniqueKeyIdInternal'),
+          sortDirection: String(sortModel?.sort || 'asc').toUpperCase()
         });
-
-        if (sortModel?.colId) {
-          queryParams.set('sortBy', this.mapColumnToApiField(sortModel.colId));
-          queryParams.set('sortDirection', String(sortModel.sort || 'asc').toUpperCase());
-        }
 
         Object.entries(params.filterModel || {}).forEach(([field, model]) => {
           const rawValue = String(model?.filter ?? '').trim();
