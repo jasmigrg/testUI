@@ -89,6 +89,113 @@ class GtPageSelectHeader {
   }
 }
 
+class MarginFundingCustomerManualFloatingFilter {
+  init(params) {
+    this.params = params;
+    this.currentValue = '';
+    this.gui = document.createElement('div');
+    this.gui.className = 'mfi-manual-floating-filter';
+
+    this.input = document.createElement('input');
+    this.input.type = 'text';
+    this.input.className = 'mfi-floating-filter-input';
+    this.input.setAttribute(
+      'aria-label',
+      `${params.column.getColDef().headerName || params.column.getColId()} filter`
+    );
+    this.input.dataset.colId = params.column.getColId();
+
+    this.onKeyDown = (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        if (this.params?.api && typeof this.params.api.applyPendingFloatingFilters === 'function') {
+          this.params.api.applyPendingFloatingFilters();
+        } else {
+          this.apply();
+        }
+      }
+    };
+
+    this.input.addEventListener('keydown', this.onKeyDown);
+    this.gui.appendChild(this.input);
+
+    if (!params.api.__manualFloatingFilters) {
+      params.api.__manualFloatingFilters = [];
+    }
+    params.api.__manualFloatingFilters.push(this);
+  }
+
+  getGui() {
+    return this.gui;
+  }
+
+  onParentModelChanged(parentModel) {
+    let next = '';
+    if (parentModel && parentModel.rawInput != null) {
+      next = String(parentModel.rawInput);
+    } else if (parentModel && parentModel.dateFrom != null && this.isNumericOrDateFilter()) {
+      next = this.rebuildOperatorInput(
+        parentModel.type,
+        MarginFundingCustomerMaintenanceManager.normalizeDateValueForDisplay(parentModel.dateFrom)
+      );
+    } else if (parentModel && parentModel.filter != null && this.isNumericOrDateFilter()) {
+      next = this.rebuildOperatorInput(parentModel.type, parentModel.filter);
+    } else if (parentModel && parentModel.filter != null) {
+      next = String(parentModel.filter);
+    }
+
+    this.currentValue = next;
+    if (this.input && this.input.value !== next) {
+      this.input.value = next;
+    }
+  }
+
+  apply() {
+    if (!this.input) return;
+    const value = this.input.value.trim();
+    this.currentValue = value;
+    const fallbackOperator = this.isNumericOrDateFilter() ? 'equals' : 'contains';
+    const parsedInput = MarginFundingCustomerMaintenanceManager.parseInlineFilterExpression(
+      value,
+      fallbackOperator
+    );
+
+    this.params.parentFilterInstance((instance) => {
+      if (!instance) return;
+      instance.onFloatingFilterChanged(parsedInput.type, parsedInput.value || null);
+    });
+  }
+
+  isNumericOrDateFilter() {
+    const filter = this.params?.column?.getColDef?.()?.filter;
+    return filter === 'agNumberColumnFilter' || filter === 'agDateColumnFilter';
+  }
+
+  rebuildOperatorInput(type, value) {
+    const prefixMap = {
+      equals: '',
+      notEqual: '!=',
+      greaterThan: '>',
+      lessThan: '<',
+      greaterThanOrEqual: '>=',
+      lessThanOrEqual: '<='
+    };
+    const prefix = prefixMap[String(type || '').trim()] ?? '';
+    return `${prefix}${value == null ? '' : String(value)}`;
+  }
+
+  destroy() {
+    if (this.input && this.onKeyDown) {
+      this.input.removeEventListener('keydown', this.onKeyDown);
+    }
+    const list = this.params?.api?.__manualFloatingFilters;
+    if (Array.isArray(list)) {
+      const idx = list.indexOf(this);
+      if (idx >= 0) list.splice(idx, 1);
+    }
+  }
+}
+
 const MarginFundingCustomerMaintenanceManager = {
   gridApi: null,
   gridElement: null,
@@ -243,6 +350,70 @@ const MarginFundingCustomerMaintenanceManager = {
     return cellTime < filterTime ? -1 : 1;
   },
 
+  normalizeDateValueForDisplay(value) {
+    const raw = String(value == null ? '' : value).trim();
+    const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ].*)?$/);
+    if (!isoMatch) return raw;
+    return `${isoMatch[2]}/${isoMatch[3]}/${isoMatch[1]}`;
+  },
+
+  normalizeApiDateValue(value) {
+    const raw = String(value == null ? '' : value).trim();
+    if (!raw) return '';
+
+    const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ].*)?$/);
+    if (isoMatch) {
+      return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+    }
+
+    const usMatch = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (usMatch) {
+      return `${usMatch[3]}-${usMatch[1]}-${usMatch[2]}`;
+    }
+
+    const parsed = new Date(raw);
+    if (Number.isNaN(parsed.getTime())) return raw;
+    const yyyy = parsed.getFullYear();
+    const mm = String(parsed.getMonth() + 1).padStart(2, '0');
+    const dd = String(parsed.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  },
+
+  normalizeFilterModel(field, model) {
+    if (!model || typeof model !== 'object') return null;
+
+    const kind = this.getFieldFilterKind(field);
+    const filterType = String(model.filterType || '').trim();
+
+    if (kind === 'date' || filterType === 'date') {
+      const rawDate = model.dateFrom || model.filter;
+      const normalizedDate = this.normalizeApiDateValue(rawDate);
+      if (!normalizedDate) return null;
+      return {
+        value: normalizedDate,
+        operator: String(model.type || 'equals').trim() || 'equals'
+      };
+    }
+
+    if (kind === 'number' || filterType === 'number') {
+      const rawValue = model.filter;
+      if (rawValue == null || String(rawValue).trim() === '') return null;
+      return {
+        value: String(rawValue).trim(),
+        operator: String(model.type || 'equals').trim() || 'equals'
+      };
+    }
+
+    const rawInput = String(model.rawInput ?? model.filter ?? '').trim();
+    if (!rawInput) return null;
+    const parsed = this.parseInlineFilterExpression(rawInput, 'contains');
+    if (!parsed.value) return null;
+    return {
+      value: parsed.value,
+      operator: parsed.type
+    };
+  },
+
   buildFilterableColumn(column) {
     const field = String(column?.field || column?.colId || '').trim();
     if (!field || field === 'select') return column;
@@ -254,6 +425,8 @@ const MarginFundingCustomerMaintenanceManager = {
       return {
         ...aligned,
         filter: 'agDateColumnFilter',
+        floatingFilter: true,
+        floatingFilterComponent: 'manualApplyFloatingFilter',
         filterParams: {
           buttons: ['apply', 'reset'],
           closeOnApply: true,
@@ -276,6 +449,8 @@ const MarginFundingCustomerMaintenanceManager = {
       return {
         ...aligned,
         filter: 'agNumberColumnFilter',
+        floatingFilter: true,
+        floatingFilterComponent: 'manualApplyFloatingFilter',
         filterValueGetter: (params) => this.getNumericFilterValue(params?.data?.[field]),
         filterParams: {
           buttons: ['apply', 'reset'],
@@ -297,6 +472,8 @@ const MarginFundingCustomerMaintenanceManager = {
     return {
       ...aligned,
       filter: 'agTextColumnFilter',
+      floatingFilter: true,
+      floatingFilterComponent: 'manualApplyFloatingFilter',
       filterParams: {
         buttons: ['apply', 'reset'],
         closeOnApply: true,
@@ -322,27 +499,15 @@ const MarginFundingCustomerMaintenanceManager = {
         });
 
         Object.entries(params.filterModel || {}).forEach(([field, model]) => {
-          const rawValue = String(model?.filter ?? '').trim();
-          if (!rawValue) return;
-          const parsed = this.parseInlineFilterExpression(rawValue, 'contains');
-          if (!parsed.value) return;
+          const parsed = this.normalizeFilterModel(field, model);
+          if (!parsed?.value) return;
           const apiField = this.mapColumnToApiField(field);
           queryParams.set(apiField, parsed.value);
-          queryParams.set(`${apiField}_op`, parsed.type);
+          queryParams.set(`${apiField}_op`, parsed.operator);
         });
 
         try {
           const requestUrl = `${this.resolveApiUrl(this.customerApiEndpoint)}?${queryParams.toString()}`;
-          console.log('[MFC][getRows][request]', {
-            startRow: params.startRow,
-            endRow: params.endRow,
-            pageSize,
-            page,
-            sortBy: this.mapColumnToApiField(sortModel?.colId || 'uniqueKeyIdInternal'),
-            sortDirection: String(sortModel?.sort || 'asc').toUpperCase(),
-            url: requestUrl
-          });
-
           const response = await fetch(requestUrl, {
             method: 'GET',
             headers: { Accept: 'application/json' },
@@ -356,12 +521,6 @@ const MarginFundingCustomerMaintenanceManager = {
           const payload = await response.json();
           const rows = Array.isArray(payload?.content) ? payload.content : [];
           const totalRows = Number(payload?.totalElements ?? payload?.total_elements ?? rows.length ?? 0);
-          console.log('[MFC][getRows][response]', {
-            payload,
-            rowsLength: rows.length,
-            firstRow: rows[0] || null,
-            totalRows
-          });
           params.successCallback(rows, totalRows);
         } catch (error) {
           console.error('Margin funding customer maintenance load failed:', error);
@@ -864,7 +1023,8 @@ const MarginFundingCustomerMaintenanceManager = {
             '<span class="gt-sort-icon gt-sort-icon--desc" aria-hidden="true"><svg viewBox="0 0 8 12" focusable="false"><path d="M4 11L1 8H7L4 11Z"></path></svg></span>'
         },
         components: {
-          gtPageSelectHeader: GtPageSelectHeader
+          gtPageSelectHeader: GtPageSelectHeader,
+          manualApplyFloatingFilter: MarginFundingCustomerManualFloatingFilter
         },
         localeText: {
           equals: 'Equals',
@@ -885,9 +1045,16 @@ const MarginFundingCustomerMaintenanceManager = {
           unSortIcon: true,
           wrapHeaderText: true,
           autoHeaderHeight: true,
+          suppressFloatingFilterButton: false,
+          floatingFilterComponent: 'manualApplyFloatingFilter',
+          floatingFilterComponentParams: {
+            suppressFilterButton: false
+          },
           filterParams: {
             buttons: ['apply', 'reset'],
-            closeOnApply: true
+            closeOnApply: true,
+            maxNumConditions: 1,
+            numAlwaysVisibleConditions: 1
           }
         }
       },
@@ -940,6 +1107,14 @@ const MarginFundingCustomerMaintenanceManager = {
 
     this.gridApi = DynamicGrid.createGrid(gridConfig);
     this.gridApi?.setGridOption?.('datasource', this.buildDatasource());
+    if (this.gridApi) {
+      this.gridApi.applyPendingFloatingFilters = () => {
+        const filters = this.gridApi.__manualFloatingFilters;
+        if (Array.isArray(filters)) {
+          filters.forEach((filter) => filter?.apply?.());
+        }
+      };
+    }
 
     window.gridApi = this.gridApi;
     this.initViewActions();
