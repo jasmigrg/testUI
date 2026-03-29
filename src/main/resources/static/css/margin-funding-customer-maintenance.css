@@ -53,6 +53,24 @@
   font-size: var(--mfi-cell-font-size, 13px);
 }
 
+#mfcGrid.ag-theme-alpine.app-grid .ag-floating-filter-button {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  min-width: 28px;
+  height: 30px;
+  margin-left: 6px;
+}
+
+#mfcGrid.ag-theme-alpine.app-grid .ag-floating-filter-button .ag-icon,
+#mfcGrid.ag-theme-alpine.app-grid .ag-floating-filter-button .ag-icon-filter,
+#mfcGrid.ag-theme-alpine.app-grid .ag-floating-filter-button .ag-icon-filter::before {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+  fill: #ffffff !important;
+}
+
 #mfcGrid .ag-cell.cell-align-left {
   text-align: left;
 }
