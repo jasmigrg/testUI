@@ -182,7 +182,18 @@ const MarginFundingCustomerMaintenanceManager = {
         });
 
         try {
-          const response = await fetch(`${this.resolveApiUrl(this.customerApiEndpoint)}?${queryParams.toString()}`, {
+          const requestUrl = `${this.resolveApiUrl(this.customerApiEndpoint)}?${queryParams.toString()}`;
+          console.log('[MFC][getRows][request]', {
+            startRow: params.startRow,
+            endRow: params.endRow,
+            pageSize,
+            page,
+            sortBy: this.mapColumnToApiField(sortModel?.colId || 'uniqueKeyIdInternal'),
+            sortDirection: String(sortModel?.sort || 'asc').toUpperCase(),
+            url: requestUrl
+          });
+
+          const response = await fetch(requestUrl, {
             method: 'GET',
             headers: { Accept: 'application/json' },
             credentials: 'same-origin'
@@ -195,6 +206,12 @@ const MarginFundingCustomerMaintenanceManager = {
           const payload = await response.json();
           const rows = Array.isArray(payload?.content) ? payload.content : [];
           const totalRows = Number(payload?.totalElements ?? payload?.total_elements ?? rows.length ?? 0);
+          console.log('[MFC][getRows][response]', {
+            payload,
+            rowsLength: rows.length,
+            firstRow: rows[0] || null,
+            totalRows
+          });
           params.successCallback(rows, totalRows);
         } catch (error) {
           console.error('Margin funding customer maintenance load failed:', error);
