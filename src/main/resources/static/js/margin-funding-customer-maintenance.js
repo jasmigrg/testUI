@@ -1019,6 +1019,15 @@ const MarginFundingCustomerMaintenanceManager = {
       });
     }
 
+    const addBtn = document.querySelector('.gt-action-btn[data-action="add"]');
+    if (addBtn) {
+      addBtn.addEventListener('click', () => {
+        window.location.assign(
+          window.MFC_ADD_PAGE_URL || '/margin-funding-customer-maintenance/add'
+        );
+      });
+    }
+
     if (window.GridToolbar && this.gridApi && this.gridElement) {
       window.GridToolbar.bindDensityControls({
         gridApi: this.gridApi,

@@ -21,6 +21,7 @@
   <script>
     window.API_BASE_URL = window.API_BASE_URL || '${(apiBaseUrl!'')?js_string}';
     window.GRID_PREF_TEST_USER_ID = window.GRID_PREF_TEST_USER_ID || '${(userId!'defaultUser')?js_string}';
+    window.MFC_ADD_PAGE_URL = window.MFC_ADD_PAGE_URL || '${ctx}/margin-funding-customer-maintenance/add';
     window.GRID_PREF_SCREEN_ID_BY_GRID = Object.assign({}, window.GRID_PREF_SCREEN_ID_BY_GRID, {
       mfcGrid: 'id_margin_funding_customer_maintenance'
     });
