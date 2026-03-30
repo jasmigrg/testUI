@@ -1,15 +1,15 @@
 const MFC_FIELD_DEFS = [
-  { field: 'programId', headerName: 'Program ID', minWidth: 180 },
-  { field: 'effectiveDate', headerName: 'Effective Date', minWidth: 180, type: 'date' },
-  { field: 'terminationDate', headerName: 'Termination Date', minWidth: 190, type: 'date' },
   { field: 'recordId', headerName: 'Vendor Program', minWidth: 180, type: 'number' },
-  { field: 'vendorFamilyNo', headerName: 'Vendor Family Number', minWidth: 220, type: 'number' },
+  { field: 'terminationDate', headerName: 'Termination Date', minWidth: 190, type: 'date' },
+  { field: 'workStationId', headerName: 'Workstation ID', minWidth: 180 },
   { field: 'accountType', headerName: 'Account Type', minWidth: 160 },
   { field: 'customerNumber', headerName: 'Customer Number', minWidth: 190, type: 'number' },
   { field: 'includeExclude', headerName: 'I/E', minWidth: 120 },
-  { field: 'customerName', headerName: 'Customer Name', minWidth: 220 },
-  { field: 'vendorFamilyName', headerName: 'Vendor Family Name', minWidth: 220 },
-  { field: 'notes', headerName: 'Notes', minWidth: 220 }
+  { field: 'userId', headerName: 'User ID', minWidth: 150 },
+  { field: 'effectiveDate', headerName: 'Effective Date', minWidth: 180, type: 'date' },
+  { field: 'programId', headerName: 'Program ID', minWidth: 180 },
+  { field: 'updatedAt', headerName: 'Updated At', minWidth: 220 },
+  { field: 'vendorFamilyNo', headerName: 'Vendor Family Number', minWidth: 220, type: 'number' },
 ];
 
 const MFC_DATE_FIELDS = new Set(['effectiveDate', 'terminationDate']);
@@ -19,18 +19,32 @@ const MFC_NUMBER_FIELDS = new Set([
   'customerNumber'
 ]);
 
+const MFC_HEADER_ALIASES = {
+  recordId: ['vendorprogram'],
+  workStationId: ['workstationid', 'workstation', 'workstnid'],
+  includeExclude: ['ie', 'includeexclude', 'inlcudeexclude'],
+  updatedAt: ['updatedat', 'updateddate', 'dateupdated'],
+  vendorFamilyNo: ['vendorfamilynumber', 'vendorfamilyno'],
+  customerNumber: ['customerno'],
+  userId: ['userid'],
+  programId: ['programid'],
+  effectiveDate: ['effectivedate'],
+  terminationDate: ['terminationdate'],
+  accountType: ['accounttype']
+};
+
 const MFC_OUTBOUND_FIELDS = [
-  { localField: 'programId', backendField: 'programId' },
-  { localField: 'effectiveDate', backendField: 'effectiveDate' },
-  { localField: 'terminationDate', backendField: 'terminationDate' },
   { localField: 'recordId', backendField: 'recordId' },
-  { localField: 'vendorFamilyNo', backendField: 'vendorFamilyNo' },
+  { localField: 'terminationDate', backendField: 'terminationDate' },
+  { localField: 'workStationId', backendField: 'workStationId', useContextFallback: 'workStationId' },
   { localField: 'accountType', backendField: 'accountType' },
   { localField: 'customerNumber', backendField: 'customerNumber' },
   { localField: 'includeExclude', backendField: 'includeExclude' },
-  { localField: 'customerName', backendField: 'customerName' },
-  { localField: 'vendorFamilyName', backendField: 'vendorFamilyName' },
-  { localField: 'notes', backendField: 'notes' }
+  { localField: 'userId', backendField: 'userId', useContextFallback: 'userId' },
+  { localField: 'effectiveDate', backendField: 'effectiveDate' },
+  { localField: 'programId', backendField: 'programId', useContextFallback: 'programId' },
+  { localField: 'updatedAt', backendField: 'updatedAt' },
+  { localField: 'vendorFamilyNo', backendField: 'vendorFamilyNo' }
 ];
 
 const MarginFundingCustomerMaintenanceAddPage = {
@@ -45,7 +59,7 @@ const MarginFundingCustomerMaintenanceAddPage = {
   detachCommunityPaste: null,
   pollTimer: null,
   maxPasteRows: 5000,
-  maxPasteCols: 10,
+  maxPasteCols: 11,
   maxPasteCells: 50000,
 
   init() {
@@ -1005,8 +1019,13 @@ const MarginFundingCustomerMaintenanceAddPage = {
 
   toBackendRecord(row) {
     const payload = {};
-    MFC_OUTBOUND_FIELDS.forEach(({ localField, backendField }) => {
-      payload[backendField] = row[localField] == null ? '' : row[localField];
+    const context = this.resolveUploadContext();
+    MFC_OUTBOUND_FIELDS.forEach(({ localField, backendField, useContextFallback }) => {
+      let value = row[localField];
+      if ((value == null || String(value).trim() === '') && useContextFallback) {
+        value = context[useContextFallback];
+      }
+      payload[backendField] = value == null ? '' : value;
     });
     return payload;
   },
@@ -1021,7 +1040,9 @@ const MarginFundingCustomerMaintenanceAddPage = {
     if (!normalizedHeader) return '';
 
     const match = MFC_FIELD_DEFS.find(({ field, headerName }) => (
-      this.normalizeHeader(field) === normalizedHeader || this.normalizeHeader(headerName) === normalizedHeader
+      this.normalizeHeader(field) === normalizedHeader
+      || this.normalizeHeader(headerName) === normalizedHeader
+      || (MFC_HEADER_ALIASES[field] || []).includes(normalizedHeader)
     ));
 
     if (!match) return '';

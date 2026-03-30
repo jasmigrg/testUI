@@ -205,6 +205,7 @@ const UomDiffPage = {
   pageRequestCacheByTab: {},
   apiBaseUrl: '',
   controlApiEndpoint: '/api/v1/gm-uom-diff-input-control/paginated',
+  controlUpdateEndpoint: '/api/v1/gm-uom-diff-input-control/gm-uom-diff-input-control',
   controlDownloadEndpoint: '/api/v1/gm-uom-diff-input-control/download',
   exclusionApiEndpoint: '/api/v1/gm-uom-diff-input-exclusion/paginated',
   exclusionDownloadEndpoint: '/api/v1/gm-uom-diff-input-exclusion/download',
@@ -1601,16 +1602,36 @@ const UomDiffPage = {
         uomDiffInputIncludeMonth: nextValue,
         _controlMonthInvalid: true
       });
-      this.showInfo('UOM Diff Input Include Month must be a 2-digit month between 01 and 12.', 'error');
+      this.showInfo('UOM Diff Input Include Month must be a whole number between 1 and 12.', 'error');
       return;
     }
 
-    this.applyControlRowUpdate(event.node, {
+    const updatedRow = {
       ...event.data,
-      uomDiffInputIncludeMonth: nextValue,
+      uomDiffInputIncludeMonth: this.normalizeMonthDisplay(nextValue),
       uomDiffInputUpdateDate: this.getTodayUsDate(),
       _controlMonthInvalid: false
-    });
+    };
+
+    const persistResult = this.persistControlRowUpdate(updatedRow);
+    if (persistResult && typeof persistResult.then === 'function') {
+      persistResult
+        .then((savedRow) => {
+          this.applyControlRowUpdate(event.node, savedRow || updatedRow);
+        })
+        .catch((error) => {
+          console.error('UOM Diff input control update failed:', error);
+          this.applyControlRowUpdate(event.node, {
+            ...event.data,
+            uomDiffInputIncludeMonth: previousValue,
+            _controlMonthInvalid: false
+          });
+          this.showInfo('Failed to save UOM Diff Input Include Month.', 'error');
+        });
+      return;
+    }
+
+    this.applyControlRowUpdate(event.node, persistResult || updatedRow);
   },
 
   applyControlRowUpdate(rowNode, rowData) {
@@ -1624,7 +1645,37 @@ const UomDiffPage = {
   },
 
   isValidControlMonth(value) {
-    return /^(0[1-9]|1[0-2])$/.test(String(value ?? '').trim());
+    const raw = String(value ?? '').trim();
+    if (!/^\d+$/.test(raw)) return false;
+    const numeric = Number(raw);
+    return Number.isInteger(numeric) && numeric >= 1 && numeric <= 12;
+  },
+
+  persistControlRowUpdate(rowData) {
+    const payload = this.buildControlUpdatePayload(rowData);
+    return this.fetchJson(this.resolveApiUrl(this.controlUpdateEndpoint), {
+      method: 'PUT',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json'
+      },
+      credentials: 'same-origin',
+      body: JSON.stringify(payload)
+    }).then((responseBody) => {
+      if (responseBody?.data && !Array.isArray(responseBody.data)) {
+        return this.normalizeControlRow(responseBody.data);
+      }
+      return this.normalizeControlRow({
+        uomDiffInputUpdateDate: this.toIsoDate(rowData.uomDiffInputUpdateDate),
+        uomDiffInputIncludeMonth: rowData.uomDiffInputIncludeMonth
+      });
+    });
+  },
+
+  buildControlUpdatePayload(rowData) {
+    return {
+      uomDiffInputIncludeMonth: Number(String(rowData?.uomDiffInputIncludeMonth ?? '').trim())
+    };
   },
 
   getTodayUsDate() {
