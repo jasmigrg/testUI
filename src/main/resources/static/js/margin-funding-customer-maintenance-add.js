@@ -8,7 +8,6 @@ const MFC_FIELD_DEFS = [
   { field: 'userId', headerName: 'User ID', minWidth: 150 },
   { field: 'effectiveDate', headerName: 'Effective Date', minWidth: 180, type: 'date' },
   { field: 'programId', headerName: 'Program ID', minWidth: 180 },
-  { field: 'updatedAt', headerName: 'Updated At', minWidth: 220 },
   { field: 'vendorFamilyNo', headerName: 'Vendor Family Number', minWidth: 220, type: 'number' },
 ];
 
@@ -23,7 +22,6 @@ const MFC_HEADER_ALIASES = {
   recordId: ['vendorprogram'],
   workStationId: ['workstationid', 'workstation', 'workstnid'],
   includeExclude: ['ie', 'includeexclude', 'inlcudeexclude'],
-  updatedAt: ['updatedat', 'updateddate', 'dateupdated'],
   vendorFamilyNo: ['vendorfamilynumber', 'vendorfamilyno'],
   customerNumber: ['customerno'],
   userId: ['userid'],
@@ -43,7 +41,6 @@ const MFC_OUTBOUND_FIELDS = [
   { localField: 'userId', backendField: 'userId', useContextFallback: 'userId' },
   { localField: 'effectiveDate', backendField: 'effectiveDate' },
   { localField: 'programId', backendField: 'programId', useContextFallback: 'programId' },
-  { localField: 'updatedAt', backendField: 'updatedAt' },
   { localField: 'vendorFamilyNo', backendField: 'vendorFamilyNo' }
 ];
 
@@ -59,7 +56,7 @@ const MarginFundingCustomerMaintenanceAddPage = {
   detachCommunityPaste: null,
   pollTimer: null,
   maxPasteRows: 5000,
-  maxPasteCols: 11,
+  maxPasteCols: 10,
   maxPasteCells: 50000,
 
   init() {
@@ -143,8 +140,15 @@ const MarginFundingCustomerMaintenanceAddPage = {
           unSortIcon: true,
           wrapHeaderText: true,
           autoHeaderHeight: true,
+          suppressFloatingFilterButton: false,
           editable: (params) => this.isEditableCell(params),
-          resizable: true
+          resizable: true,
+          filterParams: {
+            buttons: ['apply', 'reset'],
+            closeOnApply: true,
+            maxNumConditions: 1,
+            numAlwaysVisibleConditions: 1
+          }
         }
       },
       columns: [
@@ -231,6 +235,8 @@ const MarginFundingCustomerMaintenanceAddPage = {
     } else if (column.type === 'number') {
       config.filter = 'agNumberColumnFilter';
       config.filterValueGetter = (params) => this.numberFilterValue(params?.data?.[column.field]);
+    } else {
+      config.filter = 'agTextColumnFilter';
     }
 
     return config;
