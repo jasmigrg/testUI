@@ -35,6 +35,11 @@
                     </a>
                 </li>
                 <li class="submenu-item">
+                    <a href="/margin-funding-contract-maintenance" class="submenu-link" title="Margin Funding Contract Maintenance">
+                        <span class="text">Margin Funding Contract Maintenance</span>
+                    </a>
+                </li>
+                <li class="submenu-item">
                     <a href="/cams-eligibility" class="submenu-link" title="CAMS Eligibility">
                         <span class="text">CAMS Eligibility</span>
                     </a>

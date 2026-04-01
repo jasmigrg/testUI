@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="${ctx}/css/grid-manager.css">
   <link rel="stylesheet" href="${ctx}/css/grid-page.css">
   <link rel="stylesheet" href="${ctx}/css/action-toolbar.css">
+  <link rel="stylesheet" href="${ctx}/css/page-toast.css">
   <link rel="stylesheet" href="${ctx}/css/margin-funding-maintenance.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
@@ -17,10 +18,20 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.1/styles/ag-grid.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.1/styles/ag-theme-alpine.css">
 
+  <script>
+    window.API_BASE_URL = window.API_BASE_URL || '${(apiBaseUrl!'')?js_string}';
+    window.GRID_PREF_TEST_USER_ID = window.GRID_PREF_TEST_USER_ID || '${(userId!'defaultUser')?js_string}';
+    window.MFI_ADD_PAGE_URL = window.MFI_ADD_PAGE_URL || '${ctx}/margin-funding-maintenance/add';
+    window.GRID_PREF_SCREEN_ID_BY_GRID = Object.assign({}, window.GRID_PREF_SCREEN_ID_BY_GRID, {
+      mfiGrid: 'id_margin_funding_item_maintenance'
+    });
+  </script>
+
   <script src="${ctx}/js/sidebar.js" defer></script>
   <script src="${ctx}/js/dynamic-grid.js" defer></script>
   <script src="${ctx}/js/grid-manager.js" defer></script>
   <script src="${ctx}/js/grid-toolbar.js" defer></script>
+  <script src="${ctx}/js/page-toast.js" defer></script>
   <script src="${ctx}/js/margin-funding-maintenance.js" defer></script>
 
   <!-- AG-Grid JavaScript -->
@@ -49,7 +60,7 @@
 
         <#assign iconBack><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6L9 12L15 18" /></svg></#assign>
         <#assign iconAdd><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5V19M5 12H19" /></svg></#assign>
-        <#assign iconTools><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8.5A3.5 3.5 0 1 1 12 15.5A3.5 3.5 0 0 1 12 8.5Z" /><path d="M19.4 15A1 1 0 0 0 19.6 16.1L19.7 16.2A1 1 0 0 1 18.3 17.6L18.2 17.5A1 1 0 0 0 17.1 17.3A1 1 0 0 0 16.5 18.2V18.5A1 1 0 0 1 14.5 18.5V18.2A1 1 0 0 0 13.9 17.3A1 1 0 0 0 12.8 17.5L12.7 17.6A1 1 0 0 1 11.3 16.2L11.4 16.1A1 1 0 0 0 11.6 15A1 1 0 0 0 10.7 14.4H10.4A1 1 0 0 1 10.4 12.4H10.7A1 1 0 0 0 11.6 11.8A1 1 0 0 0 11.4 10.7L11.3 10.6A1 1 0 0 1 12.7 9.2L12.8 9.3A1 1 0 0 0 13.9 9.1A1 1 0 0 0 14.5 8.2V7.9A1 1 0 0 1 16.5 7.9V8.2A1 1 0 0 0 17.1 9.1A1 1 0 0 0 18.2 9.3L18.3 9.2A1 1 0 0 1 19.7 10.6L19.6 10.7A1 1 0 0 0 19.4 11.8A1 1 0 0 0 20.3 12.4H20.6A1 1 0 0 1 20.6 14.4H20.3A1 1 0 0 0 19.4 15Z" /></svg></#assign>
+        <#assign iconHeart><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20L4.7 12.7A4.8 4.8 0 1 1 11.5 5.9L12 6.4L12.5 5.9A4.8 4.8 0 1 1 19.3 12.7L12 20Z" /></svg></#assign>
         <#assign iconDisable><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="6" width="14" height="12" rx="2" /><path d="M9 9L15 15M15 9L9 15" /></svg></#assign>
         <#assign iconUpdate><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="2" /><path d="M8 3V7M16 3V7M4 10H20M8 14H12" /></svg></#assign>
         <#assign iconRefresh><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12A8 8 0 1 1 17.6 6.2" /><path d="M20 4V10H14" /></svg></#assign>
@@ -57,7 +68,7 @@
         <#assign actionItems=[
           {"id":"back","label":"Back","iconOnly":true,"className":"icon-only is-back","iconHtml":iconBack},
           {"id":"add","label":"Add","iconOnly":true,"className":"icon-only is-add","iconHtml":iconAdd},
-          {"id":"tools","label":"Tools","className":"is-tools has-divider","iconHtml":iconTools},
+          {"id":"favorite","label":"Favorite","iconOnly":true,"className":"icon-only has-divider","iconHtml":iconHeart},
           {"id":"disable","label":"Disable","className":"has-divider","iconHtml":iconDisable},
           {"id":"update-termination-date","label":"Update Termination Date","ariaLabel":"Update Termination Date","className":"has-divider","iconHtml":iconUpdate},
           {"id":"refresh","label":"Refresh","iconHtml":iconRefresh},

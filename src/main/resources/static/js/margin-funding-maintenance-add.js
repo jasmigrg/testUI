@@ -1,89 +1,55 @@
-const CUSTOMER_GPO_FIELD_DEFS = [
-  { field: 'uniqueKeyId', headerName: 'Unique Key ID', minWidth: 150, editable: false },
-  { field: 'customerPriority', headerName: 'Customer Priority', minWidth: 160 },
-  { field: 'itemPriority', headerName: 'Item Priority', minWidth: 140 },
-  { field: 'accountType', headerName: 'Account Type', minWidth: 140 },
-  { field: 'accountTypeDescription', headerName: 'Account Type Description (from UD 56/AT)', minWidth: 280 },
-  { field: 'customerNumber', headerName: 'Customer Number', minWidth: 160 },
-  { field: 'accountName', headerName: 'Account Name', minWidth: 180 },
-  { field: 'gpoNumber', headerName: 'GPO Number', minWidth: 140 },
-  { field: 'gpoName', headerName: 'GPO Name', minWidth: 150 },
-  { field: 'progNum', headerName: 'Prog Num', minWidth: 130 },
-  { field: 'programType', headerName: 'Program Type', minWidth: 150 },
-  { field: 'progSubNum', headerName: 'Prog Sub Num', minWidth: 150 },
-  { field: 'programSubType', headerName: 'Program Sub Type', minWidth: 170 },
-  { field: 'effectiveFrom', headerName: 'Effective From', minWidth: 150, type: 'date' },
-  { field: 'terminationDate', headerName: 'Termination Date', minWidth: 150, type: 'date' },
-  { field: 'disableDate', headerName: 'Disable Date', minWidth: 140, type: 'date' },
-  { field: 'productFamily', headerName: 'Product Family', minWidth: 160 },
-  { field: 'productCategory', headerName: 'Product Category', minWidth: 160 },
-  { field: 'productGroup', headerName: 'Product Group', minWidth: 150 },
-  { field: 'productSubCategory', headerName: 'Product Sub Category', minWidth: 180 },
-  { field: 'mckBrandContractPercent', headerName: 'McK Brand Contract %', minWidth: 180, type: 'number' },
-  { field: 'mckBrandNonContractPercent', headerName: 'McK Brand Non Contract %', minWidth: 200, type: 'number' },
-  { field: 'allOtherContractPercent', headerName: 'All Other Contract %', minWidth: 180, type: 'number' },
-  { field: 'allOtherNonContractPercent', headerName: 'All Other Non Contract %', minWidth: 200, type: 'number' },
-  { field: 'notes', headerName: 'Notes', minWidth: 180 },
-  { field: 'createdByUser', headerName: 'Created By User', minWidth: 160, editable: false },
-  { field: 'createdDate', headerName: 'Created Date', minWidth: 140, editable: false, type: 'date' },
-  { field: 'createTime', headerName: 'Create Time', minWidth: 130, editable: false },
-  { field: 'dateUpdated', headerName: 'Date Updated', minWidth: 140, editable: false, type: 'date' },
-  { field: 'timeUpdated', headerName: 'Time Updated', minWidth: 140, editable: false },
-  { field: 'programId', headerName: 'Program ID', minWidth: 130 },
-  { field: 'userId', headerName: 'User ID', minWidth: 120 },
-  { field: 'workStnId', headerName: 'Work Stn ID', minWidth: 140 }
+const MFC_FIELD_DEFS = [
+  { field: 'userId', headerName: 'User ID', minWidth: 150 },
+  { field: 'programId', headerName: 'Program ID', minWidth: 180 },
+  { field: 'workStationId', headerName: 'Workstation ID', minWidth: 180 },
+  { field: 'effectiveDate', headerName: 'Effective Date', minWidth: 180, type: 'date' },
+  { field: 'terminationDate', headerName: 'Termination Date', minWidth: 190, type: 'date' },
+  { field: 'recordId', headerName: 'Vendor Program', minWidth: 180, type: 'number' },
+  { field: 'vendorFamilyNumber', headerName: 'Vendor Family Number', minWidth: 220, type: 'number' },
+  { field: 'itemNum', headerName: 'Item Number', minWidth: 170, type: 'number' },
+  { field: 'distFeeContractPercentage', headerName: 'Distribution Fee Contract %', minWidth: 240, type: 'number' },
+  { field: 'distFeeNonContractPercentage', headerName: 'Distribution Fee Non-Contract %', minWidth: 260, type: 'number' },
+  { field: 'marginFundingPctType', headerName: 'Margin Funding Percent Type', minWidth: 240 }
 ];
 
-const CUSTOMER_GPO_DATE_FIELDS = new Set(['effectiveFrom', 'terminationDate', 'disableDate', 'createdDate', 'dateUpdated']);
-const CUSTOMER_GPO_NUMBER_FIELDS = new Set([
-  'mckBrandContractPercent',
-  'mckBrandNonContractPercent',
-  'allOtherContractPercent',
-  'allOtherNonContractPercent'
+const MFC_DATE_FIELDS = new Set(['effectiveDate', 'terminationDate']);
+const MFC_NUMBER_FIELDS = new Set([
+  'recordId',
+  'vendorFamilyNumber',
+  'itemNum',
+  'distFeeContractPercentage',
+  'distFeeNonContractPercentage'
 ]);
 
-const CUSTOMER_GPO_BACKEND_ALIASES = {
-  mckBrandContractPercent: ['mckBrandContractPct'],
-  mckBrandNonContractPercent: ['mckBrandNonContractPct'],
-  allOtherContractPercent: ['allOtherContractPct'],
-  allOtherNonContractPercent: ['allOtherNonContractPct'],
-  workStnId: ['workStationId'],
-  createdDate: ['createDate']
+const MFC_HEADER_ALIASES = {
+  recordId: ['vendorprogram'],
+  workStationId: ['workstationid', 'workstation', 'workstnid'],
+  userId: ['userid'],
+  programId: ['programid'],
+  effectiveDate: ['effectivedate'],
+  terminationDate: ['terminationdate'],
+  vendorFamilyNumber: ['vendorfamilynumber', 'vendorfamilyno'],
+  itemNum: ['itemnumber', 'itemnum'],
+  distFeeContractPercentage: ['distributionfeecontract', 'distributionfeecontractpercentage', 'distfeecontractpercentage'],
+  distFeeNonContractPercentage: ['distributionfeenoncontract', 'distributionfeenoncontractpercentage', 'distfeenoncontractpercentage'],
+  marginFundingPctType: ['marginfundingpercenttype', 'marginfundingpcttype']
 };
 
-const CUSTOMER_GPO_OUTBOUND_FIELDS = [
+const MFC_OUTBOUND_FIELDS = [
   { localField: 'userId', backendField: 'userId', useContextFallback: 'userId' },
   { localField: 'programId', backendField: 'programId', useContextFallback: 'programId' },
-  { localField: 'workStnId', backendField: 'workStationId', useContextFallback: 'workStationId' },
-  { localField: 'effectiveFrom', backendField: 'effectiveFrom' },
+  { localField: 'workStationId', backendField: 'workStationId', useContextFallback: 'workStationId' },
+  { localField: 'effectiveDate', backendField: 'effectiveDate' },
   { localField: 'terminationDate', backendField: 'terminationDate' },
-  { localField: 'disableDate', backendField: 'disableDate' },
-  { localField: 'customerPriority', backendField: 'customerPriority' },
-  { localField: 'itemPriority', backendField: 'itemPriority' },
-  { localField: 'accountType', backendField: 'accountType' },
-  { localField: 'accountTypeDescription', backendField: 'accountTypeDescription' },
-  { localField: 'customerNumber', backendField: 'customerNumber' },
-  { localField: 'accountName', backendField: 'accountName' },
-  { localField: 'gpoNumber', backendField: 'gpoNumber' },
-  { localField: 'gpoName', backendField: 'gpoName' },
-  { localField: 'progNum', backendField: 'progNum' },
-  { localField: 'programType', backendField: 'programType' },
-  { localField: 'progSubNum', backendField: 'progSubNum' },
-  { localField: 'programSubType', backendField: 'programSubType' },
-  { localField: 'productFamily', backendField: 'productFamily' },
-  { localField: 'productCategory', backendField: 'productCategory' },
-  { localField: 'productGroup', backendField: 'productGroup' },
-  { localField: 'productSubCategory', backendField: 'productSubCategory' },
-  { localField: 'mckBrandContractPercent', backendField: 'mckBrandContractPct' },
-  { localField: 'mckBrandNonContractPercent', backendField: 'mckBrandNonContractPct' },
-  { localField: 'allOtherContractPercent', backendField: 'allOtherContractPct' },
-  { localField: 'allOtherNonContractPercent', backendField: 'allOtherNonContractPct' },
-  { localField: 'notes', backendField: 'notes' },
-  { localField: 'createdByUser', backendField: 'createdByUser' },
-  { localField: 'createdDate', backendField: 'createDate' }
+  { localField: 'recordId', backendField: 'recordId' },
+  { localField: 'vendorFamilyNumber', backendField: 'vendorFamilyNumber' },
+  { localField: 'itemNum', backendField: 'itemNum' },
+  { localField: 'distFeeContractPercentage', backendField: 'distFeeContractPercentage' },
+  { localField: 'distFeeNonContractPercentage', backendField: 'distFeeNonContractPercentage' },
+  { localField: 'marginFundingPctType', backendField: 'marginFundingPctType' }
 ];
 
-const CustomerGpoAdjustmentsAddPage = {
+const MarginFundingItemMaintenanceAddPage = {
   entityName: '',
   gridApi: null,
   gridElement: null,
@@ -95,25 +61,27 @@ const CustomerGpoAdjustmentsAddPage = {
   detachCommunityPaste: null,
   pollTimer: null,
   maxPasteRows: 5000,
-  maxPasteCols: 40,
-  maxPasteCells: 200000,
+  maxPasteCols: 10,
+  maxPasteCells: 50000,
 
   init() {
-    this.entityName = String(window.CUSTOMER_GPO_ADJUSTMENTS_ENTITY_NAME || 'customer-gpo-adjustment').trim();
+    this.entityName = String(
+      window.MFI_ENTITY_NAME || 'distribution-fee-item-attribute'
+    ).trim();
     this.cacheDom();
     this.initGrid();
     this.initBatchSectionControls();
     this.initBatchTable();
     this.initBulkUploadModal();
-    this.bindBulkUploadAction();
     this.bindToolbarActions();
+    this.bindBulkUploadAction();
     this.initViewActions();
     this.restoreJobs();
   },
 
   cacheDom() {
-    this.uploadStatusRow = document.getElementById('customerGpoUploadStatusRow');
-    this.uploadStatusInputs = Array.from(document.querySelectorAll('input[name="customerGpoUploadStatus"]'));
+    this.uploadStatusRow = document.getElementById('screenAddUploadStatusRow');
+    this.uploadStatusInputs = Array.from(document.querySelectorAll('input[name="mfcUploadStatus"]'));
     this.batchSection = document.querySelector('.bulk-upload-batch-section');
     this.batchCollapseBtn = document.getElementById('bulkUploadBatchCollapseBtn');
     this.batchInfoText = this.batchSection?.querySelector('.bulk-upload-batch-info-text') || null;
@@ -127,7 +95,7 @@ const CustomerGpoAdjustmentsAddPage = {
 
   createBlankRow() {
     const row = {};
-    CUSTOMER_GPO_FIELD_DEFS.forEach(({ field }) => {
+    MFC_FIELD_DEFS.forEach(({ field }) => {
       row[field] = '';
     });
     row.uploadStatus = '';
@@ -136,8 +104,8 @@ const CustomerGpoAdjustmentsAddPage = {
     row.fieldErrorMessages = {};
     row.editedFields = [];
     row.wasEditedAfterError = false;
-    row.mainTableId = null;
     row.isBackendRow = false;
+    row.rowNumber = null;
     return row;
   },
 
@@ -147,7 +115,7 @@ const CustomerGpoAdjustmentsAddPage = {
       : null;
 
     this.gridApi = DynamicGrid.createGrid({
-      gridElementId: 'customerGpoAdjustmentsAddGrid',
+      gridElementId: 'mfiMaintenanceAddGrid',
       paginationType: 'client',
       pageSize: 20,
       floatingFilter: true,
@@ -191,9 +159,16 @@ const CustomerGpoAdjustmentsAddPage = {
           unSortIcon: true,
           wrapHeaderText: true,
           autoHeaderHeight: true,
+          suppressFloatingFilterButton: false,
           editable: (params) => this.isEditableCell(params),
-          resizable: true
-        },
+          resizable: true,
+          filterParams: {
+            buttons: ['apply', 'reset'],
+            closeOnApply: true,
+            maxNumConditions: 1,
+            numAlwaysVisibleConditions: 1
+          }
+        }
       },
       columns: [
         {
@@ -214,19 +189,20 @@ const CustomerGpoAdjustmentsAddPage = {
           editable: false,
           suppressSizeToFit: true
         },
-        ...CUSTOMER_GPO_FIELD_DEFS.map((column) => this.buildColumn(column, dateComparator))
+        ...MFC_FIELD_DEFS.map((column) => this.buildColumn(column, dateComparator))
       ]
     });
 
-    this.gridElement = document.getElementById('customerGpoAdjustmentsAddGrid');
+    this.gridElement = document.getElementById('mfiMaintenanceAddGrid');
     if (!this.gridApi) return;
 
     if (typeof this.detachCommunityPaste === 'function') {
       this.detachCommunityPaste();
       this.detachCommunityPaste = null;
     }
+
     if (window.CommunityGridPaste?.attach) {
-      const pasteableFields = CUSTOMER_GPO_FIELD_DEFS.filter((column) => column.editable !== false).map((column) => column.field);
+      const pasteableFields = MFC_FIELD_DEFS.map((column) => column.field);
       this.detachCommunityPaste = window.CommunityGridPaste.attach({
         gridElement: this.gridElement,
         gridApi: this.gridApi,
@@ -238,7 +214,7 @@ const CustomerGpoAdjustmentsAddPage = {
         ensureRowCapacity: (rowCount, startRowIndex) => this.ensureRowCapacityForPaste(rowCount, startRowIndex),
         normalizeRow: (row) => this.normalizeRow(row),
         validateRow: () => ({ isValid: true, errors: [] }),
-        resolveHeaderField: (header) => this.resolvePasteHeaderField(header, pasteableFields),
+        resolveHeaderField: (header, allowedFields) => this.resolvePasteHeaderField(header, allowedFields),
         requireHeaderMapping: true,
         headerMatchThreshold: 3,
         onApplied: () => this.syncUploadedRowsFromGrid(true)
@@ -256,7 +232,7 @@ const CustomerGpoAdjustmentsAddPage = {
     this.applyDefaultDensity();
     setTimeout(() => {
       if (typeof GridManager !== 'undefined' && this.gridApi) {
-        GridManager.init(this.gridApi, 'customerGpoAdjustmentsAddGrid');
+        GridManager.init(this.gridApi, 'mfiMaintenanceAddGrid');
       }
     }, 300);
   },
@@ -267,7 +243,7 @@ const CustomerGpoAdjustmentsAddPage = {
       headerName: column.headerName,
       minWidth: column.minWidth,
       cellClass: column.type === 'date' || column.type === 'number' ? 'cell-align-right' : 'cell-align-left',
-      editable: column.editable !== false ? (params) => this.isEditableCell(params, column.field) : false,
+      editable: (params) => this.isEditableCell(params, column.field),
       cellClassRules: this.validationCellRules(column.field),
       tooltipValueGetter: (params) => this.getCellErrorTooltip(params, column.field)
     };
@@ -299,7 +275,14 @@ const CustomerGpoAdjustmentsAddPage = {
         maxNumConditions: 1,
         numAlwaysVisibleConditions: 1,
         defaultOption: 'equals',
-        filterOptions: ['equals', 'notEqual', 'greaterThan', 'lessThan', 'greaterThanOrEqual', 'lessThanOrEqual']
+        filterOptions: [
+          'equals',
+          'notEqual',
+          'greaterThan',
+          'lessThan',
+          'greaterThanOrEqual',
+          'lessThanOrEqual'
+        ]
       };
     } else {
       config.filter = 'agTextColumnFilter';
@@ -312,6 +295,7 @@ const CustomerGpoAdjustmentsAddPage = {
         filterOptions: ['contains', 'equals', 'notEqual', 'notContains', 'startsWith', 'endsWith']
       };
     }
+
     return config;
   },
 
@@ -323,10 +307,6 @@ const CustomerGpoAdjustmentsAddPage = {
 
   isSuccessfulUploadRow(row) {
     return String(row?.uploadStatus || '').trim().toLowerCase() === 'success';
-  },
-
-  isErrorUploadRow(row) {
-    return String(row?.uploadStatus || '').trim().toLowerCase() === 'error';
   },
 
   isProcessingUploadRow(row) {
@@ -360,8 +340,6 @@ const CustomerGpoAdjustmentsAddPage = {
     const field = fieldOverride || params?.colDef?.field;
     const row = params?.data;
     if (!field || !row) return false;
-    const column = CUSTOMER_GPO_FIELD_DEFS.find((item) => item.field === field);
-    if (column?.editable === false) return false;
     if (!row.isBackendRow) return true;
     return !this.isSuccessfulUploadRow(row) && !this.isProcessingUploadRow(row);
   },
@@ -414,12 +392,10 @@ const CustomerGpoAdjustmentsAddPage = {
       initialNextLabel: 'Upload',
       uploadLabel: 'Upload',
       validateFile: (file) => /\.csv$/i.test(file.name) || file.type === 'text/csv',
-      onUpload: (file, controls) => {
-        return this.processUploadedCsv(file).then((success) => {
-          if (success) controls.close();
-          return success;
-        });
-      }
+      onUpload: (file, controls) => this.processUploadedCsv(file).then((success) => {
+        if (success) controls.close();
+        return success;
+      })
     });
   },
 
@@ -446,7 +422,7 @@ const CustomerGpoAdjustmentsAddPage = {
 
       switch (actionButton.dataset.action) {
         case 'back':
-          window.location.href = window.CUSTOMER_GPO_ADJUSTMENTS_LIST_PAGE_URL || '/adjustments';
+          window.location.href = window.MFI_LIST_PAGE_URL || '/margin-funding-maintenance';
           break;
         case 'delete':
           this.deleteSelectedRows();
@@ -472,7 +448,7 @@ const CustomerGpoAdjustmentsAddPage = {
       gridApi: this.gridApi,
       gridElement: this.gridElement,
       defaultMode: 'compact',
-      densityClassPrefix: 'kvi-density'
+      densityClassPrefix: 'mfc-density'
     });
   },
 
@@ -482,7 +458,7 @@ const CustomerGpoAdjustmentsAddPage = {
       gridApi: this.gridApi,
       gridElement: this.gridElement,
       defaultMode: 'compact',
-      densityClassPrefix: 'kvi-density'
+      densityClassPrefix: 'mfc-density'
     });
   },
 
@@ -517,7 +493,9 @@ const CustomerGpoAdjustmentsAddPage = {
           errorMessages: [],
           fieldErrorMessages: {},
           editedFields: [],
-          wasEditedAfterError: false
+          wasEditedAfterError: false,
+          isBackendRow: false,
+          rowNumber: null
         }));
       this.uploadedRows = rows;
     }
@@ -528,9 +506,7 @@ const CustomerGpoAdjustmentsAddPage = {
 
   getBulkUploadBaseUrl() {
     const baseUrl = String(window.API_BASE_URL || '').trim().replace(/\/$/, '');
-    return baseUrl
-      ? `${baseUrl}/api/foundational/api/bulk-upload`
-      : '/api/foundational/api/bulk-upload';
+    return baseUrl ? `${baseUrl}/api/foundational/api/bulk-upload` : '/api/foundational/api/bulk-upload';
   },
 
   getCurrentUser() {
@@ -539,7 +515,7 @@ const CustomerGpoAdjustmentsAddPage = {
   },
 
   getStorageKey() {
-    return `customer-gpo-adjustments-jobs:${this.entityName}`;
+    return `margin-funding-item-jobs:${this.entityName}`;
   },
 
   readStoredJobs() {
@@ -563,17 +539,17 @@ const CustomerGpoAdjustmentsAddPage = {
 
   addStoredJob(jobId, seed = {}) {
     if (!jobId) return;
-    const existing = this.readStoredJobs();
+    const context = this.resolveUploadContext();
     const next = [
       {
         jobId: String(jobId),
         entityName: this.entityName,
         status: seed.status || 'PENDING_UPLOAD',
-        programId: seed.programId || this.resolveUploadContext().programId,
-        workStationId: seed.workStationId || this.resolveUploadContext().workStationId,
+        programId: seed.programId || context.programId,
+        workStationId: seed.workStationId || context.workStationId,
         updatedAt: seed.updatedAt || new Date().toISOString()
       },
-      ...existing.filter((row) => String(row.jobId) !== String(jobId))
+      ...this.readStoredJobs().filter((row) => String(row.jobId) !== String(jobId))
     ];
     this.jobRows = next;
     this.writeStoredJobs(next);
@@ -620,17 +596,12 @@ const CustomerGpoAdjustmentsAddPage = {
       this.jobRows = [];
       this.renderStoredJobs([]);
       this.updateBatchInfoCount(0);
-      if (this.pollTimer) {
-        clearInterval(this.pollTimer);
-        this.pollTimer = null;
-      }
       return;
     }
 
     const next = await Promise.all(stored.map(async (row) => {
       try {
-        const status = await this.fetchJobStatus(row.jobId);
-        return this.normalizeJobRow(status);
+        return this.normalizeJobRow(await this.fetchJobStatus(row.jobId));
       } catch (error) {
         return {
           ...row,
@@ -649,13 +620,12 @@ const CustomerGpoAdjustmentsAddPage = {
 
   renderStoredJobs(rows) {
     if (!this.batchTableBody) return;
-    const visibleRows = this.getVisibleBatchRows(rows);
-    if (!visibleRows || visibleRows.length === 0) {
+    if (!Array.isArray(rows) || rows.length === 0) {
       this.batchTableBody.innerHTML = '<div class="bulk-upload-batch-empty">No upload tracked yet.</div>';
       return;
     }
 
-    this.batchTableBody.innerHTML = visibleRows.map((row) => `
+    this.batchTableBody.innerHTML = rows.map((row) => `
       <div class="bulk-upload-batch-row" role="listitem">
         <span class="bulk-upload-batch-cell"><button type="button" class="bulk-upload-batch-number-link" data-job-link="${this.escapeHtml(row.jobId)}">${this.escapeHtml(row.jobId)}</button></span>
         <span class="bulk-upload-batch-cell">${this.escapeHtml(row.status || '')}</span>
@@ -670,16 +640,6 @@ const CustomerGpoAdjustmentsAddPage = {
         <span class="bulk-upload-batch-cell"><button type="button" class="bulk-upload-batch-delete-btn" data-job-remove="${this.escapeHtml(row.jobId)}" aria-label="Remove job">🗑</button></span>
       </div>
     `).join('');
-  },
-
-  getVisibleBatchRows(rows) {
-    if (!Array.isArray(rows) || rows.length === 0) return [];
-    return rows[0] ? [rows[0]] : [];
-  },
-
-  isSuccessfulBatchStatus(status) {
-    const normalized = String(status || '').trim().toUpperCase();
-    return ['SUCCESS', 'COMPLETED', 'VALID'].includes(normalized);
   },
 
   updateBatchInfoCount(count) {
@@ -751,8 +711,10 @@ const CustomerGpoAdjustmentsAddPage = {
   },
 
   async fetchJobStatus(jobId) {
-    const endpoint = `${this.getBulkUploadBaseUrl()}/jobs/status?jobId=${encodeURIComponent(jobId)}`;
-    return this.fetchJson(endpoint, { method: 'GET', headers: { Accept: 'application/json' } });
+    return this.fetchJson(`${this.getBulkUploadBaseUrl()}/jobs/status?jobId=${encodeURIComponent(jobId)}`, {
+      method: 'GET',
+      headers: { Accept: 'application/json' }
+    });
   },
 
   async fetchJobResults(jobId, onlyErrors = false) {
@@ -781,7 +743,7 @@ const CustomerGpoAdjustmentsAddPage = {
 
   mapErrorField(field) {
     const normalized = this.normalizeHeader(field);
-    const match = CUSTOMER_GPO_FIELD_DEFS.find((column) => this.normalizeHeader(column.headerName) === normalized || this.normalizeHeader(column.field) === normalized);
+    const match = MFC_FIELD_DEFS.find((column) => this.normalizeHeader(column.headerName) === normalized || this.normalizeHeader(column.field) === normalized);
     return match?.field || '';
   },
 
@@ -793,26 +755,12 @@ const CustomerGpoAdjustmentsAddPage = {
       messagesByField[mappedField] = String(message);
     };
 
-    if (item?.fieldErrors && typeof item.fieldErrors === 'object' && !Array.isArray(item.fieldErrors)) {
-      Object.entries(item.fieldErrors).forEach(([field, message]) => assignMessage(field, message));
-    }
-
-    if (Array.isArray(item?.fieldErrors)) {
-      item.fieldErrors.forEach((entry) => {
-        if (!entry || typeof entry !== 'object') return;
-        assignMessage(entry.field || entry.name || entry.key, entry.message || entry.errorMessage || entry.reason);
-      });
-    }
-
-    if (Array.isArray(item?.errors)) {
-      item.errors.forEach((entry) => {
-        if (!entry || typeof entry !== 'object') return;
-        assignMessage(entry.field || entry.name || entry.key, entry.message || entry.errorMessage || entry.reason);
-      });
-    }
-
     if (Array.isArray(item?.errorFields) && Array.isArray(item?.errorMessages) && item.errorFields.length === item.errorMessages.length) {
       item.errorFields.forEach((field, index) => assignMessage(field, item.errorMessages[index]));
+    }
+
+    if (item?.fieldErrors && typeof item.fieldErrors === 'object' && !Array.isArray(item.fieldErrors)) {
+      Object.entries(item.fieldErrors).forEach(([field, message]) => assignMessage(field, message));
     }
 
     return messagesByField;
@@ -831,20 +779,14 @@ const CustomerGpoAdjustmentsAddPage = {
 
   getFieldValue(source, field) {
     if (!source || typeof source !== 'object') return '';
-
     if (source[field] != null) return source[field];
-
-    const aliases = CUSTOMER_GPO_BACKEND_ALIASES[field] || [];
-    for (const alias of aliases) {
-      if (source[alias] != null) return source[alias];
-    }
 
     const normalizedField = this.normalizeHeader(field);
     for (const [key, value] of Object.entries(source)) {
       if (this.normalizeHeader(key) === normalizedField) return value;
     }
 
-    const column = CUSTOMER_GPO_FIELD_DEFS.find((item) => item.field === field);
+    const column = MFC_FIELD_DEFS.find((item) => item.field === field);
     if (column) {
       const normalizedHeader = this.normalizeHeader(column.headerName);
       for (const [key, value] of Object.entries(source)) {
@@ -857,7 +799,7 @@ const CustomerGpoAdjustmentsAddPage = {
 
   toBackendDataShape(source) {
     const mapped = this.createBlankRow();
-    CUSTOMER_GPO_FIELD_DEFS.forEach(({ field }) => {
+    MFC_FIELD_DEFS.forEach(({ field }) => {
       mapped[field] = this.getFieldValue(source, field);
     });
     return mapped;
@@ -867,18 +809,18 @@ const CustomerGpoAdjustmentsAddPage = {
     const instructions = response?.uploadInstructions;
     const method = String(instructions?.method || 'PUT').toUpperCase();
     const headers = {};
-    const assignHeader = (key, value) => {
-      if (!key || value == null || value === '') return;
-      headers[key] = value;
-    };
 
     if (instructions?.headers && typeof instructions.headers === 'object' && !Array.isArray(instructions.headers)) {
-      Object.entries(instructions.headers).forEach(([key, value]) => assignHeader(key, value));
+      Object.entries(instructions.headers).forEach(([key, value]) => {
+        if (key && value != null && value !== '') headers[key] = value;
+      });
     }
 
     if (Array.isArray(instructions?.headers)) {
       instructions.headers.forEach((entry) => {
-        assignHeader(entry?.name || entry?.key, entry?.value);
+        const key = entry?.name || entry?.key;
+        const value = entry?.value;
+        if (key && value != null && value !== '') headers[key] = value;
       });
     }
 
@@ -891,11 +833,6 @@ const CustomerGpoAdjustmentsAddPage = {
 
   normalizeResultRow(item) {
     const baseRow = this.normalizeRow(this.toBackendDataShape(item?.data || {}));
-    const mainTableId = item?.mainTableId ?? null;
-    const createTime = String(item?.data?.createTime ?? item?.createTime ?? '').trim();
-    const updatedAt = String(item?.data?.updatedAt ?? item?.updatedAt ?? '').trim();
-    const { datePart: createdDatePart, timePart: createTimePart } = this.splitBackendDateTime(createTime);
-    const { datePart: updatedDatePart, timePart: updatedTimePart } = this.splitBackendDateTime(updatedAt);
     const fieldErrorMessages = this.extractFieldErrorMessages(item);
     const uploadErrors = Array.from(new Set([
       ...(Array.isArray(item?.errorFields) ? item.errorFields.map((field) => this.mapErrorField(field)).filter(Boolean) : []),
@@ -906,11 +843,6 @@ const CustomerGpoAdjustmentsAddPage = {
 
     return {
       ...baseRow,
-      uniqueKeyId: baseRow.uniqueKeyId || (mainTableId == null ? '' : String(mainTableId)),
-      createdDate: baseRow.createdDate || createdDatePart,
-      createTime: baseRow.createTime || createTimePart,
-      dateUpdated: baseRow.dateUpdated || updatedDatePart,
-      timeUpdated: baseRow.timeUpdated || updatedTimePart,
       uploadStatus,
       uploadErrors,
       errorMessages: Array.isArray(item?.errorMessages) ? item.errorMessages : [],
@@ -918,18 +850,7 @@ const CustomerGpoAdjustmentsAddPage = {
       editedFields: [],
       wasEditedAfterError: false,
       rowNumber: item?.rowNumber ?? null,
-      mainTableId,
       isBackendRow: true
-    };
-  },
-
-  splitBackendDateTime(value) {
-    const raw = String(value || '').trim();
-    if (!raw) return { datePart: '', timePart: '' };
-    const [dateToken = '', timeToken = ''] = raw.split(/\s+/, 2);
-    return {
-      datePart: this.toUsDate(dateToken),
-      timePart: timeToken
     };
   },
 
@@ -960,13 +881,7 @@ const CustomerGpoAdjustmentsAddPage = {
       if (this.uploadStatusRow) this.uploadStatusRow.hidden = rows.length === 0;
       if (clearColumnFilters) this.clearColumnFilters();
       this.applyUploadFilter();
-      if (showToast) {
-        if (normalizedStatus.errorMessage && this.isTerminalStatus(normalizedStatus.status)) {
-          this.showInfo(normalizedStatus.errorMessage, normalizedStatus.status === 'FAILED' ? 'error' : 'success');
-        } else {
-          this.showInfo(`Loaded job ${jobId} (${rows.length} row(s)).`, 'success');
-        }
-      }
+      if (showToast) this.showInfo(`Loaded job ${jobId} (${rows.length} row(s)).`, 'success');
     } catch (error) {
       console.error('Failed to load job results:', error);
       this.showInfo(error?.message || 'Failed to load job results.', 'error');
@@ -985,8 +900,7 @@ const CustomerGpoAdjustmentsAddPage = {
   async refreshSingleJobStatus(jobId) {
     if (!jobId) return null;
     try {
-      const status = await this.fetchJobStatus(jobId);
-      const normalizedStatus = this.normalizeJobRow(status);
+      const normalizedStatus = this.normalizeJobRow(await this.fetchJobStatus(jobId));
       this.upsertJobRow(normalizedStatus);
       return normalizedStatus;
     } catch (error) {
@@ -997,23 +911,14 @@ const CustomerGpoAdjustmentsAddPage = {
 
   async processUploadedCsv(file) {
     try {
-      console.debug('[CustomerGpoAdjustmentsAdd] processUploadedCsv:start', {
-        fileName: file?.name,
-        size: file?.size
-      });
       const response = await this.requestSignedUrlUpload(file);
-
       if (!response?.jobId) throw new Error('Job id missing from upload response');
 
-      console.debug('[CustomerGpoAdjustmentsAdd] processUploadedCsv:job-created', {
-        jobId: response.jobId,
-        fileName: response.fileName || file?.name
-      });
-
+      const context = this.resolveUploadContext();
       this.addStoredJob(response.jobId, {
         status: 'PENDING_UPLOAD',
-        programId: this.resolveUploadContext().programId,
-        workStationId: this.resolveUploadContext().workStationId
+        programId: context.programId,
+        workStationId: context.workStationId
       });
       await this.refreshSingleJobStatus(response.jobId);
       this.showInfo(`Upload accepted. Job ${response.jobId} created.`, 'success');
@@ -1026,12 +931,10 @@ const CustomerGpoAdjustmentsAddPage = {
   },
 
   resolveUploadContext() {
-    const gridRows = this.getGridRows().map((row) => this.normalizeRow(row));
-    const firstPopulated = gridRows.find((row) => !this.isRowEmpty(row)) || {};
     return {
-      userId: firstPopulated.userId || this.getCurrentUser(),
-      programId: firstPopulated.programId || String(window.CUSTOMER_GPO_PROGRAM_ID || 'PROG001'),
-      workStationId: firstPopulated.workStnId || firstPopulated.workStationId || String(window.CUSTOMER_GPO_WORK_STATION_ID || 'WS001')
+      userId: this.getCurrentUser(),
+      programId: String(window.MFI_PROGRAM_ID || 'PROG001'),
+      workStationId: String(window.MFI_WORK_STATION_ID || 'WS001')
     };
   },
 
@@ -1045,13 +948,6 @@ const CustomerGpoAdjustmentsAddPage = {
   async requestSignedUrlUpload(file) {
     const context = this.resolveUploadContext();
     const uploadFileName = this.getBulkUploadFileName(file);
-    console.debug('[CustomerGpoAdjustmentsAdd] requestSignedUrlUpload:request', {
-      entityName: this.entityName,
-      fileName: uploadFileName,
-      userId: context.userId,
-      programId: context.programId,
-      workStationId: context.workStationId
-    });
     const response = await this.fetchJson(`${this.getBulkUploadBaseUrl()}/request-signed-url`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -1065,48 +961,16 @@ const CustomerGpoAdjustmentsAddPage = {
     });
 
     if (!response?.signedUrl) throw new Error('Signed URL missing from response');
-    console.debug('[CustomerGpoAdjustmentsAdd] requestSignedUrlUpload:response', {
-      jobId: response.jobId,
-      signedUrl: response.signedUrl,
-      uploadInstructions: response.uploadInstructions
-    });
-    const uploadRequest = this.resolveUploadInstructions(response, file);
-    console.debug('[CustomerGpoAdjustmentsAdd] requestSignedUrlUpload:put-start', {
-      jobId: response.jobId,
-      fileName: file?.name,
-      method: uploadRequest.method,
-      headers: uploadRequest.headers
-    });
 
+    const uploadRequest = this.resolveUploadInstructions(response, file);
     const uploadResponse = await fetch(response.signedUrl, {
       method: uploadRequest.method,
       headers: uploadRequest.headers,
       body: file
     });
-    console.debug('[CustomerGpoAdjustmentsAdd] requestSignedUrlUpload:put-finish', {
-      jobId: response.jobId,
-      fileName: file?.name,
-      status: uploadResponse.status,
-      ok: uploadResponse.ok
-    });
     if (!uploadResponse.ok) throw new Error(`Signed upload failed: ${uploadResponse.status}`);
 
     return response;
-  },
-
-  async uploadCsvDirectly(file) {
-    const context = this.resolveUploadContext();
-    const uploadFileName = this.getBulkUploadFileName(file);
-    const formData = new FormData();
-    formData.append('entityName', this.entityName);
-    formData.append('userId', context.userId);
-    formData.append('programId', context.programId);
-    formData.append('workStationId', context.workStationId);
-    formData.append('file', file, uploadFileName);
-    return this.fetchJson(`${this.getBulkUploadBaseUrl()}/csv`, {
-      method: 'POST',
-      body: formData
-    });
   },
 
   async submitGridRows(rows, mode = 'grid') {
@@ -1143,7 +1007,6 @@ const CustomerGpoAdjustmentsAddPage = {
   processGridRows() {
     const selectedRows = this.gridApi?.getSelectedRows?.() || [];
     const sourceRows = selectedRows.length > 0 ? selectedRows : this.getGridRows();
-
     const normalizedRows = sourceRows
       .map((row) => this.normalizeRow(row))
       .filter((row) => !this.isRowEmpty(row));
@@ -1168,17 +1031,13 @@ const CustomerGpoAdjustmentsAddPage = {
       this.showInfo('You have error rows. Select the corrected row(s) and then submit.', 'warning');
       return;
     }
-    const mode = shouldResubmit ? 'resubmit' : 'grid';
 
+    const mode = shouldResubmit ? 'resubmit' : 'grid';
     this.submitGridRows(submitRows, mode).then(async (response) => {
       if (mode === 'resubmit') {
-        if (typeof this.gridApi?.deselectAll === 'function') {
-          this.gridApi.deselectAll();
-        }
+        if (typeof this.gridApi?.deselectAll === 'function') this.gridApi.deselectAll();
         submitRows.forEach((submittedRow) => {
-          const match = this.uploadedRows.find((row) => row.isBackendRow
-            && row.rowNumber === submittedRow.rowNumber
-            && row.mainTableId === submittedRow.mainTableId);
+          const match = this.uploadedRows.find((row) => row.isBackendRow && row.rowNumber === submittedRow.rowNumber);
           if (!match) return;
           match.uploadStatus = 'processing';
           match.wasEditedAfterError = false;
@@ -1186,7 +1045,6 @@ const CustomerGpoAdjustmentsAddPage = {
           match.fieldErrorMessages = {};
           match.errorMessages = [];
         });
-        this.applyUploadFilter();
         this.showInfo(response?.message || 'Selected corrected row(s) submitted successfully.', 'success');
         if (this.selectedJobId) {
           const refreshedStatus = await this.refreshSingleJobStatus(this.selectedJobId);
@@ -1208,13 +1066,14 @@ const CustomerGpoAdjustmentsAddPage = {
       }
 
       if (!response?.jobId) throw new Error('Job id missing from submit response');
+      const context = this.resolveUploadContext();
       this.addStoredJob(response.jobId, {
         status: 'PROCESSING',
-        programId: submitRows[0]?.programId || '',
-        workStationId: submitRows[0]?.workStnId || submitRows[0]?.workStationId || ''
+        programId: context.programId,
+        workStationId: context.workStationId
       });
       await this.refreshSingleJobStatus(response.jobId);
-      this.showInfo(response.message || `Job ${response.jobId} created successfully.`, 'success');
+      this.showInfo(response?.message || `Job ${response.jobId} created successfully.`, 'success');
     }).catch((error) => {
       console.error('Grid processing failed:', error);
       this.showInfo(error?.message || 'Grid processing failed.', 'error');
@@ -1222,17 +1081,15 @@ const CustomerGpoAdjustmentsAddPage = {
   },
 
   toBackendRecord(row) {
-    const context = this.resolveUploadContext();
     const payload = {};
-
-    CUSTOMER_GPO_OUTBOUND_FIELDS.forEach(({ localField, backendField, useContextFallback }) => {
+    const context = this.resolveUploadContext();
+    MFC_OUTBOUND_FIELDS.forEach(({ localField, backendField, useContextFallback }) => {
       let value = row[localField];
-      if ((value == null || value === '') && useContextFallback) {
+      if ((value == null || String(value).trim() === '') && useContextFallback) {
         value = context[useContextFallback];
       }
       payload[backendField] = value == null ? '' : value;
     });
-
     return payload;
   },
 
@@ -1245,12 +1102,11 @@ const CustomerGpoAdjustmentsAddPage = {
     const normalizedHeader = this.normalizeHeader(header);
     if (!normalizedHeader) return '';
 
-    const match = CUSTOMER_GPO_FIELD_DEFS.find(({ field, headerName }) => {
-      if (this.normalizeHeader(field) === normalizedHeader) return true;
-      if (this.normalizeHeader(headerName) === normalizedHeader) return true;
-      const aliases = CUSTOMER_GPO_BACKEND_ALIASES[field] || [];
-      return aliases.some((alias) => this.normalizeHeader(alias) === normalizedHeader);
-    });
+    const match = MFC_FIELD_DEFS.find(({ field, headerName }) => (
+      this.normalizeHeader(field) === normalizedHeader
+      || this.normalizeHeader(headerName) === normalizedHeader
+      || (MFC_HEADER_ALIASES[field] || []).includes(normalizedHeader)
+    ));
 
     if (!match) return '';
     if (Array.isArray(allowedFields) && allowedFields.length > 0 && !allowedFields.includes(match.field)) {
@@ -1264,18 +1120,6 @@ const CustomerGpoAdjustmentsAddPage = {
     return String(value || '').trim();
   },
 
-  isValidUsDate(value) {
-    if (!value) return true;
-    if (window.CsvUploadUtils?.isValidUsDate) return window.CsvUploadUtils.isValidUsDate(value);
-    return false;
-  },
-
-  isNumeric(value) {
-    if (!value && value !== 0) return true;
-    if (window.CsvUploadUtils?.isNumeric) return window.CsvUploadUtils.isNumeric(value);
-    return !Number.isNaN(Number(String(value).replace(/,/g, '').trim()));
-  },
-
   numberFilterValue(value) {
     const raw = String(value ?? '').replace(/,/g, '').trim();
     if (!raw) return null;
@@ -1285,17 +1129,19 @@ const CustomerGpoAdjustmentsAddPage = {
 
   usDateToIso(value) {
     const normalized = this.toUsDate(value);
-    if (!this.isValidUsDate(normalized) || !normalized) return '';
+    if (!normalized) return '';
     const [mm, dd, yyyy] = normalized.split('/');
-    return `${yyyy}-${mm}-${dd}`;
+    return `${yyyy}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`;
   },
 
   normalizeRow(row) {
     const normalized = { ...this.createBlankRow(), ...row };
-    CUSTOMER_GPO_FIELD_DEFS.forEach(({ field }) => {
+    MFC_FIELD_DEFS.forEach(({ field }) => {
       const value = normalized[field];
-      if (CUSTOMER_GPO_DATE_FIELDS.has(field)) {
+      if (MFC_DATE_FIELDS.has(field)) {
         normalized[field] = this.toUsDate(value || '');
+      } else if (MFC_NUMBER_FIELDS.has(field)) {
+        normalized[field] = String(value ?? '').trim().replace(/,/g, '');
       } else {
         normalized[field] = String(value ?? '').trim();
       }
@@ -1304,9 +1150,7 @@ const CustomerGpoAdjustmentsAddPage = {
   },
 
   isRowEmpty(row) {
-    return CUSTOMER_GPO_FIELD_DEFS
-      .filter(({ field }) => !['uniqueKeyId', 'createdByUser', 'createdDate', 'createTime', 'dateUpdated', 'timeUpdated'].includes(field))
-      .every(({ field }) => !String(row[field] || '').trim());
+    return MFC_FIELD_DEFS.every(({ field }) => !String(row[field] || '').trim());
   },
 
   onCellValueChanged(event) {
@@ -1361,7 +1205,7 @@ const CustomerGpoAdjustmentsAddPage = {
 
     return parsed.rows.map((cells) => {
       const row = this.createBlankRow();
-      CUSTOMER_GPO_FIELD_DEFS.forEach(({ field, headerName }) => {
+      MFC_FIELD_DEFS.forEach(({ field, headerName }) => {
         const index = indexByHeader[this.normalizeHeader(headerName)] ?? indexByHeader[this.normalizeHeader(field)];
         row[field] = index == null ? '' : (cells[index] || '');
       });
@@ -1376,7 +1220,7 @@ const CustomerGpoAdjustmentsAddPage = {
 
   applyAdvancedFilters() {
     const fieldTypeMap = {};
-    CUSTOMER_GPO_FIELD_DEFS.forEach((column) => {
+    MFC_FIELD_DEFS.forEach((column) => {
       if (column.type === 'date') fieldTypeMap[column.field] = 'date';
       else if (column.type === 'number') fieldTypeMap[column.field] = 'number';
       else fieldTypeMap[column.field] = 'text';
@@ -1388,7 +1232,7 @@ const CustomerGpoAdjustmentsAddPage = {
         gridElement: this.gridElement,
         fieldTypeMap,
         toDateIso: (value) => this.usDateToIso(value),
-        isNumeric: (value) => this.isNumeric(value),
+        isNumeric: (value) => !Number.isNaN(Number(String(value).replace(/,/g, '').trim())),
         onValidationError: (field, reason) => this.showInfo(`${field}: ${reason}`, 'error')
       });
       return;
@@ -1448,7 +1292,6 @@ const CustomerGpoAdjustmentsAddPage = {
 
   showInfo(message, type = 'success') {
     if (!window.PageToast?.show) return;
-
     const container = this.ensureToastContainer();
     if (!container) return;
 
@@ -1458,24 +1301,23 @@ const CustomerGpoAdjustmentsAddPage = {
       : normalizedType === 'warning'
         ? 'Heads up'
         : 'Success';
-    const subtitle = String(message || '').trim();
 
     window.PageToast.show({
       container,
       type: normalizedType,
       title,
-      subtitle,
+      subtitle: String(message || '').trim(),
       icon: normalizedType === 'error' ? '!' : normalizedType === 'warning' ? 'i' : '✓',
       autoHideMs: 2400
     });
   },
 
   ensureToastContainer() {
-    let container = document.getElementById('customerGpoPageToastLayer');
+    let container = document.getElementById('marginFundingItemMaintenanceAddPageToastLayer');
     if (container) return container;
 
     container = document.createElement('div');
-    container.id = 'customerGpoPageToastLayer';
+    container.id = 'marginFundingItemMaintenanceAddPageToastLayer';
     container.className = 'app-page-toast-layer';
     document.body.appendChild(container);
     return container;
@@ -1483,5 +1325,5 @@ const CustomerGpoAdjustmentsAddPage = {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
-  CustomerGpoAdjustmentsAddPage.init();
+  MarginFundingItemMaintenanceAddPage.init();
 });

@@ -291,6 +291,7 @@ const MckBrandLogicPage = {
   toolbarScope: '.mck-brand-logic-shell',
   gridManagerBootstrapped: false,
   gridManagerInitScheduled: false,
+  pageRequestCacheByTab: {},
   apiBaseUrl: '',
   pendingDisableIds: [],
   pendingTerminationUpdateIds: [],
@@ -478,6 +479,7 @@ const MckBrandLogicPage = {
   refreshActiveGridData() {
     const activeGrid = this.getActiveGrid();
     if (!activeGrid?.api) return;
+    this.pageRequestCacheByTab[this.activeTab] = new Map();
     if (typeof activeGrid.api.refreshInfiniteCache === 'function') {
       activeGrid.api.refreshInfiniteCache();
     } else if (typeof activeGrid.api.refreshServerSideStore === 'function') {
@@ -1286,6 +1288,7 @@ const MckBrandLogicPage = {
   resetActiveGridState() {
     const activeGrid = this.getActiveGrid();
     if (!activeGrid?.api) return;
+    this.pageRequestCacheByTab[this.activeTab] = new Map();
 
     const currentFilterModel =
       typeof activeGrid.api.getFilterModel === 'function' ? activeGrid.api.getFilterModel() || {} : {};
@@ -1341,7 +1344,7 @@ const MckBrandLogicPage = {
       }
     };
     const useSelectionColumn = tabConfig.allowSelection !== false;
-    const datasource = tabConfig.paginationType === 'server' ? this.buildDatasource(tabConfig) : null;
+    const datasource = tabConfig.paginationType === 'server' ? this.buildDatasource(tabKey, tabConfig) : null;
 
     const gridApi = DynamicGrid.createGrid({
       gridElementId: tabConfig.gridElementId,
@@ -1366,8 +1369,47 @@ const MckBrandLogicPage = {
           startsWith: 'Begins with',
           endsWith: 'Ends with'
         },
+        onPaginationChanged: (params) => {
+          if (tabConfig.paginationType !== 'server' || !params?.api) return;
+          if (typeof params.api.paginationGetPageSize !== 'function') return;
+          if (params.api.__isUpdatingPageSize) return;
+
+          const newPageSize = params.api.paginationGetPageSize();
+          const lastKnownPageSize = params.api.__lastKnownPageSize || 20;
+          if (!newPageSize || newPageSize === lastKnownPageSize) return;
+
+          params.api.__isUpdatingPageSize = true;
+          params.api.__lastKnownPageSize = newPageSize;
+          this.pageRequestCacheByTab[tabKey] = new Map();
+
+          setTimeout(() => {
+            if (typeof params.api.updateGridOptions === 'function') {
+              params.api.updateGridOptions({ cacheBlockSize: newPageSize });
+            } else if (typeof params.api.setGridOption === 'function') {
+              params.api.setGridOption('cacheBlockSize', newPageSize);
+            }
+
+            const currentPage =
+              typeof params.api.paginationGetCurrentPage === 'function'
+                ? params.api.paginationGetCurrentPage()
+                : 0;
+
+            if (currentPage > 0 && typeof params.api.paginationGoToFirstPage === 'function') {
+              params.api.paginationGoToFirstPage();
+            } else if (typeof params.api.purgeInfiniteCache === 'function') {
+              params.api.purgeInfiniteCache();
+            } else if (typeof params.api.refreshInfiniteCache === 'function') {
+              params.api.refreshInfiniteCache();
+            }
+
+            params.api.__isUpdatingPageSize = false;
+          }, 50);
+        },
         onGridReady: (params) => {
           if (tabConfig.paginationType !== 'server') return;
+          this.pageRequestCacheByTab[tabKey] = new Map();
+          params.api.__lastKnownPageSize = 20;
+          params.api.__isUpdatingPageSize = false;
           params.api.setGridOption('datasource', datasource);
         },
         rowSelection: useSelectionColumn ? 'multiple' : undefined,
@@ -1475,41 +1517,68 @@ const MckBrandLogicPage = {
     }
   },
 
-  buildDatasource(tabConfig) {
+  buildDatasource(tabKey, tabConfig) {
     return {
       rowCount: null,
       getRows: async (params) => {
-        const pageSize = params.endRow - params.startRow || 20;
-        const page = Math.floor(params.startRow / pageSize);
+        const requestedBlockSize = params.endRow - params.startRow || 20;
+        const selectedPageSize =
+          typeof this.grids?.[tabKey]?.api?.paginationGetPageSize === 'function'
+            ? this.grids[tabKey].api.paginationGetPageSize() || requestedBlockSize
+            : requestedBlockSize;
+        const page = Math.floor((params.startRow || 0) / selectedPageSize);
         const sortModel = Array.isArray(params.sortModel) ? params.sortModel[0] : null;
         const urlParams = new URLSearchParams({
           page: String(page),
-          size: String(pageSize),
+          size: String(selectedPageSize),
           sortBy: sortModel?.colId || 'uniqueId',
           sortDirection: String(sortModel?.sort || 'asc').toUpperCase()
         });
         this.appendFilterParams(urlParams, params.filterModel);
 
         try {
-          const response = await fetch(`${this.resolveApiUrl(tabConfig.apiEndpoint)}?${urlParams.toString()}`, {
-            method: 'GET',
-            headers: { Accept: 'application/json' },
-            credentials: 'same-origin'
-          });
-
-          if (!response.ok) {
-            throw new Error(`Request failed with status ${response.status}`);
+          if (!(this.pageRequestCacheByTab[tabKey] instanceof Map)) {
+            this.pageRequestCacheByTab[tabKey] = new Map();
           }
 
-          const payload = await response.json();
-          const pagePayload = this.extractPagePayload(payload);
-          const rows = Array.isArray(pagePayload?.content)
-            ? pagePayload.content.map((row) => this.transformRowForTab(tabConfig, row))
-            : [];
-          const totalRows = Number.isFinite(pagePayload?.totalElements) ? pagePayload.totalElements : rows.length;
+          const cache = this.pageRequestCacheByTab[tabKey];
+          const cacheKey = urlParams.toString();
+          let requestPromise = cache.get(cacheKey);
+
+          if (!requestPromise) {
+            requestPromise = fetch(`${this.resolveApiUrl(tabConfig.apiEndpoint)}?${urlParams.toString()}`, {
+              method: 'GET',
+              headers: { Accept: 'application/json' },
+              credentials: 'same-origin'
+            }).then(async (response) => {
+              if (!response.ok) {
+                throw new Error(`Request failed with status ${response.status}`);
+              }
+
+              const payload = await response.json();
+              const pagePayload = this.extractPagePayload(payload);
+              const rows = Array.isArray(pagePayload?.content)
+                ? pagePayload.content.map((row) => this.transformRowForTab(tabConfig, row))
+                : [];
+              const totalRows = Number.isFinite(pagePayload?.totalElements) ? pagePayload.totalElements : rows.length;
+              return { rows, totalRows };
+            });
+
+            cache.set(cacheKey, requestPromise);
+          }
+
+          const { rows, totalRows } = await requestPromise;
+          const pageStart = page * selectedPageSize;
+          const sliceStart = Math.max(0, (params.startRow || 0) - pageStart);
+          const sliceEnd = Math.min(sliceStart + requestedBlockSize, rows.length);
+          const blockRows = rows.slice(sliceStart, sliceEnd);
+
           this.syncNoRowsOverlay(params.api, rows.length);
-          params.successCallback(rows, totalRows);
+          params.successCallback(blockRows, totalRows);
         } catch (error) {
+          if (this.pageRequestCacheByTab[tabKey] instanceof Map) {
+            this.pageRequestCacheByTab[tabKey].delete(urlParams.toString());
+          }
           console.error(`Failed to load ${tabConfig.gridElementId}:`, error);
           this.syncNoRowsOverlay(params.api, 0);
           params.successCallback([], 0);
@@ -1818,7 +1887,7 @@ const MckBrandLogicPage = {
         closeOnApply: true,
         maxNumConditions: 1,
         numAlwaysVisibleConditions: 1,
-        filterOptions: ['contains', 'equals', 'notEqual', 'notContains', 'startsWith', 'endsWith', 'blank', 'notBlank']
+        filterOptions: ['contains', 'equals', 'notEqual', 'notContains', 'startsWith', 'endsWith']
       }
     };
   }

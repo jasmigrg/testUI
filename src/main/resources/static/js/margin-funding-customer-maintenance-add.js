@@ -135,6 +135,20 @@ const MarginFundingCustomerMaintenanceAddPage = {
           sortDescending:
             '<span class="gt-sort-icon gt-sort-icon--desc" aria-hidden="true"><svg viewBox="0 0 8 12" focusable="false"><path d="M4 11L1 8H7L4 11Z"></path></svg></span>'
         },
+        localeText: {
+          equals: 'Equals',
+          notEqual: 'Does not equal',
+          contains: 'Contains',
+          notContains: 'Does not contain',
+          startsWith: 'Begins with',
+          endsWith: 'Ends with',
+          greaterThan: 'Greater than',
+          lessThan: 'Less than',
+          greaterThanOrEqual: 'Greater than or equal to',
+          lessThanOrEqual: 'Less than or equal to',
+          after: 'Greater than',
+          before: 'Less than'
+        },
         defaultColDef: {
           sortable: true,
           unSortIcon: true,
@@ -231,12 +245,50 @@ const MarginFundingCustomerMaintenanceAddPage = {
 
     if (column.type === 'date') {
       config.filter = 'agDateColumnFilter';
-      if (dateComparator) config.filterParams = { comparator: dateComparator };
+      config.filterParams = {
+        ...(dateComparator ? { comparator: dateComparator } : {}),
+        buttons: ['apply', 'reset'],
+        closeOnApply: true,
+        maxNumConditions: 1,
+        numAlwaysVisibleConditions: 1,
+        defaultOption: 'equals',
+        filterOptions: [
+          'equals',
+          'notEqual',
+          'greaterThan',
+          'lessThan',
+          'greaterThanOrEqual',
+          'lessThanOrEqual'
+        ]
+      };
     } else if (column.type === 'number') {
       config.filter = 'agNumberColumnFilter';
       config.filterValueGetter = (params) => this.numberFilterValue(params?.data?.[column.field]);
+      config.filterParams = {
+        buttons: ['apply', 'reset'],
+        closeOnApply: true,
+        maxNumConditions: 1,
+        numAlwaysVisibleConditions: 1,
+        defaultOption: 'equals',
+        filterOptions: [
+          'equals',
+          'notEqual',
+          'greaterThan',
+          'lessThan',
+          'greaterThanOrEqual',
+          'lessThanOrEqual'
+        ]
+      };
     } else {
       config.filter = 'agTextColumnFilter';
+      config.filterParams = {
+        buttons: ['apply', 'reset'],
+        closeOnApply: true,
+        maxNumConditions: 1,
+        numAlwaysVisibleConditions: 1,
+        defaultOption: 'contains',
+        filterOptions: ['contains', 'equals', 'notEqual', 'notContains', 'startsWith', 'endsWith']
+      };
     }
 
     return config;

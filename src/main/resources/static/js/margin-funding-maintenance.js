@@ -9,7 +9,7 @@ class GtPageSelectHeader {
     this.checkbox.className = 'gt-header-select-checkbox';
     this.checkbox.setAttribute('aria-label', 'Select visible rows');
 
-    this.stopEvent = (e) => e.stopPropagation();
+    this.stopEvent = (event) => event.stopPropagation();
     this.onToggle = () => this.toggleVisibleRows();
     this.onSync = () => this.syncState();
 
@@ -37,7 +37,7 @@ class GtPageSelectHeader {
     const from = currentPage * pageSize;
     const to = from + pageSize;
 
-    for (let i = from; i < to; i++) {
+    for (let i = from; i < to; i += 1) {
       const rowNode = this.params.api.getDisplayedRowAtIndex(i);
       if (!rowNode) continue;
       if (rowNode.rowPinned || rowNode.group || rowNode.selectable === false) {
@@ -45,11 +45,13 @@ class GtPageSelectHeader {
       }
       rowNode.setSelected(shouldSelect);
     }
+
     this.syncState();
   }
 
   syncState() {
     if (!this.checkbox || !this.params?.api) return;
+
     const pageSize = this.params.api.paginationGetPageSize?.() || 20;
     const currentPage = this.params.api.paginationGetCurrentPage?.() || 0;
     const from = currentPage * pageSize;
@@ -57,12 +59,13 @@ class GtPageSelectHeader {
     let selectableCount = 0;
     let selectedCount = 0;
 
-    for (let i = from; i < to; i++) {
+    for (let i = from; i < to; i += 1) {
       const rowNode = this.params.api.getDisplayedRowAtIndex(i);
       if (!rowNode) continue;
       if (rowNode.rowPinned || rowNode.group || rowNode.selectable === false) {
         continue;
       }
+
       selectableCount += 1;
       if (rowNode.isSelected()) {
         selectedCount += 1;
@@ -76,6 +79,7 @@ class GtPageSelectHeader {
 
   destroy() {
     if (!this.checkbox) return;
+
     this.checkbox.removeEventListener('click', this.stopEvent);
     this.checkbox.removeEventListener('mousedown', this.stopEvent);
     this.checkbox.removeEventListener('change', this.onToggle);
@@ -89,37 +93,546 @@ class GtPageSelectHeader {
   }
 }
 
+class MarginFundingItemManualFloatingFilter {
+  init(params) {
+    this.params = params;
+    this.currentValue = '';
+    this.gui = document.createElement('div');
+    this.gui.className = 'mfi-manual-floating-filter';
+
+    this.input = document.createElement('input');
+    this.input.type = 'text';
+    this.input.className = 'mfi-floating-filter-input';
+    this.input.setAttribute(
+      'aria-label',
+      `${params.column.getColDef().headerName || params.column.getColId()} filter`
+    );
+    this.input.dataset.colId = params.column.getColId();
+
+    this.onKeyDown = (event) => {
+      if (event.key !== 'Enter') return;
+      event.preventDefault();
+      if (this.params?.api && typeof this.params.api.applyPendingFloatingFilters === 'function') {
+        this.params.api.applyPendingFloatingFilters();
+        return;
+      }
+      this.apply();
+    };
+
+    this.input.addEventListener('keydown', this.onKeyDown);
+    this.gui.appendChild(this.input);
+
+    if (!params.api.__manualFloatingFilters) {
+      params.api.__manualFloatingFilters = [];
+    }
+    params.api.__manualFloatingFilters.push(this);
+  }
+
+  getGui() {
+    return this.gui;
+  }
+
+  onParentModelChanged(parentModel) {
+    let next = '';
+
+    if (parentModel && parentModel.rawInput != null) {
+      next = String(parentModel.rawInput);
+    } else if (parentModel && parentModel.dateFrom != null && this.isNumericOrDateFilter()) {
+      next = this.rebuildOperatorInput(
+        parentModel.type,
+        MarginFundingMaintenanceManager.normalizeDateValueForDisplay(parentModel.dateFrom)
+      );
+    } else if (parentModel && parentModel.filter != null && this.isNumericOrDateFilter()) {
+      next = this.rebuildOperatorInput(parentModel.type, parentModel.filter);
+    } else if (parentModel && parentModel.filter != null) {
+      next = String(parentModel.filter);
+    }
+
+    this.currentValue = next;
+    if (this.input && this.input.value !== next) {
+      this.input.value = next;
+    }
+  }
+
+  apply() {
+    if (!this.input) return;
+
+    const value = this.input.value.trim();
+    this.currentValue = value;
+    const fallbackOperator = this.isNumericOrDateFilter() ? 'equals' : 'contains';
+    const parsedInput = MarginFundingMaintenanceManager.parseInlineFilterExpression(
+      value,
+      fallbackOperator
+    );
+
+    this.params.parentFilterInstance((instance) => {
+      if (!instance) return;
+      instance.onFloatingFilterChanged(parsedInput.type, parsedInput.value || null);
+    });
+  }
+
+  isNumericOrDateFilter() {
+    const filter = this.params?.column?.getColDef?.()?.filter;
+    return filter === 'agNumberColumnFilter' || filter === 'agDateColumnFilter';
+  }
+
+  rebuildOperatorInput(type, value) {
+    const prefixMap = {
+      equals: '',
+      notEqual: '!=',
+      greaterThan: '>',
+      lessThan: '<',
+      greaterThanOrEqual: '>=',
+      lessThanOrEqual: '<='
+    };
+    const prefix = prefixMap[String(type || '').trim()] ?? '';
+    return `${prefix}${value == null ? '' : String(value)}`;
+  }
+
+  destroy() {
+    if (this.input && this.onKeyDown) {
+      this.input.removeEventListener('keydown', this.onKeyDown);
+    }
+
+    const list = this.params?.api?.__manualFloatingFilters;
+    if (Array.isArray(list)) {
+      const index = list.indexOf(this);
+      if (index >= 0) list.splice(index, 1);
+    }
+  }
+}
+
 const MarginFundingMaintenanceManager = {
   gridApi: null,
   gridElement: null,
-  disableEndpoint: '/api/margin-funding/disable',
-  updateTerminationDateEndpoint: '/api/margin-funding/update-termination-date',
-  pendingDisableUniqueKeys: [],
-  pendingTerminationUpdateUniqueKeys: [],
+  apiBaseUrl: '',
+  itemApiEndpoint: '/margin-funding/item',
+  bulkUpdateEndpoint: '/api/v1/margin-funding/item/bulk-update',
+  downloadEndpoint: '/v1/margin-funding/item/download-csv',
+  pageRequestCache: new Map(),
 
-  buildRows() {
-    return Array.from({ length: 16 }, (_, i) => ({
-      uniqueKey: `UK-${1000 + i}`,
-      vendorFamilyNumber: `VF-${200 + (i % 6)}`,
-      vendorFamilyName: `Vendor Family ${String.fromCharCode(65 + (i % 6))}`,
-      vendorProgram: `Program ${1 + (i % 4)}`,
-      itemNumber: `${10001 + i}`,
-      itemDescription: `Item Description ${i + 1}`,
-      distributionNonContract: (5 + (i % 3)).toFixed(2),
-      distributionContract: (3 + (i % 4)).toFixed(2),
-      marginFundingPercentType: i % 2 === 0 ? 'Flat' : 'Tiered',
-      effectiveFrom: '01/01/2026',
-      effectiveThru: '12/31/2026',
-      userId: `USER${100 + (i % 8)}`,
-      dateUpdated: '01/15/2026',
-      timeUpdated: `${String(9 + (i % 8)).padStart(2, '0')}:30:00`,
-      workStnId: `WS${200 + (i % 6)}`,
-      programId: `PGM-${3000 + (i % 12)}`
-    }));
+  showInfo(message, type = 'success') {
+    if (!window.PageToast?.show) return;
+
+    const container = this.ensureToastContainer();
+    if (!container) return;
+
+    const normalizedType = ['success', 'error', 'warning'].includes(type) ? type : 'success';
+    const title = normalizedType === 'error'
+      ? 'Action required'
+      : normalizedType === 'warning'
+        ? 'Heads up'
+        : 'Success';
+
+    window.PageToast.show({
+      container,
+      type: normalizedType,
+      title,
+      subtitle: String(message || '').trim(),
+      duration: normalizedType === 'error' ? 3200 : 2400
+    });
+  },
+
+  ensureToastContainer() {
+    let container = document.getElementById('marginFundingItemMaintenancePageToastLayer');
+    if (container) return container;
+
+    container = document.createElement('div');
+    container.id = 'marginFundingItemMaintenancePageToastLayer';
+    container.className = 'app-page-toast-layer';
+    document.body.appendChild(container);
+    return container;
+  },
+
+  resolveApiUrl(path) {
+    const normalizedPath = String(path || '').trim();
+    if (!normalizedPath) return this.apiBaseUrl;
+    if (/^https?:\/\//i.test(normalizedPath)) return normalizedPath;
+    if (!this.apiBaseUrl) return normalizedPath;
+
+    const base = this.apiBaseUrl.replace(/\/$/, '');
+    const suffix = normalizedPath.startsWith('/') ? normalizedPath : `/${normalizedPath}`;
+    return `${base}${suffix}`;
+  },
+
+  formatDateFromTimestamp(timestamp) {
+    if (!timestamp) return '';
+
+    const parsed = new Date(timestamp);
+    if (Number.isNaN(parsed.getTime())) return '';
+
+    const month = String(parsed.getMonth() + 1).padStart(2, '0');
+    const day = String(parsed.getDate()).padStart(2, '0');
+    const year = parsed.getFullYear();
+    return `${month}/${day}/${year}`;
+  },
+
+  formatTimeFromTimestamp(timestamp) {
+    if (!timestamp) return '';
+
+    const parsed = new Date(timestamp);
+    if (Number.isNaN(parsed.getTime())) return '';
+
+    return parsed.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
+  },
+
+  formatUpdatedAt(timestamp) {
+    const formattedDate = this.formatDateFromTimestamp(timestamp);
+    const formattedTime = this.formatTimeFromTimestamp(timestamp);
+    if (!formattedDate) return '';
+    if (!formattedTime) return formattedDate;
+    return `${formattedDate} ${formattedTime}`;
+  },
+
+  parseInlineFilterExpression(rawValue, defaultType = 'contains') {
+    const raw = String(rawValue ?? '').trim();
+    if (!raw) return { value: '', type: defaultType };
+
+    const operators = ['!=', '<>', '>=', '<=', '>', '<', '='];
+    const token = operators.find((operator) => raw.startsWith(operator));
+    if (!token) {
+      return { value: raw, type: defaultType };
+    }
+
+    const value = raw.slice(token.length).trim();
+    let type = defaultType;
+
+    if (token === '=') type = 'equals';
+    else if (token === '>') type = 'greaterThan';
+    else if (token === '>=') type = 'greaterThanOrEqual';
+    else if (token === '<') type = 'lessThan';
+    else if (token === '<=') type = 'lessThanOrEqual';
+    else if (token === '!=' || token === '<>') type = 'notEqual';
+
+    return { value, type };
+  },
+
+  mapColumnToApiField(colId, context = 'filter') {
+    const fieldMap = {
+      uniqueKey: context === 'sort' ? 'unqiueKeyId' : 'unique_key_id',
+      userId: 'user_id',
+      programId: 'program_id',
+      workStnId: 'work_station_id',
+      effectiveDate: 'effective_date',
+      terminationDate: 'termination_date',
+      disableDate: 'disable_date',
+      vendorProgram: 'record_id',
+      vendorFamilyNumber: 'vendor_family_number',
+      vendorFamilyName: 'vendor_family_name',
+      itemNumber: 'item_num',
+      itemDescription: 'item_description',
+      distributionNonContract: 'dist_fee_noncontract_percentage',
+      distributionContract: 'dist_fee_contract_percentage',
+      marginFundingPercentType: 'margin_funding_pct_type',
+      notes: 'notes',
+      updatedAtDisplay: 'updated_at'
+    };
+
+    return fieldMap[colId] || colId;
+  },
+
+  getFieldFilterKind(field) {
+    const normalizedField = String(field || '').trim();
+
+    if (['effectiveDate', 'terminationDate', 'disableDate', 'updatedAtDisplay'].includes(normalizedField)) {
+      return 'date';
+    }
+
+    if (
+      [
+        'uniqueKey',
+        'vendorProgram',
+        'vendorFamilyNumber',
+        'itemNumber',
+        'distributionNonContract',
+        'distributionContract'
+      ].includes(normalizedField)
+    ) {
+      return 'number';
+    }
+
+    return 'text';
+  },
+
+  buildAlignedColumn(column) {
+    const field = String(column?.field || column?.colId || '').trim();
+    if (!field || field === 'select') return column;
+
+    const kind = this.getFieldFilterKind(field);
+    return {
+      ...column,
+      cellClass: kind === 'text' ? 'cell-align-left' : 'cell-align-right'
+    };
+  },
+
+  getNumericFilterValue(value) {
+    const raw = String(value ?? '').trim();
+    if (!raw) return null;
+
+    const normalized = raw.replace(/[%,$\s]/g, '').replace(/,/g, '');
+    const numeric = Number(normalized);
+    return Number.isNaN(numeric) ? null : numeric;
+  },
+
+  dateFilterComparator(filterLocalDateAtMidnight, cellValue) {
+    const raw = String(cellValue || '').trim();
+    const usDateMatch = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (!usDateMatch) return 0;
+
+    const cellDate = new Date(
+      Number(usDateMatch[3]),
+      Number(usDateMatch[1]) - 1,
+      Number(usDateMatch[2])
+    );
+    const cellTime = cellDate.setHours(0, 0, 0, 0);
+    const filterTime = filterLocalDateAtMidnight.setHours(0, 0, 0, 0);
+    if (cellTime === filterTime) return 0;
+    return cellTime < filterTime ? -1 : 1;
+  },
+
+  normalizeDateValueForDisplay(value) {
+    const raw = String(value == null ? '' : value).trim();
+    const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ].*)?$/);
+    if (!isoMatch) return raw;
+    return `${isoMatch[2]}/${isoMatch[3]}/${isoMatch[1]}`;
+  },
+
+  normalizeApiDateValue(value) {
+    const raw = String(value == null ? '' : value).trim();
+    if (!raw) return '';
+
+    const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ].*)?$/);
+    if (isoMatch) {
+      return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+    }
+
+    const usMatch = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (usMatch) {
+      return `${usMatch[3]}-${usMatch[1]}-${usMatch[2]}`;
+    }
+
+    const parsed = new Date(raw);
+    if (Number.isNaN(parsed.getTime())) return raw;
+
+    const yyyy = parsed.getFullYear();
+    const mm = String(parsed.getMonth() + 1).padStart(2, '0');
+    const dd = String(parsed.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  },
+
+  normalizeFilterModel(field, model) {
+    if (!model || typeof model !== 'object') return null;
+
+    const kind = this.getFieldFilterKind(field);
+    const filterType = String(model.filterType || '').trim();
+
+    if (kind === 'date' || filterType === 'date') {
+      const rawDate = model.dateFrom || model.filter;
+      const normalizedDate = this.normalizeApiDateValue(rawDate);
+      if (!normalizedDate) return null;
+      return {
+        value: normalizedDate,
+        operator: String(model.type || 'equals').trim() || 'equals'
+      };
+    }
+
+    if (kind === 'number' || filterType === 'number') {
+      const rawValue = model.filter;
+      if (rawValue == null || String(rawValue).trim() === '') return null;
+      return {
+        value: String(rawValue).trim(),
+        operator: String(model.type || 'equals').trim() || 'equals'
+      };
+    }
+
+    const rawInput = String(model.rawInput ?? model.filter ?? '').trim();
+    if (!rawInput) return null;
+
+    const parsed = this.parseInlineFilterExpression(rawInput, 'contains');
+    if (!parsed.value) return null;
+
+    return {
+      value: parsed.value,
+      operator: parsed.type
+    };
+  },
+
+  buildFilterableColumn(column) {
+    const field = String(column?.field || column?.colId || '').trim();
+    if (!field || field === 'select') return column;
+
+    const aligned = this.buildAlignedColumn(column);
+    const kind = this.getFieldFilterKind(field);
+
+    if (kind === 'date') {
+      return {
+        ...aligned,
+        filter: 'agDateColumnFilter',
+        floatingFilter: true,
+        floatingFilterComponent: 'manualApplyFloatingFilter',
+        filterParams: {
+          buttons: ['apply', 'reset'],
+          closeOnApply: true,
+          maxNumConditions: 1,
+          numAlwaysVisibleConditions: 1,
+          comparator: this.dateFilterComparator,
+          filterOptions: [
+            'equals',
+            'notEqual',
+            'greaterThan',
+            'lessThan',
+            'greaterThanOrEqual',
+            'lessThanOrEqual'
+          ]
+        }
+      };
+    }
+
+    if (kind === 'number') {
+      return {
+        ...aligned,
+        filter: 'agNumberColumnFilter',
+        floatingFilter: true,
+        floatingFilterComponent: 'manualApplyFloatingFilter',
+        filterValueGetter: (params) => this.getNumericFilterValue(params?.data?.[field]),
+        filterParams: {
+          buttons: ['apply', 'reset'],
+          closeOnApply: true,
+          maxNumConditions: 1,
+          numAlwaysVisibleConditions: 1,
+          filterOptions: [
+            'equals',
+            'notEqual',
+            'greaterThan',
+            'lessThan',
+            'greaterThanOrEqual',
+            'lessThanOrEqual'
+          ]
+        }
+      };
+    }
+
+    return {
+      ...aligned,
+      filter: 'agTextColumnFilter',
+      floatingFilter: true,
+      floatingFilterComponent: 'manualApplyFloatingFilter',
+      filterParams: {
+        buttons: ['apply', 'reset'],
+        closeOnApply: true,
+        maxNumConditions: 1,
+        numAlwaysVisibleConditions: 1,
+        filterOptions: ['contains', 'equals', 'notEqual', 'notContains', 'startsWith', 'endsWith']
+      }
+    };
+  },
+
+  mapApiRow(row) {
+    return {
+      uniqueKey: row?.unique_key_id ?? '',
+      userId: row?.user_id ?? '',
+      programId: row?.program_id ?? '',
+      workStnId: row?.work_station_id ?? '',
+      effectiveDate: this.normalizeDateValueForDisplay(row?.effective_date),
+      terminationDate: this.normalizeDateValueForDisplay(row?.termination_date),
+      disableDate: this.normalizeDateValueForDisplay(row?.disable_date),
+      updatedAtDisplay: row?.updated_at ?? '',
+      vendorProgram: row?.record_id ?? '',
+      vendorFamilyNumber: row?.vendor_family_number ?? '',
+      vendorFamilyName: row?.vendor_family_name ?? '',
+      itemNumber: row?.item_num ?? '',
+      itemDescription: row?.item_description ?? '',
+      distributionNonContract: row?.dist_fee_noncontract_percentage ?? '',
+      distributionContract: row?.dist_fee_contract_percentage ?? '',
+      marginFundingPercentType: row?.margin_funding_pct_type ?? '',
+      notes: row?.notes ?? ''
+    };
+  },
+
+  buildDatasource() {
+    return {
+      rowCount: null,
+      getRows: async (params) => {
+        const requestedBlockSize = params.endRow - params.startRow || 20;
+        const selectedPageSize =
+          typeof this.gridApi?.paginationGetPageSize === 'function'
+            ? this.gridApi.paginationGetPageSize() || requestedBlockSize
+            : requestedBlockSize;
+        const page = Math.floor((params.startRow || 0) / selectedPageSize);
+        const sortModel = Array.isArray(params.sortModel) ? params.sortModel[0] : null;
+        const queryParams = new URLSearchParams({
+          page: String(page),
+          size: String(selectedPageSize),
+          sortBy: this.mapColumnToApiField(sortModel?.colId || 'uniqueKey', 'sort'),
+          sortDirection: String(sortModel?.sort || 'asc').toUpperCase()
+        });
+
+        Object.entries(params.filterModel || {}).forEach(([field, model]) => {
+          const parsed = this.normalizeFilterModel(field, model);
+          if (!parsed?.value) return;
+          const apiField = this.mapColumnToApiField(field, 'filter');
+          queryParams.set(apiField, parsed.value);
+          queryParams.set(`${apiField}_op`, parsed.operator);
+        });
+
+        try {
+          const cacheKey = queryParams.toString();
+          let requestPromise = this.pageRequestCache.get(cacheKey);
+
+          if (!requestPromise) {
+            const requestUrl = `${this.resolveApiUrl(this.itemApiEndpoint)}?${queryParams.toString()}`;
+            requestPromise = fetch(requestUrl, {
+              method: 'GET',
+              headers: { Accept: 'application/json' },
+              credentials: 'same-origin'
+            }).then(async (response) => {
+              if (!response.ok) {
+                throw new Error(`Failed to load margin funding item data (${response.status})`);
+              }
+
+              const payload = await response.json();
+              const rows = Array.isArray(payload?.content) ? payload.content.map((row) => this.mapApiRow(row)) : [];
+              const totalRows = Number(
+                payload?.totalElements ?? payload?.total_elements ?? rows.length ?? 0
+              );
+
+              return {
+                rows,
+                totalRows
+              };
+            });
+
+            this.pageRequestCache.set(cacheKey, requestPromise);
+          }
+
+          const { rows, totalRows } = await requestPromise;
+          const pageStart = page * selectedPageSize;
+          const sliceStart = Math.max(0, (params.startRow || 0) - pageStart);
+          const sliceEnd = Math.min(sliceStart + requestedBlockSize, rows.length);
+          const blockRows = rows.slice(sliceStart, sliceEnd);
+          params.successCallback(blockRows, totalRows);
+        } catch (error) {
+          this.pageRequestCache.delete(queryParams.toString());
+          console.error('Margin funding item maintenance load failed:', error);
+          params.successCallback([], 0);
+          if (typeof this.gridApi?.showNoRowsOverlay === 'function') {
+            this.gridApi.showNoRowsOverlay();
+          }
+        }
+      }
+    };
   },
 
   resetGridState() {
     if (!this.gridApi) return;
+
+    this.pageRequestCache = new Map();
+
     if (typeof this.gridApi.setFilterModel === 'function') {
       this.gridApi.setFilterModel(null);
     }
@@ -139,9 +652,10 @@ const MarginFundingMaintenanceManager = {
 
   getSelectedUniqueKeys() {
     if (!this.gridApi || typeof this.gridApi.getSelectedRows !== 'function') return [];
+
     return this.gridApi.getSelectedRows()
       .map((row) => row?.uniqueKey)
-      .filter(Boolean);
+      .filter((value) => value !== null && value !== undefined && value !== '');
   },
 
   getSelectedRows() {
@@ -155,19 +669,23 @@ const MarginFundingMaintenanceManager = {
 
   refreshGridData() {
     if (!this.gridApi) return;
+
+    this.pageRequestCache = new Map();
+
     if (typeof this.gridApi.refreshInfiniteCache === 'function') {
       this.gridApi.refreshInfiniteCache();
     } else if (typeof this.gridApi.refreshServerSideStore === 'function') {
       this.gridApi.refreshServerSideStore({ purge: true });
     }
+
     if (typeof this.gridApi.deselectAll === 'function') {
       this.gridApi.deselectAll();
     }
   },
 
   async postGridAction(url, payload) {
-    const response = await fetch(url, {
-      method: 'POST',
+    const response = await fetch(this.resolveApiUrl(url), {
+      method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
@@ -193,6 +711,93 @@ const MarginFundingMaintenanceManager = {
     if (!payload || typeof payload !== 'object') return '';
     const message = payload.message;
     return typeof message === 'string' ? message.trim() : '';
+  },
+
+  getCurrentRequestParams() {
+    const sortModel = typeof this.gridApi?.getSortModel === 'function'
+      ? (this.gridApi.getSortModel() || [])[0]
+      : null;
+    const pageSize = typeof this.gridApi?.paginationGetPageSize === 'function'
+      ? this.gridApi.paginationGetPageSize() || 20
+      : 20;
+    const page = typeof this.gridApi?.paginationGetCurrentPage === 'function'
+      ? this.gridApi.paginationGetCurrentPage() || 0
+      : 0;
+
+    const queryParams = new URLSearchParams({
+      page: String(page),
+      size: String(pageSize),
+      sortBy: this.mapColumnToApiField(sortModel?.colId || 'uniqueKey', 'sort'),
+      sortDirection: String(sortModel?.sort || 'asc').toUpperCase()
+    });
+
+    const filterModel = typeof this.gridApi?.getFilterModel === 'function'
+      ? this.gridApi.getFilterModel() || {}
+      : {};
+
+    Object.entries(filterModel).forEach(([field, model]) => {
+      const parsed = this.normalizeFilterModel(field, model);
+      if (!parsed?.value) return;
+      const apiField = this.mapColumnToApiField(field, 'filter');
+      queryParams.set(apiField, parsed.value);
+      queryParams.set(`${apiField}_op`, parsed.operator);
+    });
+
+    return queryParams;
+  },
+
+  getDownloadFileNameFromResponse(response) {
+    const disposition = response?.headers?.get?.('content-disposition') || '';
+    if (!disposition) return '';
+
+    const utfMatch = disposition.match(/filename\*\s*=\s*UTF-8''([^;]+)/i);
+    if (utfMatch?.[1]) {
+      try {
+        return decodeURIComponent(utfMatch[1].trim());
+      } catch (error) {
+        return utfMatch[1].trim();
+      }
+    }
+
+    const plainMatch = disposition.match(/filename\s*=\s*"?([^\";]+)"?/i);
+    return plainMatch?.[1]?.trim() || '';
+  },
+
+  triggerFileDownload(blob, fileName) {
+    const downloadUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = fileName || 'margin-funding-item-maintenance.csv';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(downloadUrl), 0);
+  },
+
+  async handleDownloadAction() {
+    try {
+      const queryParams = this.getCurrentRequestParams();
+      const response = await fetch(
+        `${this.resolveApiUrl(this.downloadEndpoint)}?${queryParams.toString()}`,
+        {
+          method: 'GET',
+          headers: { Accept: '*/*' },
+          credentials: 'same-origin'
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Download failed (${response.status})`);
+      }
+
+      const blob = await response.blob();
+      const fileName =
+        this.getDownloadFileNameFromResponse(response) || 'margin-funding-item-maintenance.csv';
+      this.triggerFileDownload(blob, fileName);
+    } catch (error) {
+      console.error('Margin funding item maintenance download failed:', error);
+      this.showInfo(error?.message || 'Download failed.', 'error');
+    }
   },
 
   cacheDisableModalElements() {
@@ -225,6 +830,7 @@ const MarginFundingMaintenanceManager = {
   openDisableModal(uniqueKeys) {
     this.cacheDisableModalElements();
     if (!this.disableModal) return;
+
     this.pendingDisableUniqueKeys = uniqueKeys;
     if (this.disableNotesInput) {
       this.disableNotesInput.value = '';
@@ -237,6 +843,7 @@ const MarginFundingMaintenanceManager = {
   closeDisableModal() {
     this.cacheDisableModalElements();
     if (!this.disableModal) return;
+
     this.disableModal.hidden = true;
     this.pendingDisableUniqueKeys = [];
     if (this.disableNotesInput) {
@@ -302,6 +909,7 @@ const MarginFundingMaintenanceManager = {
   parseMmDdYyyyDate(value) {
     const match = String(value || '').trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
     if (!match) return null;
+
     const month = Number(match[1]);
     const day = Number(match[2]);
     const year = Number(match[3]);
@@ -341,6 +949,7 @@ const MarginFundingMaintenanceManager = {
   closeUpdateTerminationModal() {
     this.cacheUpdateTerminationModalElements();
     if (!this.updateTerminationModal) return;
+
     this.updateTerminationModal.hidden = true;
     this.pendingTerminationUpdateUniqueKeys = [];
     if (this.updateTerminationDateInput) this.updateTerminationDateInput.value = '';
@@ -352,6 +961,7 @@ const MarginFundingMaintenanceManager = {
   openTerminationDatePicker() {
     this.cacheUpdateTerminationModalElements();
     if (!this.updateTerminationDateNativeInput) return;
+
     const picker = this.updateTerminationDateNativeInput;
     if (typeof picker.showPicker === 'function') {
       picker.showPicker();
@@ -363,6 +973,7 @@ const MarginFundingMaintenanceManager = {
   syncTerminationDateFromNativePicker() {
     const value = this.updateTerminationDateNativeInput?.value;
     if (!value) return;
+
     const [year, month, day] = value.split('-').map(Number);
     const date = new Date(year, (month || 1) - 1, day || 1);
     if (this.updateTerminationDateInput) {
@@ -408,20 +1019,20 @@ const MarginFundingMaintenanceManager = {
 
     try {
       if (this.updateTerminationSaveBtn) this.updateTerminationSaveBtn.disabled = true;
-      await this.postGridAction(this.updateTerminationDateEndpoint, {
-        uniqueKeys,
-        terminationDate: this.formatDateAsMmDdYyyy(parsedDate),
-        notes
-      });
+      await this.postGridAction(
+        this.bulkUpdateEndpoint,
+        uniqueKeys.map((uniqueKeyId) => ({
+          uniqueKeyId,
+          terminationDate: this.formatDateAsYmd(parsedDate),
+          notes
+        }))
+      );
       this.closeUpdateTerminationModal();
       this.refreshGridData();
-      window.GridManager?.currentInstance?.showToast?.('Termination date updated successfully.', 'success');
+      this.showInfo('Termination date updated successfully.', 'success');
     } catch (error) {
       console.error('Update termination date failed:', error);
-      window.GridManager?.currentInstance?.showToast?.(
-        error?.message || 'Failed to update termination date.',
-        'error'
-      );
+      this.showInfo(error?.message || 'Failed to update termination date.', 'error');
     } finally {
       if (this.updateTerminationSaveBtn) this.updateTerminationSaveBtn.disabled = false;
     }
@@ -444,16 +1055,21 @@ const MarginFundingMaintenanceManager = {
 
     try {
       if (this.disableSaveBtn) this.disableSaveBtn.disabled = true;
-      await this.postGridAction(this.disableEndpoint, { uniqueKeys, notes });
+      const disableDate = this.formatDateAsYmd(this.getTodayDateOnly());
+      await this.postGridAction(
+        this.bulkUpdateEndpoint,
+        uniqueKeys.map((uniqueKeyId) => ({
+          uniqueKeyId,
+          disableDate,
+          notes
+        }))
+      );
       this.closeDisableModal();
       this.refreshGridData();
-      window.GridManager?.currentInstance?.showToast?.('Selected rows disabled successfully.', 'success');
+      this.showInfo('Selected rows disabled successfully.', 'success');
     } catch (error) {
       console.error('Disable action failed:', error);
-      window.GridManager?.currentInstance?.showToast?.(
-        error?.message || 'Failed to disable selected rows.',
-        'error'
-      );
+      this.showInfo(error?.message || 'Failed to disable selected rows.', 'error');
     } finally {
       if (this.disableSaveBtn) this.disableSaveBtn.disabled = false;
     }
@@ -462,14 +1078,11 @@ const MarginFundingMaintenanceManager = {
   handleDisableAction() {
     const uniqueKeys = this.getSelectedUniqueKeys();
     if (!uniqueKeys.length) {
-      window.GridManager?.currentInstance?.showToast?.('Select at least one row to disable.', 'error');
+      this.showInfo('Select at least one row to disable.', 'error');
       return;
     }
     if (this.hasDisabledRowsSelected()) {
-      window.GridManager?.currentInstance?.showToast?.(
-        'Disabled rows cannot be edited. Remove already-disabled rows from selection.',
-        'error'
-      );
+      this.showInfo('Disabled rows cannot be edited. Remove already-disabled rows from selection.', 'error');
       return;
     }
     this.openDisableModal(uniqueKeys);
@@ -478,14 +1091,11 @@ const MarginFundingMaintenanceManager = {
   handleUpdateTerminationDateAction() {
     const uniqueKeys = this.getSelectedUniqueKeys();
     if (!uniqueKeys.length) {
-      window.GridManager?.currentInstance?.showToast?.('Select at least one row to update termination date.', 'error');
+      this.showInfo('Select at least one row to update termination date.', 'error');
       return;
     }
     if (this.hasDisabledRowsSelected()) {
-      window.GridManager?.currentInstance?.showToast?.(
-        'Disabled rows cannot be edited. Remove already-disabled rows from selection.',
-        'error'
-      );
+      this.showInfo('Disabled rows cannot be edited. Remove already-disabled rows from selection.', 'error');
       return;
     }
     this.openUpdateTerminationModal(uniqueKeys);
@@ -499,16 +1109,28 @@ const MarginFundingMaintenanceManager = {
       });
     }
 
+    const addBtn = document.querySelector('.gt-action-btn[data-action="add"]');
+    if (addBtn) {
+      addBtn.addEventListener('click', () => {
+        window.location.assign(
+          window.MFI_ADD_PAGE_URL || '/margin-funding-maintenance/add'
+        );
+      });
+    }
+
+    const favoriteBtn = document.querySelector('.gt-action-btn[data-action="favorite"]');
+    if (favoriteBtn) {
+      favoriteBtn.addEventListener('click', () => {
+        this.showInfo('Favorite action is not configured yet.', 'warning');
+      });
+    }
+
     if (window.GridToolbar && this.gridApi && this.gridElement) {
       window.GridToolbar.bindDensityControls({
         gridApi: this.gridApi,
         gridElement: this.gridElement,
         defaultMode: 'compact',
         densityClassPrefix: 'mfi-density'
-      });
-      window.GridToolbar.bindDownloadControl({
-        gridApi: this.gridApi,
-        fileName: 'margin-funding-item-maintenance.csv'
       });
     }
 
@@ -524,6 +1146,11 @@ const MarginFundingMaintenanceManager = {
     const refreshBtn = document.querySelector('.gt-action-btn[data-action="refresh"]');
     if (refreshBtn) {
       refreshBtn.addEventListener('click', () => this.resetGridState());
+    }
+
+    const downloadBtn = document.querySelector('.gt-view-btn[data-action="download"]');
+    if (downloadBtn) {
+      downloadBtn.addEventListener('click', () => this.handleDownloadAction());
     }
 
     const disableBtn = document.querySelector('.gt-action-btn[data-action="disable"]');
@@ -544,6 +1171,11 @@ const MarginFundingMaintenanceManager = {
         this.clearDisableInlineError();
       }
     });
+
+    const updateTerminationBtn = document.querySelector('.gt-action-btn[data-action="update-termination-date"]');
+    if (updateTerminationBtn) {
+      updateTerminationBtn.addEventListener('click', () => this.handleUpdateTerminationDateAction());
+    }
 
     this.cacheUpdateTerminationModalElements();
     this.updateTerminationCancelBtn?.addEventListener('click', () => this.closeUpdateTerminationModal());
@@ -570,15 +1202,11 @@ const MarginFundingMaintenanceManager = {
         this.clearUpdateTerminationInlineError();
       }
     });
-
-    const updateTerminationBtn = document.querySelector('.gt-action-btn[data-action="update-termination-date"]');
-    if (updateTerminationBtn) {
-      updateTerminationBtn.addEventListener('click', () => this.handleUpdateTerminationDateAction());
-    }
   },
 
   applyDefaultDensity() {
     if (!(window.GridToolbar && this.gridApi && this.gridElement)) return;
+
     const activeDensityBtn = document.querySelector('.gt-view-btn[data-density].is-active');
     const defaultMode = activeDensityBtn?.dataset?.density || 'compact';
     window.GridToolbar.stabilizeDensity(
@@ -592,6 +1220,7 @@ const MarginFundingMaintenanceManager = {
   },
 
   init() {
+    this.apiBaseUrl = String(window.API_BASE_URL || '').trim().replace(/\/$/, '');
     this.gridElement = document.getElementById('mfiGrid');
 
     const gridConfig = {
@@ -601,8 +1230,46 @@ const MarginFundingMaintenanceManager = {
       manualFilterApply: true,
       paginationType: 'server',
       useSpringPagination: true,
-      apiEndpoint: '/api/margin-funding/paginated',
       gridOptions: {
+        onPaginationChanged: (params) => {
+          if (!params?.api || typeof params.api.paginationGetPageSize !== 'function') return;
+          if (params.api.__isUpdatingPageSize) return;
+
+          const newPageSize = params.api.paginationGetPageSize();
+          const lastKnownPageSize = params.api.__lastKnownPageSize || 20;
+          if (newPageSize === lastKnownPageSize) return;
+
+          params.api.__isUpdatingPageSize = true;
+          params.api.__lastKnownPageSize = newPageSize;
+          this.pageRequestCache = new Map();
+
+          setTimeout(() => {
+            if (typeof params.api.updateGridOptions === 'function') {
+              params.api.updateGridOptions({ cacheBlockSize: newPageSize });
+            } else if (typeof params.api.setGridOption === 'function') {
+              params.api.setGridOption('cacheBlockSize', newPageSize);
+            }
+
+            const currentPage =
+              typeof params.api.paginationGetCurrentPage === 'function'
+                ? params.api.paginationGetCurrentPage()
+                : 0;
+
+            if (currentPage > 0 && typeof params.api.paginationGoToFirstPage === 'function') {
+              params.api.paginationGoToFirstPage();
+            } else if (typeof params.api.purgeInfiniteCache === 'function') {
+              params.api.purgeInfiniteCache();
+            } else if (typeof params.api.refreshInfiniteCache === 'function') {
+              params.api.refreshInfiniteCache();
+            }
+
+            params.api.__isUpdatingPageSize = false;
+          }, 50);
+        },
+        onGridReady: (params) => {
+          params.api.__lastKnownPageSize = 20;
+          params.api.__isUpdatingPageSize = false;
+        },
         rowSelection: 'multiple',
         suppressRowClickSelection: true,
         isRowSelectable: (rowNode) => {
@@ -618,16 +1285,38 @@ const MarginFundingMaintenanceManager = {
             '<span class="gt-sort-icon gt-sort-icon--desc" aria-hidden="true"><svg viewBox="0 0 8 12" focusable="false"><path d="M4 11L1 8H7L4 11Z"></path></svg></span>'
         },
         components: {
-          gtPageSelectHeader: GtPageSelectHeader
+          gtPageSelectHeader: GtPageSelectHeader,
+          manualApplyFloatingFilter: MarginFundingItemManualFloatingFilter
+        },
+        localeText: {
+          equals: 'Equals',
+          notEqual: 'Does not equal',
+          greaterThan: 'Greater than',
+          lessThan: 'Less than',
+          after: 'Greater than',
+          before: 'Less than',
+          greaterThanOrEqual: 'Greater than or equal',
+          lessThanOrEqual: 'Less than or equal',
+          contains: 'Contains',
+          notContains: 'Does not contain',
+          startsWith: 'Begins with',
+          endsWith: 'Ends with'
         },
         defaultColDef: {
           sortable: true,
           unSortIcon: true,
           wrapHeaderText: true,
           autoHeaderHeight: true,
+          suppressFloatingFilterButton: false,
+          floatingFilterComponent: 'manualApplyFloatingFilter',
+          floatingFilterComponentParams: {
+            suppressFilterButton: false
+          },
           filterParams: {
             buttons: ['apply', 'reset'],
-            closeOnApply: true
+            closeOnApply: true,
+            maxNumConditions: 1,
+            numAlwaysVisibleConditions: 1
           }
         }
       },
@@ -658,30 +1347,45 @@ const MarginFundingMaintenanceManager = {
         { field: 'vendorFamilyName', headerName: 'Vendor Family Name', minWidth: 190 },
         { field: 'vendorProgram', headerName: 'Vendor Program', minWidth: 160 },
         { field: 'itemNumber', headerName: 'Item Number', minWidth: 130 },
-        { field: 'itemDescription', headerName: 'Item Description', minWidth: 180 },
+        { field: 'itemDescription', headerName: 'Item Description', minWidth: 220 },
         { field: 'distributionNonContract', headerName: 'Distribution Fee Non-Contract %', minWidth: 220 },
         { field: 'distributionContract', headerName: 'Distribution Fee Contract %', minWidth: 200 },
         { field: 'marginFundingPercentType', headerName: 'Margin Funding Percent Type', minWidth: 220 },
-        { field: 'effectiveFrom', headerName: 'Effective From', minWidth: 140 },
-        { field: 'effectiveThru', headerName: 'Effective Thru', minWidth: 140 },
+        { field: 'effectiveDate', headerName: 'Effective Date', minWidth: 140 },
         { field: 'terminationDate', headerName: 'Termination Date', minWidth: 160 },
         { field: 'disableDate', headerName: 'Disable Date', minWidth: 140 },
         { field: 'notes', headerName: 'Notes', minWidth: 180 },
         { field: 'userId', headerName: 'User ID', minWidth: 120 },
-        { field: 'dateUpdated', headerName: 'Date Updated', minWidth: 140 },
-        { field: 'timeUpdated', headerName: 'Time Updated', minWidth: 140 },
+        {
+          field: 'updatedAtDisplay',
+          headerName: 'Updated At',
+          minWidth: 220,
+          valueFormatter: (params) => this.formatUpdatedAt(params.value)
+        },
         { field: 'workStnId', headerName: 'Work Stn ID', minWidth: 130 },
         { field: 'programId', headerName: 'Program ID', minWidth: 130 }
-      ]
+      ].map((column) => this.buildFilterableColumn(column))
     };
 
     this.gridApi = DynamicGrid.createGrid(gridConfig);
+    this.gridApi?.setGridOption?.('datasource', this.buildDatasource());
+
+    if (this.gridApi) {
+      this.gridApi.applyPendingFloatingFilters = () => {
+        const filters = this.gridApi.__manualFloatingFilters;
+        if (Array.isArray(filters)) {
+          filters.forEach((filter) => filter?.apply?.());
+        }
+      };
+    }
 
     window.gridApi = this.gridApi;
     this.initViewActions();
+
     if (this.gridApi && typeof this.gridApi.addEventListener === 'function') {
       this.gridApi.addEventListener('firstDataRendered', () => this.applyDefaultDensity());
     }
+
     this.applyDefaultDensity();
     setTimeout(() => this.applyDefaultDensity(), 150);
 
