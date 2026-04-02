@@ -314,7 +314,7 @@ const MarginFundingMaintenanceManager = {
 
   mapColumnToApiField(colId, context = 'filter') {
     const fieldMap = {
-      uniqueKey: context === 'sort' ? 'unqiueKeyId' : 'unique_key_id',
+      uniqueKey: context === 'sort' ? 'uniqueKeyId' : 'unique_key_id',
       userId: 'user_id',
       programId: 'program_id',
       workStnId: 'work_station_id',

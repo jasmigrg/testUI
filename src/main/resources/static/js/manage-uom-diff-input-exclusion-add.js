@@ -478,7 +478,9 @@ const UomDiffInputExclusionAddPage = {
       }
     }
 
-    if (!response.ok || payload?.status === false) {
+    const responseStatus = String(payload?.status ?? '').trim().toUpperCase();
+
+    if (!response.ok || payload?.status === false || responseStatus === 'ERROR') {
       const err = new Error(this.sanitizeSubmitMessage(payload?.message || payload?.error || `Request failed: ${response.status}`));
       err.status = response.status;
       err.payload = payload;

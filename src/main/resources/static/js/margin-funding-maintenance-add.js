@@ -61,7 +61,7 @@ const MarginFundingItemMaintenanceAddPage = {
   detachCommunityPaste: null,
   pollTimer: null,
   maxPasteRows: 5000,
-  maxPasteCols: 10,
+  maxPasteCols: MFC_FIELD_DEFS.length,
   maxPasteCells: 50000,
 
   init() {
