@@ -751,10 +751,14 @@ const UomDiffPage = {
     const exclusionGrid = this.grids.exclusion;
     if (!exclusionGrid?.api) return;
 
+    this.pageRequestCacheByTab.exclusion = new Map();
+
     if (typeof exclusionGrid.api.deselectAll === 'function') {
       exclusionGrid.api.deselectAll();
     }
-    if (typeof exclusionGrid.api.refreshInfiniteCache === 'function') {
+    if (typeof exclusionGrid.api.purgeInfiniteCache === 'function') {
+      exclusionGrid.api.purgeInfiniteCache();
+    } else if (typeof exclusionGrid.api.refreshInfiniteCache === 'function') {
       exclusionGrid.api.refreshInfiniteCache();
     }
     this.refreshActiveGridLayout();
