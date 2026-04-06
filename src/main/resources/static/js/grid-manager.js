@@ -271,6 +271,33 @@ function createGridManager(gridApi, gridId, configOverrides = {}) {
       return resolveGridPreferenceStore(this.getPreferenceStoreContext());
     },
 
+    getActivePreferenceOverrideStorageKey() {
+      const context = this.getPreferenceStoreContext();
+      return `gridPreferenceActiveOverride_${context.screenId}_${context.userId}`;
+    },
+
+    readActivePreferenceOverride() {
+      try {
+        return localStorage.getItem(this.getActivePreferenceOverrideStorageKey()) || '';
+      } catch (error) {
+        console.warn('Failed to read grid preference override:', error);
+        return '';
+      }
+    },
+
+    writeActivePreferenceOverride(preferenceKey) {
+      try {
+        const normalized = String(preferenceKey || '').trim();
+        if (!normalized) {
+          localStorage.removeItem(this.getActivePreferenceOverrideStorageKey());
+          return;
+        }
+        localStorage.setItem(this.getActivePreferenceOverrideStorageKey(), normalized);
+      } catch (error) {
+        console.warn('Failed to write grid preference override:', error);
+      }
+    },
+
     async init() {
       console.log('GridManager initializing for grid:', this.gridId, 'with screenId:', this.apiConfig.screenId);
 
@@ -371,6 +398,7 @@ function createGridManager(gridApi, gridId, configOverrides = {}) {
         if (Array.isArray(data) && data.length > 0) {
           const defaultPref = this.savedPreferences['default'];
           this.savedPreferences = { 'default': defaultPref };
+          let backendCurrentKey = '';
 
           data.forEach((pref) => {
             const key = pref.preferenceName.toLowerCase().replace(/\s+/g, '-');
@@ -384,10 +412,23 @@ function createGridManager(gridApi, gridId, configOverrides = {}) {
             };
 
             if (pref.currentPreference) {
+              backendCurrentKey = key;
               this.currentPreferenceKey = key;
               this.currentPreferenceId = pref.preferenceId;
             }
           });
+
+          const overrideKey = this.readActivePreferenceOverride();
+          if (overrideKey === 'default' && this.savedPreferences.default) {
+            this.currentPreferenceKey = 'default';
+            this.currentPreferenceId = null;
+          } else if (overrideKey && this.savedPreferences[overrideKey]) {
+            this.currentPreferenceKey = overrideKey;
+            this.currentPreferenceId = this.savedPreferences[overrideKey].preferenceId || null;
+          } else if (!backendCurrentKey) {
+            this.currentPreferenceKey = 'default';
+            this.currentPreferenceId = null;
+          }
 
           console.log(`Loaded preferences from ${store.mode || 'store'}:`, this.savedPreferences);
 
@@ -786,6 +827,7 @@ function createGridManager(gridApi, gridId, configOverrides = {}) {
 
         this.currentPreferenceKey = key;
         this.currentPreferenceId = savedData.preferenceId;
+        this.writeActivePreferenceOverride(key);
 
         this.loadPreferencesList();
         this.applyPreference(this.savedPreferences[key]);
@@ -867,6 +909,7 @@ function createGridManager(gridApi, gridId, configOverrides = {}) {
         }
 
         this.currentPreferenceKey = preferenceKey;
+        this.writeActivePreferenceOverride(preferenceKey);
 
         const preferenceMenu = document.getElementById('preferenceMenu');
         if (preferenceMenu) {
