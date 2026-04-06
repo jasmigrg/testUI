@@ -315,22 +315,26 @@ const MarginFundingMaintenanceManager = {
   mapColumnToApiField(colId, context = 'filter') {
     const fieldMap = {
       uniqueKey: context === 'sort' ? 'uniqueKeyId' : 'unique_key_id',
-      userId: 'user_id',
-      programId: 'program_id',
-      workStnId: 'work_station_id',
-      effectiveDate: 'effective_date',
-      terminationDate: 'termination_date',
-      disableDate: 'disable_date',
-      vendorProgram: 'record_id',
-      vendorFamilyNumber: 'vendor_family_number',
-      vendorFamilyName: 'vendor_family_name',
-      itemNumber: 'item_num',
-      itemDescription: 'item_description',
-      distributionNonContract: 'dist_fee_noncontract_percentage',
-      distributionContract: 'dist_fee_contract_percentage',
-      marginFundingPercentType: 'margin_funding_pct_type',
+      userId: context === 'sort' ? 'userId' : 'user_id',
+      programId: context === 'sort' ? 'programId' : 'program_id',
+      workStnId: context === 'sort' ? 'workStationId' : 'work_station_id',
+      effectiveDate: context === 'sort' ? 'effectiveDate' : 'effective_date',
+      terminationDate: context === 'sort' ? 'terminationDate' : 'termination_date',
+      disableDate: context === 'sort' ? 'disableDate' : 'disable_date',
+      vendorProgram: context === 'sort' ? 'recordId' : 'record_id',
+      vendorFamilyNumber: context === 'sort' ? 'vendorFamilyNumber' : 'vendor_family_number',
+      vendorFamilyName: context === 'sort' ? 'vendorFamilyName' : 'vendor_family_name',
+      itemNumber: context === 'sort' ? 'itemNum' : 'item_num',
+      itemDescription: context === 'sort' ? 'itemDescription' : 'item_description',
+      distributionNonContract: context === 'sort'
+        ? 'distFeeNoncontractPercentage'
+        : 'dist_fee_noncontract_percentage',
+      distributionContract: context === 'sort'
+        ? 'distFeeContractPercentage'
+        : 'dist_fee_contract_percentage',
+      marginFundingPercentType: context === 'sort' ? 'marginFundingPctType' : 'margin_funding_pct_type',
       notes: 'notes',
-      updatedAtDisplay: 'updated_at'
+      updatedAtDisplay: context === 'sort' ? 'updatedAt' : 'updated_at'
     };
 
     return fieldMap[colId] || colId;
@@ -616,6 +620,9 @@ const MarginFundingMaintenanceManager = {
           const sliceEnd = Math.min(sliceStart + requestedBlockSize, rows.length);
           const blockRows = rows.slice(sliceStart, sliceEnd);
           params.successCallback(blockRows, totalRows);
+          if (typeof this.gridApi?.hideOverlay === 'function') {
+            this.gridApi.hideOverlay();
+          }
         } catch (error) {
           this.pageRequestCache.delete(queryParams.toString());
           console.error('Margin funding item maintenance load failed:', error);
