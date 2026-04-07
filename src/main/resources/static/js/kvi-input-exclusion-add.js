@@ -1,5 +1,7 @@
 const KVI_INPUT_EXCLUSION_FIELD_DEFS = [
   { field: 'organization', headerName: 'Organization', minWidth: 180 },
+  { field: 'effectiveDate', headerName: 'Effective Date', minWidth: 160, type: 'date' },
+  { field: 'terminationDate', headerName: 'Termination Date', minWidth: 170, type: 'date' },
   { field: 'itemDiscontinuedFlag', headerName: 'Item Discontinued Flag', minWidth: 210 },
   { field: 'itemSequesteredCoramApriaFlag', headerName: 'Item Sequestered Coram Apria Flag', minWidth: 250 },
   { field: 'itemUsedBiomedFlag', headerName: 'Used Biomed Flag', minWidth: 190 },
@@ -9,6 +11,8 @@ const KVI_INPUT_EXCLUSION_FIELD_DEFS = [
 
 const KVI_INPUT_EXCLUSION_OUTBOUND_FIELDS = [
   { localField: 'organization', backendField: 'organization' },
+  { localField: 'effectiveDate', backendField: 'effectiveDate' },
+  { localField: 'terminationDate', backendField: 'terminationDate' },
   { localField: 'itemDiscontinuedFlag', backendField: 'itemDiscontinuedFlag' },
   { localField: 'itemSequesteredCoramApriaFlag', backendField: 'itemSequesteredCoramApriaFlag' },
   { localField: 'itemUsedBiomedFlag', backendField: 'itemUsedBiomedFlag' },
@@ -42,7 +46,7 @@ const KviInputExclusionAddPage = {
   detachCommunityPaste: null,
   pollTimer: null,
   maxPasteRows: 5000,
-  maxPasteCols: 10,
+  maxPasteCols: KVI_INPUT_EXCLUSION_FIELD_DEFS.length,
   maxPasteCells: 50000,
 
   init() {
@@ -226,6 +230,16 @@ const KviInputExclusionAddPage = {
         numAlwaysVisibleConditions: 1,
         defaultOption: 'equals',
         filterOptions: ['equals', 'notEqual', 'greaterThan', 'lessThan', 'greaterThanOrEqual', 'lessThanOrEqual']
+      };
+    } else if (column.type === 'date') {
+      config.filter = 'agTextColumnFilter';
+      config.filterParams = {
+        buttons: ['apply', 'reset'],
+        closeOnApply: true,
+        maxNumConditions: 1,
+        numAlwaysVisibleConditions: 1,
+        defaultOption: 'contains',
+        filterOptions: ['contains', 'equals', 'notEqual', 'notContains', 'startsWith', 'endsWith']
       };
     } else if (KVI_INPUT_EXCLUSION_FLAG_FIELDS.has(column.field)) {
       config.filter = 'agTextColumnFilter';
@@ -718,8 +732,16 @@ const KviInputExclusionAddPage = {
       messagesByField[mappedField] = String(message);
     };
 
-    if (Array.isArray(item?.errorFields) && Array.isArray(item?.errorMessages) && item.errorFields.length === item.errorMessages.length) {
-      item.errorFields.forEach((field, index) => assignMessage(field, item.errorMessages[index]));
+    const errorMessages = Array.isArray(item?.errorMessages)
+      ? item.errorMessages
+      : Array.isArray(item?.errorMessage)
+        ? item.errorMessage
+        : typeof item?.errorMessage === 'string' && item.errorMessage.trim()
+          ? [item.errorMessage.trim()]
+          : [];
+
+    if (Array.isArray(item?.errorFields) && errorMessages.length > 0 && item.errorFields.length === errorMessages.length) {
+      item.errorFields.forEach((field, index) => assignMessage(field, errorMessages[index]));
     }
 
     if (item?.fieldErrors && typeof item.fieldErrors === 'object' && !Array.isArray(item.fieldErrors)) {
@@ -801,19 +823,26 @@ const KviInputExclusionAddPage = {
 
   normalizeResultRow(item) {
     const baseRow = this.normalizeRow(this.toBackendDataShape(item?.data || {}));
+    const errorMessages = Array.isArray(item?.errorMessages)
+      ? item.errorMessages
+      : Array.isArray(item?.errorMessage)
+        ? item.errorMessage
+        : typeof item?.errorMessage === 'string' && item.errorMessage.trim()
+          ? [item.errorMessage.trim()]
+          : [];
     const fieldErrorMessages = this.extractFieldErrorMessages(item);
     const uploadErrors = Array.from(new Set([
       ...(Array.isArray(item?.errorFields) ? item.errorFields.map((field) => this.mapErrorField(field)).filter(Boolean) : []),
       ...Object.keys(fieldErrorMessages)
     ]));
     const uploadStatus = this.toUploadStatus(item?.status)
-      || (uploadErrors.length > 0 || (Array.isArray(item?.errorMessages) && item.errorMessages.length > 0) ? 'error' : 'success');
+      || (uploadErrors.length > 0 || errorMessages.length > 0 ? 'error' : 'success');
 
     return {
       ...baseRow,
       uploadStatus,
       uploadErrors,
-      errorMessages: Array.isArray(item?.errorMessages) ? item.errorMessages : [],
+      errorMessages,
       fieldErrorMessages,
       editedFields: [],
       wasEditedAfterError: false,
@@ -1112,6 +1141,8 @@ const KviInputExclusionAddPage = {
   normalizeRow(row) {
     const normalized = { ...this.createBlankRow(), ...row };
     normalized.organization = this.toDisplayText(normalized.organization);
+    normalized.effectiveDate = this.toDisplayText(normalized.effectiveDate);
+    normalized.terminationDate = this.toDisplayText(normalized.terminationDate);
     normalized.itemDiscontinuedFlag =
       this.normalizeFlagValue(normalized.itemDiscontinuedFlag) ?? this.toDisplayText(normalized.itemDiscontinuedFlag);
     normalized.itemSequesteredCoramApriaFlag =
@@ -1213,7 +1244,11 @@ const KviInputExclusionAddPage = {
   applyAdvancedFilters() {
     const fieldTypeMap = {};
     KVI_INPUT_EXCLUSION_FIELD_DEFS.forEach((column) => {
-      fieldTypeMap[column.field] = column.type === 'number' ? 'number' : 'text';
+      fieldTypeMap[column.field] = column.type === 'number'
+        ? 'number'
+        : column.type === 'date'
+          ? 'date'
+          : 'text';
     });
 
     if (window.GridFilterOperatorUtils?.applyFloatingFilters) {
@@ -1221,6 +1256,7 @@ const KviInputExclusionAddPage = {
         gridApi: this.gridApi,
         gridElement: this.gridElement,
         fieldTypeMap,
+        toDateIso: (value) => value,
         isNumeric: (value) => !Number.isNaN(Number(String(value).replace(/,/g, '').trim())),
         onValidationError: (field, reason) => this.showInfo(`${field}: ${reason}`, 'error')
       });

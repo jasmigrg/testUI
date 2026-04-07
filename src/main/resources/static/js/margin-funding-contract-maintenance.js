@@ -101,14 +101,13 @@ class MarginFundingContractManualFloatingFilter {
     this.input.dataset.colId = params.column.getColId();
 
     this.onKeyDown = (event) => {
-      if (event.key === 'Enter') {
-        event.preventDefault();
-        if (this.params?.api && typeof this.params.api.applyPendingFloatingFilters === 'function') {
-          this.params.api.applyPendingFloatingFilters();
-        } else {
-          this.apply();
-        }
+      if (event.key !== 'Enter') return;
+      event.preventDefault();
+      if (this.params?.api && typeof this.params.api.applyPendingFloatingFilters === 'function') {
+        this.params.api.applyPendingFloatingFilters();
+        return;
       }
+      this.apply();
     };
 
     this.input.addEventListener('keydown', this.onKeyDown);
@@ -126,15 +125,20 @@ class MarginFundingContractManualFloatingFilter {
 
   onParentModelChanged(parentModel) {
     let next = '';
+
     if (parentModel && parentModel.rawInput != null) {
       next = String(parentModel.rawInput);
     } else if (parentModel && parentModel.dateFrom != null && this.isNumericOrDateFilter()) {
-      next = this.rebuildOperatorInput(parentModel.type, this.normalizeDateValueForDisplay(parentModel.dateFrom));
+      next = this.rebuildOperatorInput(
+        parentModel.type,
+        MarginFundingContractMaintenancePage.normalizeDateValueForDisplay(parentModel.dateFrom)
+      );
     } else if (parentModel && parentModel.filter != null && this.isNumericOrDateFilter()) {
       next = this.rebuildOperatorInput(parentModel.type, parentModel.filter);
     } else if (parentModel && parentModel.filter != null) {
       next = String(parentModel.filter);
     }
+
     this.currentValue = next;
     if (this.input && this.input.value !== next) {
       this.input.value = next;
@@ -143,10 +147,14 @@ class MarginFundingContractManualFloatingFilter {
 
   apply() {
     if (!this.input) return;
+
     const value = this.input.value.trim();
     this.currentValue = value;
     const fallbackOperator = this.isNumericOrDateFilter() ? 'equals' : 'contains';
-    const parsedInput = MarginFundingContractMaintenancePage.parseInlineFilterExpression(value, fallbackOperator);
+    const parsedInput = MarginFundingContractMaintenancePage.parseInlineFilterExpression(
+      value,
+      fallbackOperator
+    );
 
     this.params.parentFilterInstance((instance) => {
       if (!instance) return;
@@ -172,21 +180,15 @@ class MarginFundingContractManualFloatingFilter {
     return `${prefix}${value == null ? '' : String(value)}`;
   }
 
-  normalizeDateValueForDisplay(value) {
-    const raw = String(value == null ? '' : value).trim();
-    const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ].*)?$/);
-    if (!isoMatch) return raw;
-    return `${isoMatch[2]}/${isoMatch[3]}/${isoMatch[1]}`;
-  }
-
   destroy() {
     if (this.input && this.onKeyDown) {
       this.input.removeEventListener('keydown', this.onKeyDown);
     }
+
     const list = this.params?.api?.__manualFloatingFilters;
     if (Array.isArray(list)) {
-      const idx = list.indexOf(this);
-      if (idx >= 0) list.splice(idx, 1);
+      const index = list.indexOf(this);
+      if (index >= 0) list.splice(index, 1);
     }
   }
 }
@@ -194,71 +196,19 @@ class MarginFundingContractManualFloatingFilter {
 const MarginFundingContractMaintenancePage = {
   gridApi: null,
   gridElement: null,
-
-  buildRows() {
-    const contractTypes = ['Primary', 'Secondary', 'Wildcard', 'Regional'];
-    const includeExcludeValues = ['I', 'E'];
-    return Array.from({ length: 24 }, (_, index) => {
-      const seed = index + 1;
-      const month = String((seed % 12) + 1).padStart(2, '0');
-      const vendorSeed = String(1000 + seed);
-      const day = String((seed % 27) + 1).padStart(2, '0');
-      return {
-        uniqueKey: `MFCN-${5000 + seed}`,
-        vendorFamilyNumber: `${30000 + seed}`,
-        vendorFamilyName: `Vendor Family ${String.fromCharCode(65 + (index % 6))}`,
-        vendorProgram: `VP-${vendorSeed}`,
-        manufacturerContractId: `MFG-${9000 + seed}`,
-        mfgContractIdWildcardLookup: `WC-${7000 + seed}`,
-        contractType: contractTypes[index % contractTypes.length],
-        ie: includeExcludeValues[index % includeExcludeValues.length],
-        effectiveFrom: `${month}/${day}/2026`,
-        effectiveThru: `${month}/${String(Math.min(Number(day) + 1, 28)).padStart(2, '0')}/2027`,
-        dateUpdated: `${month}/${day}/2026`,
-        timeUpdated: `${String(8 + (index % 10)).padStart(2, '0')}:15:00`,
-        userId: `USER${200 + (index % 8)}`,
-        workStnId: `WS${500 + (index % 6)}`,
-        programId: `PGM-${4000 + (index % 12)}`
-      };
-    });
-  },
-
-  parseInlineFilterExpression(value, fallbackOperator = 'contains') {
-    if (typeof DynamicGrid !== 'undefined' && typeof DynamicGrid.parseTextFilterInput === 'function') {
-      const parsed = DynamicGrid.parseTextFilterInput(value, fallbackOperator);
-      return {
-        type: parsed?.operator || fallbackOperator,
-        value: parsed?.value || '',
-        isInvalid: Boolean(parsed?.isInvalid),
-        invalidReason: parsed?.invalidReason || ''
-      };
-    }
-    return { type: fallbackOperator, value, isInvalid: false, invalidReason: '' };
-  },
-
-  toIsoDate(value) {
-    const raw = String(value || '').trim();
-    const usMatch = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-    if (!usMatch) return raw;
-    return `${usMatch[3]}-${usMatch[1]}-${usMatch[2]}`;
-  },
-
-  numberFilterValue(value) {
-    const raw = String(value ?? '').replace(/,/g, '').trim();
-    if (!raw) return null;
-    const numeric = Number(raw);
-    return Number.isFinite(numeric) ? numeric : null;
-  },
+  apiBaseUrl: '',
+  contractApiEndpoint: '/api/pricing/api/v1/margin-funding-contracts',
+  bulkUpdateEndpoint: '/api/pricing/api/v1/margin-funding-contracts/update-records',
+  downloadEndpoint: '/api/pricing/api/v1/margin-funding-contracts/export-csv',
+  pageRequestCache: new Map(),
+  pendingDisableUniqueKeys: [],
+  pendingTerminationUpdateUniqueKeys: [],
 
   showInfo(message, type = 'success') {
     if (!window.PageToast?.show) return;
-    let container = document.getElementById('marginFundingContractPageToastLayer');
-    if (!container) {
-      container = document.createElement('div');
-      container.id = 'marginFundingContractPageToastLayer';
-      container.className = 'app-page-toast-layer';
-      document.body.appendChild(container);
-    }
+
+    const container = this.ensureToastContainer();
+    if (!container) return;
 
     const normalizedType = ['success', 'error', 'warning'].includes(type) ? type : 'success';
     const title = normalizedType === 'error'
@@ -272,116 +222,1013 @@ const MarginFundingContractMaintenancePage = {
       type: normalizedType,
       title,
       subtitle: String(message || '').trim(),
-      icon: normalizedType === 'error' ? '!' : normalizedType === 'warning' ? 'i' : '✓',
-      autoHideMs: 2400
+      duration: normalizedType === 'error' ? 3200 : 2400
     });
   },
 
-  getFieldKind(field) {
-    if (['effectiveFrom', 'effectiveThru', 'dateUpdated'].includes(field)) return 'date';
-    if (['vendorFamilyNumber'].includes(field)) return 'number';
+  ensureToastContainer() {
+    let container = document.getElementById('marginFundingContractPageToastLayer');
+    if (container) return container;
+
+    container = document.createElement('div');
+    container.id = 'marginFundingContractPageToastLayer';
+    container.className = 'app-page-toast-layer';
+    document.body.appendChild(container);
+    return container;
+  },
+
+  resolveApiUrl(path) {
+    const normalizedPath = String(path || '').trim();
+    if (!normalizedPath) return this.apiBaseUrl;
+    if (/^https?:\/\//i.test(normalizedPath)) return normalizedPath;
+    if (!this.apiBaseUrl) return normalizedPath;
+
+    const base = this.apiBaseUrl.replace(/\/$/, '');
+    const suffix = normalizedPath.startsWith('/') ? normalizedPath : `/${normalizedPath}`;
+    return `${base}${suffix}`;
+  },
+
+  parseInlineFilterExpression(rawValue, defaultType = 'contains') {
+    const raw = String(rawValue ?? '').trim();
+    if (!raw) return { value: '', type: defaultType };
+
+    const operators = ['!=', '<>', '>=', '<=', '>', '<', '='];
+    const token = operators.find((operator) => raw.startsWith(operator));
+    if (!token) {
+      return { value: raw, type: defaultType };
+    }
+
+    const value = raw.slice(token.length).trim();
+    let type = defaultType;
+    if (token === '=') type = 'equals';
+    else if (token === '>') type = 'greaterThan';
+    else if (token === '>=') type = 'greaterThanOrEqual';
+    else if (token === '<') type = 'lessThan';
+    else if (token === '<=') type = 'lessThanOrEqual';
+    else if (token === '!=' || token === '<>') type = 'notEqual';
+
+    return { value, type };
+  },
+
+  mapColumnToApiField(colId, context = 'filter') {
+    const fieldMap = {
+      uniqueKey: context === 'sort' ? 'unique_key' : 'uniqueKey',
+      vendorFamilyNumber: context === 'sort' ? 'vendor_family_number' : 'vendorFamilyNumber',
+      vendorProgram: context === 'sort' ? 'vendor_program' : 'vendorProgram',
+      manufacturerContractId:
+        context === 'sort' ? 'manufacturer_contract_id' : 'manufacturerContractId',
+      mfgContractIdWildcardLookup:
+        context === 'sort'
+          ? 'mfg_contract_id_wildcard_lookup'
+          : 'mfgContractIdWildcardLookup',
+      contractType: context === 'sort' ? 'contract_type' : 'contractType',
+      ie: 'ie',
+      effectiveFrom: context === 'sort' ? 'effective_date' : 'effectiveFrom',
+      effectiveThru: context === 'sort' ? 'effective_thru' : 'effectiveThru',
+      updatedAtDisplay: context === 'sort' ? 'updated_at' : 'updatedAt',
+      userId: context === 'sort' ? 'user_id' : 'userId',
+      programId: context === 'sort' ? 'program_id' : 'programId',
+      workStationId: context === 'sort' ? 'work_station_id' : 'workStationId',
+      notes: 'notes',
+      disableDate: context === 'sort' ? 'disable_date' : 'disableDate'
+    };
+
+    return fieldMap[colId] || colId;
+  },
+
+  getFieldFilterKind(field) {
+    const normalizedField = String(field || '').trim();
+
+    if (['effectiveFrom', 'effectiveThru', 'updatedAtDisplay', 'disableDate'].includes(normalizedField)) {
+      return 'date';
+    }
+
+    if (['uniqueKey', 'vendorFamilyNumber', 'vendorProgram'].includes(normalizedField)) {
+      return 'number';
+    }
+
     return 'text';
   },
 
-  buildFilterableColumn(column) {
-    const fieldKind = this.getFieldKind(column.field);
-    const config = {
-      ...column,
-      cellClass: fieldKind === 'date' || fieldKind === 'number' ? 'cell-align-right' : 'cell-align-left'
-    };
+  buildAlignedColumn(column) {
+    const field = String(column?.field || column?.colId || '').trim();
+    if (!field || field === 'select') return column;
 
-    if (fieldKind === 'date') {
-      config.filter = 'agDateColumnFilter';
-      config.filterParams = {
-        comparator: window.GridFilterOperatorUtils?.createUsDateComparator
-          ? window.GridFilterOperatorUtils.createUsDateComparator((value) => this.toIsoDate(value))
-          : undefined,
-        buttons: ['apply', 'reset'],
-        closeOnApply: true,
-        maxNumConditions: 1,
-        numAlwaysVisibleConditions: 1
+    const kind = this.getFieldFilterKind(field);
+    return {
+      ...column,
+      cellClass: kind === 'text' ? 'cell-align-left' : 'cell-align-right'
+    };
+  },
+
+  getNumericFilterValue(value) {
+    const raw = String(value ?? '').trim();
+    if (!raw) return null;
+
+    const normalized = raw.replace(/[%,$\s]/g, '').replace(/,/g, '');
+    const numeric = Number(normalized);
+    return Number.isNaN(numeric) ? null : numeric;
+  },
+
+  dateFilterComparator(filterLocalDateAtMidnight, cellValue) {
+    const raw = String(cellValue || '').trim();
+    const usDateMatch = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (usDateMatch) {
+      const cellDate = new Date(Number(usDateMatch[3]), Number(usDateMatch[1]) - 1, Number(usDateMatch[2]));
+      const cellTime = cellDate.setHours(0, 0, 0, 0);
+      const filterTime = filterLocalDateAtMidnight.setHours(0, 0, 0, 0);
+      if (cellTime === filterTime) return 0;
+      return cellTime < filterTime ? -1 : 1;
+    }
+
+    const timestamp = Date.parse(raw);
+    if (Number.isNaN(timestamp)) return 0;
+    const cellDate = new Date(timestamp);
+    const cellTime = cellDate.setHours(0, 0, 0, 0);
+    const filterTime = filterLocalDateAtMidnight.setHours(0, 0, 0, 0);
+    if (cellTime === filterTime) return 0;
+    return cellTime < filterTime ? -1 : 1;
+  },
+
+  normalizeDateValueForDisplay(value) {
+    const raw = String(value == null ? '' : value).trim();
+    const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ].*)?$/);
+    if (!isoMatch) return raw;
+    return `${isoMatch[2]}/${isoMatch[3]}/${isoMatch[1]}`;
+  },
+
+  normalizeApiDateValue(value) {
+    const raw = String(value == null ? '' : value).trim();
+    if (!raw) return '';
+
+    const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ].*)?$/);
+    if (isoMatch) {
+      return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+    }
+
+    const usMatch = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (usMatch) {
+      return `${usMatch[3]}-${usMatch[1]}-${usMatch[2]}`;
+    }
+
+    const parsed = new Date(raw);
+    if (Number.isNaN(parsed.getTime())) return raw;
+    const yyyy = parsed.getFullYear();
+    const mm = String(parsed.getMonth() + 1).padStart(2, '0');
+    const dd = String(parsed.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  },
+
+  normalizeFilterModel(field, model) {
+    if (!model || typeof model !== 'object') return null;
+
+    const kind = this.getFieldFilterKind(field);
+    const filterType = String(model.filterType || '').trim();
+
+    if (kind === 'date' || filterType === 'date') {
+      const rawDate = model.dateFrom || model.filter;
+      const normalizedDate = this.normalizeApiDateValue(rawDate);
+      if (!normalizedDate) return null;
+      return {
+        value: normalizedDate,
+        operator: String(model.type || 'equals').trim() || 'equals'
       };
-    } else if (fieldKind === 'number') {
-      config.filter = 'agNumberColumnFilter';
-      config.filterValueGetter = (params) => this.numberFilterValue(params?.data?.[column.field]);
-      config.filterParams = {
-        buttons: ['apply', 'reset'],
-        closeOnApply: true,
-        maxNumConditions: 1,
-        numAlwaysVisibleConditions: 1
+    }
+
+    if (kind === 'number' || filterType === 'number') {
+      const rawValue = model.filter;
+      if (rawValue == null || String(rawValue).trim() === '') return null;
+      return {
+        value: String(rawValue).trim(),
+        operator: String(model.type || 'equals').trim() || 'equals'
       };
-    } else {
-      config.filter = 'agTextColumnFilter';
-      config.filterParams = {
+    }
+
+    const rawInput = String(model.rawInput ?? model.filter ?? '').trim();
+    if (!rawInput) return null;
+    const parsed = this.parseInlineFilterExpression(rawInput, 'contains');
+    if (!parsed.value) return null;
+
+    return {
+      value: parsed.value,
+      operator: parsed.type
+    };
+  },
+
+  buildFilterableColumn(column) {
+    const field = String(column?.field || column?.colId || '').trim();
+    if (!field || field === 'select') return column;
+
+    const aligned = this.buildAlignedColumn(column);
+    const kind = this.getFieldFilterKind(field);
+
+    if (kind === 'date') {
+      return {
+        ...aligned,
+        filter: 'agDateColumnFilter',
+        floatingFilter: true,
+        floatingFilterComponent: 'manualApplyFloatingFilter',
+        filterParams: {
+          buttons: ['apply', 'reset'],
+          closeOnApply: true,
+          maxNumConditions: 1,
+          numAlwaysVisibleConditions: 1,
+          comparator: this.dateFilterComparator,
+          filterOptions: [
+            'equals',
+            'notEqual',
+            'greaterThan',
+            'lessThan',
+            'greaterThanOrEqual',
+            'lessThanOrEqual'
+          ]
+        }
+      };
+    }
+
+    if (kind === 'number') {
+      return {
+        ...aligned,
+        filter: 'agNumberColumnFilter',
+        floatingFilter: true,
+        floatingFilterComponent: 'manualApplyFloatingFilter',
+        filterValueGetter: (params) => this.getNumericFilterValue(params?.data?.[field]),
+        filterParams: {
+          buttons: ['apply', 'reset'],
+          closeOnApply: true,
+          maxNumConditions: 1,
+          numAlwaysVisibleConditions: 1,
+          filterOptions: [
+            'equals',
+            'notEqual',
+            'greaterThan',
+            'lessThan',
+            'greaterThanOrEqual',
+            'lessThanOrEqual'
+          ]
+        }
+      };
+    }
+
+    return {
+      ...aligned,
+      filter: 'agTextColumnFilter',
+      floatingFilter: true,
+      floatingFilterComponent: 'manualApplyFloatingFilter',
+      filterParams: {
         buttons: ['apply', 'reset'],
         closeOnApply: true,
         maxNumConditions: 1,
         numAlwaysVisibleConditions: 1,
-        defaultOption: 'contains',
         filterOptions: ['contains', 'equals', 'notEqual', 'notContains', 'startsWith', 'endsWith']
-      };
-    }
-
-    return config;
+      }
+    };
   },
 
-  applyAdvancedFilters() {
-    const fieldTypeMap = {};
-    const filterableFields = [
-      'uniqueKey',
-      'vendorFamilyNumber',
-      'vendorFamilyName',
-      'vendorProgram',
-      'manufacturerContractId',
-      'mfgContractIdWildcardLookup',
-      'contractType',
-      'ie',
-      'effectiveFrom',
-      'effectiveThru',
-      'dateUpdated',
-      'timeUpdated',
-      'userId',
-      'workStnId',
-      'programId'
-    ];
-    filterableFields.forEach((field) => {
-      fieldTypeMap[field] = this.getFieldKind(field);
+  formatUpdatedAt(timestamp) {
+    if (!timestamp) return '';
+
+    const parsed = new Date(timestamp);
+    if (Number.isNaN(parsed.getTime())) return String(timestamp);
+
+    const month = String(parsed.getMonth() + 1).padStart(2, '0');
+    const day = String(parsed.getDate()).padStart(2, '0');
+    const year = parsed.getFullYear();
+    const time = parsed.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
     });
 
-    if (window.GridFilterOperatorUtils?.applyFloatingFilters) {
-      window.GridFilterOperatorUtils.applyFloatingFilters({
-        gridApi: this.gridApi,
-        gridElement: this.gridElement,
-        fieldTypeMap,
-        toDateIso: (value) => this.toIsoDate(value),
-        isNumeric: (value) => !Number.isNaN(Number(String(value).replace(/,/g, '').trim())),
-        onValidationError: (field, reason) => this.showInfo(`${field}: ${reason}`, 'error')
-      });
-      return;
-    }
-
-    this.gridApi?.onFilterChanged?.();
+    return `${month}/${day}/${year} ${time}`;
   },
 
-  clearColumnFilters() {
-    if (!this.gridApi) return;
-    this.gridApi.setFilterModel?.(null);
-    this.gridApi.onFilterChanged?.();
-    this.gridElement?.querySelectorAll('.mfi-floating-filter-input').forEach((input) => {
-      input.value = '';
-    });
+  mapApiRow(row) {
+    return {
+      uniqueKey: row?.uniqueKey ?? '',
+      vendorFamilyNumber: row?.vendorFamilyNumber ?? '',
+      vendorProgram: row?.vendorProgram ?? '',
+      manufacturerContractId: row?.manufacturerContractId ?? '',
+      mfgContractIdWildcardLookup: row?.mfgContractIdWildcardLookup ?? '',
+      contractType: row?.contractType ?? '',
+      ie: row?.ie ?? '',
+      effectiveFrom: this.normalizeDateValueForDisplay(row?.effectiveFrom),
+      effectiveThru: this.normalizeDateValueForDisplay(row?.effectiveThru),
+      updatedAtDisplay: row?.updatedAt ?? '',
+      userId: row?.userId ?? '',
+      programId: row?.programId ?? '',
+      workStationId: row?.workStationId ?? '',
+      notes: row?.notes ?? '',
+      disableDate: this.normalizeDateValueForDisplay(row?.disableDate)
+    };
+  },
+
+  buildDatasource() {
+    return {
+      rowCount: null,
+      getRows: async (params) => {
+        const requestedBlockSize = params.endRow - params.startRow || 10;
+        const selectedPageSize =
+          typeof this.gridApi?.paginationGetPageSize === 'function'
+            ? this.gridApi.paginationGetPageSize() || requestedBlockSize
+            : requestedBlockSize;
+        const pageNumber = Math.floor((params.startRow || 0) / selectedPageSize) + 1;
+        const sortModel = Array.isArray(params.sortModel) ? params.sortModel[0] : null;
+        const queryParams = new URLSearchParams({
+          page: String(pageNumber),
+          pageSize: String(selectedPageSize),
+          sortBy: this.mapColumnToApiField(sortModel?.colId || 'effectiveFrom', 'sort'),
+          sortDir: String(sortModel?.sort || 'asc').toLowerCase()
+        });
+
+        Object.entries(params.filterModel || {}).forEach(([field, model]) => {
+          const parsed = this.normalizeFilterModel(field, model);
+          if (!parsed?.value) return;
+          const apiField = this.mapColumnToApiField(field, 'filter');
+          queryParams.set(apiField, parsed.value);
+          queryParams.set(`${apiField}_op`, parsed.operator);
+        });
+
+        try {
+          const cacheKey = queryParams.toString();
+          let requestPromise = this.pageRequestCache.get(cacheKey);
+
+          if (!requestPromise) {
+            const requestUrl = `${this.resolveApiUrl(this.contractApiEndpoint)}?${queryParams.toString()}`;
+            requestPromise = fetch(requestUrl, {
+              method: 'GET',
+              headers: { Accept: 'application/json' },
+              credentials: 'same-origin'
+            }).then(async (response) => {
+              if (!response.ok) {
+                throw new Error(`Failed to load margin funding contract data (${response.status})`);
+              }
+
+              const payload = await response.json();
+              const items = Array.isArray(payload?.data?.items) ? payload.data.items : [];
+              const rows = items.map((row) => this.mapApiRow(row));
+              const totalRows = Number(payload?.data?.totalRecords ?? rows.length ?? 0);
+
+              return {
+                rows,
+                totalRows
+              };
+            });
+
+            this.pageRequestCache.set(cacheKey, requestPromise);
+          }
+
+          const { rows, totalRows } = await requestPromise;
+          const pageStart = (pageNumber - 1) * selectedPageSize;
+          const sliceStart = Math.max(0, (params.startRow || 0) - pageStart);
+          const sliceEnd = Math.min(sliceStart + requestedBlockSize, rows.length);
+          const blockRows = rows.slice(sliceStart, sliceEnd);
+          params.successCallback(blockRows, totalRows);
+          if (typeof this.gridApi?.hideOverlay === 'function') {
+            this.gridApi.hideOverlay();
+          }
+        } catch (error) {
+          this.pageRequestCache.delete(queryParams.toString());
+          console.error('Margin funding contract maintenance load failed:', error);
+          params.successCallback([], 0);
+          if (typeof this.gridApi?.showNoRowsOverlay === 'function') {
+            this.gridApi.showNoRowsOverlay();
+          }
+        }
+      }
+    };
   },
 
   resetGridState() {
     if (!this.gridApi) return;
-    this.clearColumnFilters();
-    this.gridApi.applyColumnState?.({ defaultState: { sort: null } });
-    this.gridApi.paginationGoToFirstPage?.();
-    this.gridApi.deselectAll?.();
+
+    this.pageRequestCache = new Map();
+
+    if (typeof this.gridApi.setFilterModel === 'function') {
+      this.gridApi.setFilterModel(null);
+    }
+    if (typeof this.gridApi.setSortModel === 'function') {
+      this.gridApi.setSortModel(null);
+    }
+    if (typeof this.gridApi.onFilterChanged === 'function') {
+      this.gridApi.onFilterChanged();
+    }
+    if (typeof this.gridApi.paginationGoToFirstPage === 'function') {
+      this.gridApi.paginationGoToFirstPage();
+    }
+    if (typeof this.gridApi.deselectAll === 'function') {
+      this.gridApi.deselectAll();
+    }
+    if (typeof this.gridApi.purgeInfiniteCache === 'function') {
+      this.gridApi.purgeInfiniteCache();
+    } else if (typeof this.gridApi.refreshInfiniteCache === 'function') {
+      this.gridApi.refreshInfiniteCache();
+    }
+  },
+
+  getSelectedUniqueKeys() {
+    if (!this.gridApi || typeof this.gridApi.getSelectedRows !== 'function') return [];
+
+    return this.gridApi.getSelectedRows()
+      .map((row) => row?.uniqueKey)
+      .filter((value) => value !== null && value !== undefined && value !== '');
+  },
+
+  getSelectedRows() {
+    if (!this.gridApi || typeof this.gridApi.getSelectedRows !== 'function') return [];
+    return this.gridApi.getSelectedRows().filter(Boolean);
+  },
+
+  hasDisabledRowsSelected() {
+    return this.getSelectedRows().some((row) => String(row.disableDate || '').trim() !== '');
+  },
+
+  refreshGridData() {
+    if (!this.gridApi) return;
+
+    this.pageRequestCache = new Map();
+
+    if (typeof this.gridApi.refreshInfiniteCache === 'function') {
+      this.gridApi.refreshInfiniteCache();
+    } else if (typeof this.gridApi.refreshServerSideStore === 'function') {
+      this.gridApi.refreshServerSideStore({ purge: true });
+    }
+
+    if (typeof this.gridApi.deselectAll === 'function') {
+      this.gridApi.deselectAll();
+    }
+  },
+
+  async postGridAction(url, payload) {
+    const response = await fetch(this.resolveApiUrl(url), {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const responseBody = await this.readJsonSafely(response);
+    if (!response.ok) {
+      const errorMessage = this.extractErrorMessage(responseBody)
+        || `Request failed: ${response.status}`;
+      throw new Error(errorMessage);
+    }
+
+    if (String(responseBody?.status || '').toUpperCase() === 'ERROR') {
+      throw new Error(this.extractErrorMessage(responseBody) || 'Update failed.');
+    }
+
+    const failedItems = Array.isArray(responseBody?.data)
+      ? responseBody.data.filter((item) => String(item?.status || '').toUpperCase() !== 'SUCCESS')
+      : [];
+    if (failedItems.length) {
+      const firstMessage = failedItems[0]?.message;
+      throw new Error(
+        typeof firstMessage === 'string' && firstMessage.trim()
+          ? firstMessage.trim()
+          : 'One or more updates failed.'
+      );
+    }
+
+    return responseBody;
+  },
+
+  async readJsonSafely(response) {
+    try {
+      return await response.json();
+    } catch (error) {
+      return null;
+    }
+  },
+
+  extractErrorMessage(payload) {
+    if (!payload || typeof payload !== 'object') return '';
+
+    if (typeof payload.message === 'string' && payload.message.trim()) {
+      return payload.message.trim();
+    }
+
+    if (Array.isArray(payload.errors) && payload.errors.length) {
+      const firstError = payload.errors[0];
+      if (typeof firstError === 'string' && firstError.trim()) {
+        return firstError.trim();
+      }
+      if (typeof firstError?.message === 'string' && firstError.message.trim()) {
+        return firstError.message.trim();
+      }
+    }
+
+    if (Array.isArray(payload.data) && payload.data.length) {
+      const firstFailure = payload.data.find((item) => String(item?.status || '').toUpperCase() !== 'SUCCESS');
+      if (typeof firstFailure?.message === 'string' && firstFailure.message.trim()) {
+        return firstFailure.message.trim();
+      }
+    }
+
+    return '';
+  },
+
+  getCurrentRequestParams() {
+    const sortModel = typeof this.gridApi?.getSortModel === 'function'
+      ? (this.gridApi.getSortModel() || [])[0]
+      : null;
+    const pageSize = typeof this.gridApi?.paginationGetPageSize === 'function'
+      ? this.gridApi.paginationGetPageSize() || 10
+      : 10;
+    const page = typeof this.gridApi?.paginationGetCurrentPage === 'function'
+      ? (this.gridApi.paginationGetCurrentPage() || 0) + 1
+      : 1;
+
+    const queryParams = new URLSearchParams({
+      page: String(page),
+      pageSize: String(pageSize),
+      sortBy: this.mapColumnToApiField(sortModel?.colId || 'effectiveFrom', 'sort'),
+      sortDir: String(sortModel?.sort || 'asc').toLowerCase()
+    });
+
+    const filterModel = typeof this.gridApi?.getFilterModel === 'function'
+      ? this.gridApi.getFilterModel() || {}
+      : {};
+
+    Object.entries(filterModel).forEach(([field, model]) => {
+      const parsed = this.normalizeFilterModel(field, model);
+      if (!parsed?.value) return;
+      const apiField = this.mapColumnToApiField(field, 'filter');
+      queryParams.set(apiField, parsed.value);
+      queryParams.set(`${apiField}_op`, parsed.operator);
+    });
+
+    return queryParams;
+  },
+
+  getDownloadFileNameFromResponse(response) {
+    const disposition = response?.headers?.get?.('content-disposition') || '';
+    if (!disposition) return '';
+
+    const utfMatch = disposition.match(/filename\*\s*=\s*UTF-8''([^;]+)/i);
+    if (utfMatch?.[1]) {
+      try {
+        return decodeURIComponent(utfMatch[1].trim());
+      } catch (error) {
+        return utfMatch[1].trim();
+      }
+    }
+
+    const plainMatch = disposition.match(/filename\s*=\s*"?([^\";]+)"?/i);
+    return plainMatch?.[1]?.trim() || '';
+  },
+
+  triggerFileDownload(blob, fileName) {
+    const downloadUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = fileName || 'margin-funding-contract-maintenance.csv';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(downloadUrl), 0);
+  },
+
+  async handleDownloadAction() {
+    try {
+      const queryParams = this.getCurrentRequestParams();
+      const response = await fetch(
+        `${this.resolveApiUrl(this.downloadEndpoint)}?${queryParams.toString()}`,
+        {
+          method: 'GET',
+          headers: { Accept: '*/*' },
+          credentials: 'same-origin'
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Download failed (${response.status})`);
+      }
+
+      const blob = await response.blob();
+      const fileName =
+        this.getDownloadFileNameFromResponse(response) || 'margin-funding-contract-maintenance.csv';
+      this.triggerFileDownload(blob, fileName);
+    } catch (error) {
+      console.error('Margin funding contract maintenance download failed:', error);
+      this.showInfo(error?.message || 'Download failed.', 'error');
+    }
+  },
+
+  cacheDisableModalElements() {
+    if (this.disableModal) return;
+    this.disableModal = document.getElementById('disableRecordModal');
+    this.disableDialog = this.disableModal?.querySelector('.mf-action-modal__dialog');
+    this.disableNotesInput = document.getElementById('disableRecordNotesInput');
+    this.disableErrorMessage = document.getElementById('disableRecordErrorMessage');
+    this.disableSaveBtn = this.disableModal?.querySelector('[data-action="save-disable-modal"]');
+    this.disableCancelBtn = this.disableModal?.querySelector('[data-action="cancel-disable-modal"]');
+    this.disableCloseEls = this.disableModal
+      ? Array.from(this.disableModal.querySelectorAll('[data-action="close-disable-modal"]'))
+      : [];
+  },
+
+  showDisableInlineError() {
+    if (this.disableErrorMessage) {
+      this.disableErrorMessage.hidden = false;
+    }
+    this.disableDialog?.classList.add('has-inline-error');
+  },
+
+  clearDisableInlineError() {
+    if (this.disableErrorMessage) {
+      this.disableErrorMessage.hidden = true;
+    }
+    this.disableDialog?.classList.remove('has-inline-error');
+  },
+
+  openDisableModal(uniqueKeys) {
+    this.cacheDisableModalElements();
+    if (!this.disableModal) return;
+
+    this.pendingDisableUniqueKeys = uniqueKeys;
+    if (this.disableNotesInput) {
+      this.disableNotesInput.value = '';
+      this.disableNotesInput.focus();
+    }
+    this.clearDisableInlineError();
+    this.disableModal.hidden = false;
+  },
+
+  closeDisableModal() {
+    this.cacheDisableModalElements();
+    if (!this.disableModal) return;
+
+    this.disableModal.hidden = true;
+    this.pendingDisableUniqueKeys = [];
+    if (this.disableNotesInput) {
+      this.disableNotesInput.value = '';
+    }
+    this.clearDisableInlineError();
+  },
+
+  cacheUpdateTerminationModalElements() {
+    if (this.updateTerminationModal) return;
+    this.updateTerminationModal = document.getElementById('updateTerminationDateModal');
+    this.updateTerminationDialog = this.updateTerminationModal?.querySelector('.mf-action-modal__dialog');
+    this.updateTerminationDateInput = document.getElementById('updateTerminationDateInput');
+    this.updateTerminationDateNativeInput = document.getElementById('updateTerminationDateNativeInput');
+    this.updateTerminationNotesInput = document.getElementById('updateTerminationNotesInput');
+    this.updateTerminationErrorMessage = document.getElementById('updateTerminationErrorMessage');
+    this.updateTerminationSaveBtn =
+      this.updateTerminationModal?.querySelector('[data-action="save-update-termination-modal"]');
+    this.updateTerminationCancelBtn =
+      this.updateTerminationModal?.querySelector('[data-action="cancel-update-termination-modal"]');
+    this.updateTerminationCloseEls = this.updateTerminationModal
+      ? Array.from(this.updateTerminationModal.querySelectorAll('[data-action="close-update-termination-modal"]'))
+      : [];
+    this.updateTerminationDatePickerBtn =
+      this.updateTerminationModal?.querySelector('[data-action="open-termination-date-picker"]');
+  },
+
+  showUpdateTerminationInlineError(message) {
+    if (this.updateTerminationErrorMessage) {
+      this.updateTerminationErrorMessage.textContent = message;
+      this.updateTerminationErrorMessage.hidden = false;
+    }
+    this.updateTerminationDialog?.classList.add('has-inline-error');
+  },
+
+  clearUpdateTerminationInlineError() {
+    if (this.updateTerminationErrorMessage) {
+      this.updateTerminationErrorMessage.hidden = true;
+      this.updateTerminationErrorMessage.textContent = '';
+    }
+    this.updateTerminationDialog?.classList.remove('has-inline-error');
+  },
+
+  getTodayDateOnly() {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  },
+
+  formatDateAsYmd(date) {
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const dd = String(date.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  },
+
+  formatDateAsMmDdYyyy(date) {
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const dd = String(date.getDate()).padStart(2, '0');
+    const yyyy = date.getFullYear();
+    return `${mm}/${dd}/${yyyy}`;
+  },
+
+  parseMmDdYyyyDate(value) {
+    const match = String(value || '').trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (!match) return null;
+
+    const month = Number(match[1]);
+    const day = Number(match[2]);
+    const year = Number(match[3]);
+    const date = new Date(year, month - 1, day);
+    if (
+      date.getFullYear() !== year ||
+      date.getMonth() !== month - 1 ||
+      date.getDate() !== day
+    ) {
+      return null;
+    }
+    return date;
+  },
+
+  openUpdateTerminationModal(uniqueKeys) {
+    this.cacheUpdateTerminationModalElements();
+    if (!this.updateTerminationModal) return;
+
+    this.pendingTerminationUpdateUniqueKeys = uniqueKeys;
+    const today = this.getTodayDateOnly();
+    const ymd = this.formatDateAsYmd(today);
+    if (this.updateTerminationDateNativeInput) {
+      this.updateTerminationDateNativeInput.min = ymd;
+      this.updateTerminationDateNativeInput.value = '';
+    }
+    if (this.updateTerminationDateInput) {
+      this.updateTerminationDateInput.value = '';
+    }
+    if (this.updateTerminationNotesInput) {
+      this.updateTerminationNotesInput.value = '';
+    }
+    this.clearUpdateTerminationInlineError();
+    this.updateTerminationModal.hidden = false;
+    this.updateTerminationDateInput?.focus();
+  },
+
+  closeUpdateTerminationModal() {
+    this.cacheUpdateTerminationModalElements();
+    if (!this.updateTerminationModal) return;
+
+    this.updateTerminationModal.hidden = true;
+    this.pendingTerminationUpdateUniqueKeys = [];
+    if (this.updateTerminationDateInput) this.updateTerminationDateInput.value = '';
+    if (this.updateTerminationDateNativeInput) this.updateTerminationDateNativeInput.value = '';
+    if (this.updateTerminationNotesInput) this.updateTerminationNotesInput.value = '';
+    this.clearUpdateTerminationInlineError();
+  },
+
+  openTerminationDatePicker() {
+    this.cacheUpdateTerminationModalElements();
+    if (!this.updateTerminationDateNativeInput) return;
+
+    const picker = this.updateTerminationDateNativeInput;
+    if (typeof picker.showPicker === 'function') {
+      picker.showPicker();
+    } else {
+      picker.click();
+    }
+  },
+
+  syncTerminationDateFromNativePicker() {
+    const value = this.updateTerminationDateNativeInput?.value;
+    if (!value) return;
+
+    const [year, month, day] = value.split('-').map(Number);
+    const date = new Date(year, (month || 1) - 1, day || 1);
+    if (this.updateTerminationDateInput) {
+      this.updateTerminationDateInput.value = this.formatDateAsMmDdYyyy(date);
+    }
+  },
+
+  async handleUpdateTerminationDateSave() {
+    const uniqueKeys = this.pendingTerminationUpdateUniqueKeys || [];
+    if (!uniqueKeys.length) {
+      this.closeUpdateTerminationModal();
+      return;
+    }
+
+    const dateText = (this.updateTerminationDateInput?.value ?? '').trim();
+    const notes = (this.updateTerminationNotesInput?.value ?? '').trim();
+
+    if (!dateText) {
+      this.showUpdateTerminationInlineError('Termination Date is required.');
+      this.updateTerminationDateInput?.focus();
+      return;
+    }
+    if (!notes) {
+      this.showUpdateTerminationInlineError('A note is required to update termination date.');
+      this.updateTerminationNotesInput?.focus();
+      return;
+    }
+
+    const parsedDate = this.parseMmDdYyyyDate(dateText);
+    if (!parsedDate) {
+      this.showUpdateTerminationInlineError('Termination Date must be in MM/DD/YYYY format.');
+      this.updateTerminationDateInput?.focus();
+      return;
+    }
+
+    if (parsedDate < this.getTodayDateOnly()) {
+      this.showUpdateTerminationInlineError('Termination Date must be today or a future date.');
+      this.updateTerminationDateInput?.focus();
+      return;
+    }
+
+    this.clearUpdateTerminationInlineError();
+
+    try {
+      if (this.updateTerminationSaveBtn) this.updateTerminationSaveBtn.disabled = true;
+      await this.postGridAction(
+        this.bulkUpdateEndpoint,
+        uniqueKeys.map((uniqueKeyIdInternal) => ({
+          uniqueKeyIdInternal,
+          terminationDate: this.formatDateAsYmd(parsedDate),
+          notes
+        }))
+      );
+      this.closeUpdateTerminationModal();
+      this.refreshGridData();
+      this.showInfo('Termination date updated successfully.', 'success');
+    } catch (error) {
+      console.error('Update termination date failed:', error);
+      this.showInfo(error?.message || 'Failed to update termination date.', 'error');
+    } finally {
+      if (this.updateTerminationSaveBtn) this.updateTerminationSaveBtn.disabled = false;
+    }
+  },
+
+  async handleDisableSave() {
+    const uniqueKeys = this.pendingDisableUniqueKeys || [];
+    if (!uniqueKeys.length) {
+      this.closeDisableModal();
+      return;
+    }
+
+    const notes = (this.disableNotesInput?.value ?? '').trim();
+    if (!notes) {
+      this.showDisableInlineError();
+      this.disableNotesInput?.focus();
+      return;
+    }
+    this.clearDisableInlineError();
+
+    try {
+      if (this.disableSaveBtn) this.disableSaveBtn.disabled = true;
+      const disableDate = this.formatDateAsYmd(this.getTodayDateOnly());
+      await this.postGridAction(
+        this.bulkUpdateEndpoint,
+        uniqueKeys.map((uniqueKeyIdInternal) => ({
+          uniqueKeyIdInternal,
+          disableDate,
+          notes
+        }))
+      );
+      this.closeDisableModal();
+      this.refreshGridData();
+      this.showInfo('Selected rows disabled successfully.', 'success');
+    } catch (error) {
+      console.error('Disable action failed:', error);
+      this.showInfo(error?.message || 'Failed to disable selected rows.', 'error');
+    } finally {
+      if (this.disableSaveBtn) this.disableSaveBtn.disabled = false;
+    }
+  },
+
+  handleDisableAction() {
+    const uniqueKeys = this.getSelectedUniqueKeys();
+    if (!uniqueKeys.length) {
+      this.showInfo('Select at least one row to disable.', 'error');
+      return;
+    }
+    if (this.hasDisabledRowsSelected()) {
+      this.showInfo('Disabled rows cannot be edited. Remove already-disabled rows from selection.', 'error');
+      return;
+    }
+    this.openDisableModal(uniqueKeys);
+  },
+
+  handleUpdateTerminationDateAction() {
+    const uniqueKeys = this.getSelectedUniqueKeys();
+    if (!uniqueKeys.length) {
+      this.showInfo('Select at least one row to update termination date.', 'error');
+      return;
+    }
+    if (this.hasDisabledRowsSelected()) {
+      this.showInfo('Disabled rows cannot be edited. Remove already-disabled rows from selection.', 'error');
+      return;
+    }
+    this.openUpdateTerminationModal(uniqueKeys);
+  },
+
+  initViewActions() {
+    const backBtn = document.querySelector('.gt-action-btn[data-action="back"]');
+    if (backBtn) {
+      backBtn.addEventListener('click', () => {
+        window.location.assign('/');
+      });
+    }
+
+    const addBtn = document.querySelector('.gt-action-btn[data-action="add"]');
+    if (addBtn) {
+      addBtn.addEventListener('click', () => {
+        this.showInfo('Add flow is not wired for contract maintenance yet.', 'warning');
+      });
+    }
+
+    const favoriteBtn = document.querySelector('.gt-action-btn[data-action="favorite"]');
+    if (favoriteBtn) {
+      favoriteBtn.addEventListener('click', () => {
+        this.showInfo('Favorite action is not configured yet.', 'warning');
+      });
+    }
+
+    if (window.GridToolbar && this.gridApi && this.gridElement) {
+      window.GridToolbar.bindDensityControls({
+        gridApi: this.gridApi,
+        gridElement: this.gridElement,
+        defaultMode: 'compact',
+        densityClassPrefix: 'mfi-density'
+      });
+    }
+
+    const executeBtn = document.querySelector('.gt-action-btn[data-action="execute"]');
+    if (executeBtn) {
+      executeBtn.addEventListener('click', () => {
+        if (this.gridApi && typeof this.gridApi.applyPendingFloatingFilters === 'function') {
+          this.gridApi.applyPendingFloatingFilters();
+        }
+        this.pageRequestCache = new Map();
+        if (typeof this.gridApi?.purgeInfiniteCache === 'function') {
+          this.gridApi.purgeInfiniteCache();
+        } else if (typeof this.gridApi?.refreshInfiniteCache === 'function') {
+          this.gridApi.refreshInfiniteCache();
+        }
+      });
+    }
+
+    const refreshBtn = document.querySelector('.gt-action-btn[data-action="refresh"]');
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', () => this.resetGridState());
+    }
+
+    const downloadBtn = document.querySelector('.gt-view-btn[data-action="download"]');
+    if (downloadBtn) {
+      downloadBtn.addEventListener('click', () => this.handleDownloadAction());
+    }
+
+    const disableBtn = document.querySelector('.gt-action-btn[data-action="disable"]');
+    if (disableBtn) {
+      disableBtn.addEventListener('click', () => this.handleDisableAction());
+    }
+
+    const updateTerminationBtn = document.querySelector('.gt-action-btn[data-action="update-termination-date"]');
+    if (updateTerminationBtn) {
+      updateTerminationBtn.addEventListener('click', () => this.handleUpdateTerminationDateAction());
+    }
+
+    this.cacheDisableModalElements();
+    this.disableCancelBtn?.addEventListener('click', () => this.closeDisableModal());
+    this.disableCloseEls?.forEach((el) => el.addEventListener('click', () => this.closeDisableModal()));
+    this.disableSaveBtn?.addEventListener('click', () => this.handleDisableSave());
+    this.disableNotesInput?.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') this.closeDisableModal();
+      if (event.key === 'Enter') this.handleDisableSave();
+    });
+    this.disableNotesInput?.addEventListener('input', () => {
+      if (this.disableNotesInput?.value.trim()) {
+        this.clearDisableInlineError();
+      }
+    });
+
+    this.cacheUpdateTerminationModalElements();
+    this.updateTerminationCancelBtn?.addEventListener('click', () => this.closeUpdateTerminationModal());
+    this.updateTerminationCloseEls?.forEach((el) =>
+      el.addEventListener('click', () => this.closeUpdateTerminationModal())
+    );
+    this.updateTerminationDatePickerBtn?.addEventListener('click', () => this.openTerminationDatePicker());
+    this.updateTerminationDateNativeInput?.addEventListener('change', () => this.syncTerminationDateFromNativePicker());
+    this.updateTerminationSaveBtn?.addEventListener('click', () => this.handleUpdateTerminationDateSave());
+    this.updateTerminationDateInput?.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') this.closeUpdateTerminationModal();
+    });
+    this.updateTerminationDateInput?.addEventListener('input', () => {
+      if (this.updateTerminationDateInput?.value.trim()) {
+        this.clearUpdateTerminationInlineError();
+      }
+    });
+    this.updateTerminationNotesInput?.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') this.closeUpdateTerminationModal();
+      if (event.key === 'Enter') this.handleUpdateTerminationDateSave();
+    });
+    this.updateTerminationNotesInput?.addEventListener('input', () => {
+      if (this.updateTerminationNotesInput?.value.trim()) {
+        this.clearUpdateTerminationInlineError();
+      }
+    });
   },
 
   applyDefaultDensity() {
     if (!(window.GridToolbar && this.gridApi && this.gridElement)) return;
+
     const activeDensityBtn = document.querySelector('.gt-view-btn[data-density].is-active');
     const defaultMode = activeDensityBtn?.dataset?.density || 'compact';
     window.GridToolbar.stabilizeDensity(
@@ -394,65 +1241,63 @@ const MarginFundingContractMaintenancePage = {
     );
   },
 
-  initViewActions() {
-    const backBtn = document.querySelector('.gt-action-btn[data-action="back"]');
-    backBtn?.addEventListener('click', () => window.history.back());
-
-    if (window.GridToolbar && this.gridApi && this.gridElement) {
-      window.GridToolbar.bindDensityControls({
-        gridApi: this.gridApi,
-        gridElement: this.gridElement,
-        defaultMode: 'compact',
-        densityClassPrefix: 'mfi-density'
-      });
-    }
-
-    document.querySelector('.gt-action-btn[data-action="add"]')
-      ?.addEventListener('click', () => this.showInfo('Add flow will be wired once the contract APIs are finalized.', 'warning'));
-    document.querySelector('.gt-action-btn[data-action="favorite"]')
-      ?.addEventListener('click', () => this.showInfo('Favorite action is not configured yet.', 'warning'));
-    document.querySelector('.gt-action-btn[data-action="disable"]')
-      ?.addEventListener('click', () => {
-        const selected = this.gridApi?.getSelectedRows?.() || [];
-        if (!selected.length) {
-          this.showInfo('Select at least one row to disable.', 'error');
-          return;
-        }
-        this.showInfo('Disable action will be wired when the contract mutation APIs are ready.', 'warning');
-      });
-    document.querySelector('.gt-action-btn[data-action="update-termination-date"]')
-      ?.addEventListener('click', () => {
-        const selected = this.gridApi?.getSelectedRows?.() || [];
-        if (!selected.length) {
-          this.showInfo('Select at least one row to update termination date.', 'error');
-          return;
-        }
-        this.showInfo('Update Termination Date will be wired when the contract APIs are finalized.', 'warning');
-      });
-    document.querySelector('.gt-action-btn[data-action="refresh"]')
-      ?.addEventListener('click', () => this.resetGridState());
-    document.querySelector('.gt-action-btn[data-action="execute"]')
-      ?.addEventListener('click', () => {
-        if (typeof this.gridApi?.applyPendingFloatingFilters === 'function') {
-          this.gridApi.applyPendingFloatingFilters();
-        }
-      });
-  },
-
   init() {
+    this.apiBaseUrl = String(window.API_BASE_URL || '').trim().replace(/\/$/, '');
     this.gridElement = document.getElementById('mfcContractGrid');
 
     const gridConfig = {
       gridElementId: 'mfcContractGrid',
       pageSize: 10,
-      paginationType: 'client',
       floatingFilter: true,
       manualFilterApply: true,
+      paginationType: 'server',
+      useSpringPagination: true,
       gridOptions: {
-        rowData: this.buildRows(),
+        onPaginationChanged: (params) => {
+          if (!params?.api || typeof params.api.paginationGetPageSize !== 'function') return;
+          if (params.api.__isUpdatingPageSize) return;
+
+          const newPageSize = params.api.paginationGetPageSize();
+          const lastKnownPageSize = params.api.__lastKnownPageSize || 10;
+          if (newPageSize === lastKnownPageSize) return;
+
+          params.api.__isUpdatingPageSize = true;
+          params.api.__lastKnownPageSize = newPageSize;
+          this.pageRequestCache = new Map();
+
+          setTimeout(() => {
+            if (typeof params.api.updateGridOptions === 'function') {
+              params.api.updateGridOptions({ cacheBlockSize: newPageSize });
+            } else if (typeof params.api.setGridOption === 'function') {
+              params.api.setGridOption('cacheBlockSize', newPageSize);
+            }
+
+            const currentPage =
+              typeof params.api.paginationGetCurrentPage === 'function'
+                ? params.api.paginationGetCurrentPage()
+                : 0;
+
+            if (currentPage > 0 && typeof params.api.paginationGoToFirstPage === 'function') {
+              params.api.paginationGoToFirstPage();
+            } else if (typeof params.api.purgeInfiniteCache === 'function') {
+              params.api.purgeInfiniteCache();
+            } else if (typeof params.api.refreshInfiniteCache === 'function') {
+              params.api.refreshInfiniteCache();
+            }
+
+            params.api.__isUpdatingPageSize = false;
+          }, 50);
+        },
+        onGridReady: (params) => {
+          params.api.__lastKnownPageSize = 10;
+          params.api.__isUpdatingPageSize = false;
+        },
         rowSelection: 'multiple',
         suppressRowClickSelection: true,
-        singleClickEdit: false,
+        isRowSelectable: (rowNode) => {
+          const row = rowNode?.data;
+          return String(row?.disableDate || '').trim() === '';
+        },
         icons: {
           sortUnSort:
             '<span class="gt-sort-icon gt-sort-icon--none" aria-hidden="true"><svg viewBox="0 0 8 12" focusable="false"><path d="M4 1L7 4H1L4 1Z"></path><path d="M4 11L1 8H7L4 11Z"></path></svg></span>',
@@ -502,6 +1347,12 @@ const MarginFundingContractMaintenancePage = {
           field: 'select',
           headerName: '',
           checkboxSelection: true,
+          cellClassRules: {
+            'is-selection-locked': (params) => {
+              const row = params?.data;
+              return String(row?.disableDate || '').trim() !== '';
+            }
+          },
           headerComponent: 'gtPageSelectHeader',
           width: 44,
           minWidth: 44,
@@ -514,24 +1365,30 @@ const MarginFundingContractMaintenancePage = {
           suppressSizeToFit: true
         },
         { field: 'uniqueKey', headerName: 'Unique Key', minWidth: 140 },
-        { field: 'vendorFamilyNumber', headerName: 'Vendor Family Number', minWidth: 170 },
-        { field: 'vendorFamilyName', headerName: 'Vendor Family Name', minWidth: 190 },
-        { field: 'vendorProgram', headerName: 'Vendor Program', minWidth: 160 },
-        { field: 'manufacturerContractId', headerName: 'Manufacturer Contract ID', minWidth: 170 },
-        { field: 'mfgContractIdWildcardLookup', headerName: 'MFG Contract ID Wildcard Lookup', minWidth: 190 },
+        { field: 'vendorFamilyNumber', headerName: 'Vendor Family Number', minWidth: 180 },
+        { field: 'vendorProgram', headerName: 'Vendor Program', minWidth: 150 },
+        { field: 'manufacturerContractId', headerName: 'Manufacturer Contract ID', minWidth: 190 },
+        { field: 'mfgContractIdWildcardLookup', headerName: 'MFG Contract ID Wildcard Lookup', minWidth: 220 },
         { field: 'contractType', headerName: 'Contract Type', minWidth: 150 },
-        { field: 'ie', headerName: 'I E', minWidth: 90 },
-        { field: 'effectiveFrom', headerName: 'Effective From', minWidth: 150 },
+        { field: 'ie', headerName: 'I/E', minWidth: 90 },
+        { field: 'effectiveFrom', headerName: 'Effective From', minWidth: 150, sort: 'asc' },
         { field: 'effectiveThru', headerName: 'Effective Thru', minWidth: 150 },
-        { field: 'dateUpdated', headerName: 'Date Updated', minWidth: 150 },
-        { field: 'timeUpdated', headerName: 'Time Updated', minWidth: 140 },
+        {
+          field: 'updatedAtDisplay',
+          headerName: 'Updated At',
+          minWidth: 220,
+          valueFormatter: (params) => this.formatUpdatedAt(params.value)
+        },
         { field: 'userId', headerName: 'User ID', minWidth: 120 },
-        { field: 'workStnId', headerName: 'Work Stn ID', minWidth: 130 },
-        { field: 'programId', headerName: 'Program ID', minWidth: 130 }
+        { field: 'programId', headerName: 'Program ID', minWidth: 140 },
+        { field: 'workStationId', headerName: 'Workstation ID', minWidth: 150 },
+        { field: 'notes', headerName: 'Notes', minWidth: 180 },
+        { field: 'disableDate', headerName: 'Disable Date', minWidth: 150 }
       ].map((column) => this.buildFilterableColumn(column))
     };
 
     this.gridApi = DynamicGrid.createGrid(gridConfig);
+    this.gridApi?.setGridOption?.('datasource', this.buildDatasource());
     if (this.gridApi) {
       this.gridApi.applyPendingFloatingFilters = () => {
         const filters = this.gridApi.__manualFloatingFilters;
