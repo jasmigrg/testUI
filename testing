@@ -1,0 +1,48 @@
+(() => {
+  const gridRoot = document.querySelector('.ag-theme-alpine.app-grid');
+  const api = window.gridApi;
+  if (!gridRoot || !api) {
+    console.log('grid/api not found');
+    return;
+  }
+
+  const q = (sel) => gridRoot.querySelector(sel);
+  const px = (el) => el ? Math.round(el.getBoundingClientRect().height) : null;
+
+  const row0 = api.getDisplayedRowAtIndex?.(0);
+  const row19 = api.getDisplayedRowAtIndex?.(19);
+
+  const out = {
+    time: new Date().toISOString(),
+    pageSize: api.paginationGetPageSize?.(),
+    currentPage: api.paginationGetCurrentPage?.(),
+    displayedRowCount: api.getDisplayedRowCount?.(),
+    modelRowCount: api.getModel?.()?.getRowCount?.(),
+    row0Exists: Boolean(row0),
+    row19Exists: Boolean(row19),
+    gridHeight: px(gridRoot),
+    rootWrapperBodyHeight: px(q('.ag-root-wrapper-body')),
+    bodyViewportHeight: px(q('.ag-body-viewport')),
+    centerViewportHeight: px(q('.ag-center-cols-viewport')),
+    horizontalScrollbarHeight: px(q('.ag-body-horizontal-scroll')),
+    headerHeight: px(q('.ag-header')),
+    headerRowHeight: px(q('.ag-header-row.ag-header-row-column')),
+    floatingFilterHeight: px(q('.ag-header-row.ag-header-row-column + .ag-header-row')),
+    pagingPanelHeight: px(q('.ag-paging-panel')),
+    rowHeightFromApi: row0?.rowHeight ?? null,
+    row0Top: row0?.rowTop ?? null,
+    row19Top: row19?.rowTop ?? null,
+    row19Height: row19?.rowHeight ?? null
+  };
+
+  console.table(out);
+  return out;
+})();
+
+
+
+window.gridApi?.addEventListener?.('firstDataRendered', () => console.log('firstDataRendered', new Date().toISOString()));
+
+
+
+
