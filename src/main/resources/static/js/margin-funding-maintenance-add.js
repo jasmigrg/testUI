@@ -45,7 +45,7 @@ const MFC_OUTBOUND_FIELDS = [
   { localField: 'vendorFamilyNumber', backendField: 'vendorFamilyNumber' },
   { localField: 'itemNum', backendField: 'itemNum' },
   { localField: 'distFeeContractPercentage', backendField: 'distFeeContractPercentage' },
-  { localField: 'distFeeNonContractPercentage', backendField: 'distFeeNonContractPercentage' },
+  { localField: 'distFeeNonContractPercentage', backendField: 'distFeeNoncontractPercentage' },
   { localField: 'marginFundingPctType', backendField: 'marginFundingPctType' }
 ];
 

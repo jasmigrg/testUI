@@ -314,27 +314,23 @@ const MarginFundingMaintenanceManager = {
 
   mapColumnToApiField(colId, context = 'filter') {
     const fieldMap = {
-      uniqueKey: context === 'sort' ? 'uniqueKeyId' : 'unique_key_id',
-      userId: context === 'sort' ? 'userId' : 'user_id',
-      programId: context === 'sort' ? 'programId' : 'program_id',
-      workStnId: context === 'sort' ? 'workStationId' : 'work_station_id',
-      effectiveDate: context === 'sort' ? 'effectiveDate' : 'effective_date',
-      terminationDate: context === 'sort' ? 'terminationDate' : 'termination_date',
-      disableDate: context === 'sort' ? 'disableDate' : 'disable_date',
-      vendorProgram: context === 'sort' ? 'recordId' : 'record_id',
-      vendorFamilyNumber: context === 'sort' ? 'vendorFamilyNumber' : 'vendor_family_number',
-      vendorFamilyName: context === 'sort' ? 'vendorFamilyName' : 'vendor_family_name',
-      itemNumber: context === 'sort' ? 'itemNum' : 'item_num',
-      itemDescription: context === 'sort' ? 'itemDescription' : 'item_description',
-      distributionNonContract: context === 'sort'
-        ? 'distFeeNoncontractPercentage'
-        : 'dist_fee_noncontract_percentage',
-      distributionContract: context === 'sort'
-        ? 'distFeeContractPercentage'
-        : 'dist_fee_contract_percentage',
-      marginFundingPercentType: context === 'sort' ? 'marginFundingPctType' : 'margin_funding_pct_type',
+      uniqueKey: 'uniqueKeyId',
+      userId: 'userId',
+      programId: 'programId',
+      workStnId: 'workStationId',
+      effectiveDate: 'effectiveDate',
+      terminationDate: 'terminationDate',
+      disableDate: 'disableDate',
+      vendorProgram: 'recordId',
+      vendorFamilyNumber: 'vendorFamilyNumber',
+      vendorFamilyName: 'vendorFamilyName',
+      itemNumber: 'itemNum',
+      itemDescription: 'itemDescription',
+      distributionNonContract: 'distFeeNoncontractPercentage',
+      distributionContract: 'distFeeContractPercentage',
+      marginFundingPercentType: 'marginFundingPctType',
       notes: 'notes',
-      updatedAtDisplay: context === 'sort' ? 'updatedAt' : 'updated_at'
+      updatedAtDisplay: 'updatedAt'
     };
 
     return fieldMap[colId] || colId;
