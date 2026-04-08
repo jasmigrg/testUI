@@ -1,15 +1,15 @@
 const MFC_FIELD_DEFS = [
-  { field: 'userId', headerName: 'User ID', minWidth: 150 },
-  { field: 'programId', headerName: 'Program ID', minWidth: 180 },
-  { field: 'workStationId', headerName: 'Workstation ID', minWidth: 180 },
+  { field: 'vendorFamilyNumber', headerName: 'Vendor Family Number', minWidth: 220, type: 'number' },
+  { field: 'recordId', headerName: 'Vendor Program', minWidth: 180, type: 'number' },
+  { field: 'itemNum', headerName: 'Item Number', minWidth: 170, type: 'number' },
+  { field: 'distFeeNonContractPercentage', headerName: 'Distribution Fee Non-Contract %', minWidth: 260, type: 'number' },
+  { field: 'distFeeContractPercentage', headerName: 'Distribution Fee Contract %', minWidth: 240, type: 'number' },
+  { field: 'marginFundingPctType', headerName: 'Margin Funding Percent Type', minWidth: 240 },
   { field: 'effectiveDate', headerName: 'Effective Date', minWidth: 180, type: 'date' },
   { field: 'terminationDate', headerName: 'Termination Date', minWidth: 190, type: 'date' },
-  { field: 'recordId', headerName: 'Vendor Program', minWidth: 180, type: 'number' },
-  { field: 'vendorFamilyNumber', headerName: 'Vendor Family Number', minWidth: 220, type: 'number' },
-  { field: 'itemNum', headerName: 'Item Number', minWidth: 170, type: 'number' },
-  { field: 'distFeeContractPercentage', headerName: 'Distribution Fee Contract %', minWidth: 240, type: 'number' },
-  { field: 'distFeeNonContractPercentage', headerName: 'Distribution Fee Non-Contract %', minWidth: 260, type: 'number' },
-  { field: 'marginFundingPctType', headerName: 'Margin Funding Percent Type', minWidth: 240 }
+  { field: 'userId', headerName: 'User ID', minWidth: 150 },
+  { field: 'workStationId', headerName: 'Workstation ID', minWidth: 180 },
+  { field: 'programId', headerName: 'Program ID', minWidth: 180 }
 ];
 
 const MFC_DATE_FIELDS = new Set(['effectiveDate', 'terminationDate']);

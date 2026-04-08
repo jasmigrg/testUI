@@ -1,14 +1,14 @@
 const MFC_FIELD_DEFS = [
-  { field: 'recordId', headerName: 'Vendor Program', minWidth: 180, type: 'number' },
+  { field: 'userId', headerName: 'User ID', minWidth: 150 },
+  { field: 'programId', headerName: 'Program ID', minWidth: 180 },
+  { field: 'effectiveDate', headerName: 'Effective Date', minWidth: 180, type: 'date' },
   { field: 'terminationDate', headerName: 'Termination Date', minWidth: 190, type: 'date' },
   { field: 'workStationId', headerName: 'Workstation ID', minWidth: 180 },
+  { field: 'recordId', headerName: 'Vendor Program', minWidth: 180, type: 'number' },
+  { field: 'vendorFamilyNo', headerName: 'Vendor Family Number', minWidth: 220, type: 'number' },
   { field: 'accountType', headerName: 'Account Type', minWidth: 160 },
   { field: 'customerNumber', headerName: 'Customer Number', minWidth: 190, type: 'number' },
-  { field: 'includeExclude', headerName: 'I/E', minWidth: 120 },
-  { field: 'userId', headerName: 'User ID', minWidth: 150 },
-  { field: 'effectiveDate', headerName: 'Effective Date', minWidth: 180, type: 'date' },
-  { field: 'programId', headerName: 'Program ID', minWidth: 180 },
-  { field: 'vendorFamilyNo', headerName: 'Vendor Family Number', minWidth: 220, type: 'number' },
+  { field: 'includeExclude', headerName: 'I/E', minWidth: 120 }
 ];
 
 const MFC_DATE_FIELDS = new Set(['effectiveDate', 'terminationDate']);
