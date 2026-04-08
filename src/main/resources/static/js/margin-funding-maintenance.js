@@ -686,31 +686,6 @@ const MarginFundingMaintenanceManager = {
     }
   },
 
-  scheduleInitialGridRefresh() {
-    if (!this.gridApi || this._didInitialGridRefresh) return;
-    this._didInitialGridRefresh = true;
-
-    setTimeout(() => {
-      if (!this.gridApi) return;
-      if (typeof this.gridApi.refreshHeader === 'function') {
-        this.gridApi.refreshHeader();
-      }
-      if (typeof this.gridApi.doLayout === 'function') {
-        this.gridApi.doLayout();
-      }
-      if (typeof this.gridApi.resetRowHeights === 'function') {
-        this.gridApi.resetRowHeights();
-      }
-      if (typeof this.gridApi.redrawRows === 'function') {
-        this.gridApi.redrawRows();
-      }
-      if (typeof this.gridApi.refreshCells === 'function') {
-        this.gridApi.refreshCells({ force: true });
-      }
-      window.dispatchEvent(new Event('resize'));
-    }, 250);
-  },
-
   async postGridAction(url, payload) {
     const response = await fetch(this.resolveApiUrl(url), {
       method: 'PATCH',
@@ -1250,6 +1225,11 @@ const MarginFundingMaintenanceManager = {
   init() {
     this.apiBaseUrl = String(window.API_BASE_URL || '').trim().replace(/\/$/, '');
     this.gridElement = document.getElementById('mfiGrid');
+    const compactPreset = window.GridToolbar?.DEFAULT_DENSITY_PRESETS?.compact || {
+      rowHeight: 40,
+      headerHeight: 48,
+      floatingFiltersHeight: 38
+    };
 
     const gridConfig = {
       gridElementId: 'mfiGrid',
@@ -1259,6 +1239,9 @@ const MarginFundingMaintenanceManager = {
       paginationType: 'server',
       useSpringPagination: true,
       gridOptions: {
+        rowHeight: compactPreset.rowHeight,
+        headerHeight: compactPreset.headerHeight,
+        floatingFiltersHeight: compactPreset.floatingFiltersHeight,
         onPaginationChanged: (params) => {
           if (!params?.api || typeof params.api.paginationGetPageSize !== 'function') return;
           if (params.api.__isUpdatingPageSize) return;
@@ -1409,14 +1392,6 @@ const MarginFundingMaintenanceManager = {
 
     window.gridApi = this.gridApi;
     this.initViewActions();
-
-    if (this.gridApi && typeof this.gridApi.addEventListener === 'function') {
-      this.gridApi.addEventListener('firstDataRendered', () => {
-        this.applyDefaultDensity();
-        this.scheduleInitialGridRefresh();
-      });
-    }
-
     this.applyDefaultDensity();
     setTimeout(() => this.applyDefaultDensity(), 150);
 
