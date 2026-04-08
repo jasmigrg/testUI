@@ -45,6 +45,12 @@ public class PricingInquiryController {
     return "margin-funding-contract-maintenance";
   }
 
+  @GetMapping("/margin-funding-contract-maintenance/add")
+  public String marginFundingContractMaintenanceAdd(Model model) {
+    model.addAttribute("apiBaseUrl", apiBaseUrl);
+    return "margin-funding-contract-maintenance-add";
+  }
+
   @GetMapping("/cams-eligibility")
   public String camsEligibility() {
     return "pricing/cams-eligibility";

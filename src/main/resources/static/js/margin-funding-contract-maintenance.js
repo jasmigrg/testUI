@@ -1146,7 +1146,9 @@ const MarginFundingContractMaintenancePage = {
     const addBtn = document.querySelector('.gt-action-btn[data-action="add"]');
     if (addBtn) {
       addBtn.addEventListener('click', () => {
-        this.showInfo('Add flow is not wired for contract maintenance yet.', 'warning');
+        window.location.assign(
+          window.MFCC_ADD_PAGE_URL || '/margin-funding-contract-maintenance/add'
+        );
       });
     }
 
@@ -1387,8 +1389,8 @@ const MarginFundingContractMaintenancePage = {
         { field: 'mfgContractIdWildcardLookup', headerName: 'MFG Contract ID Wildcard Lookup', minWidth: 220 },
         { field: 'contractType', headerName: 'Contract Type', minWidth: 150 },
         { field: 'ie', headerName: 'I/E', minWidth: 90 },
-        { field: 'effectiveFrom', headerName: 'Effective From', minWidth: 150, sort: 'asc' },
-        { field: 'effectiveThru', headerName: 'Effective Thru', minWidth: 150 },
+        { field: 'effectiveFrom', headerName: 'Effective Date', minWidth: 150, sort: 'asc' },
+        { field: 'effectiveThru', headerName: 'Termination Date', minWidth: 150 },
         {
           field: 'updatedAtDisplay',
           headerName: 'Updated At',
