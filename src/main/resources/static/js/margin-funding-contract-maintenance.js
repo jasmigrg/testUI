@@ -660,6 +660,22 @@ const MarginFundingContractMaintenancePage = {
     }
   },
 
+  scheduleInitialGridRefresh() {
+    if (!this.gridApi || this._didInitialGridRefresh) return;
+    this._didInitialGridRefresh = true;
+
+    setTimeout(() => {
+      if (!this.gridApi) return;
+      this.pageRequestCache = new Map();
+
+      if (typeof this.gridApi.purgeInfiniteCache === 'function') {
+        this.gridApi.purgeInfiniteCache();
+      } else if (typeof this.gridApi.refreshInfiniteCache === 'function') {
+        this.gridApi.refreshInfiniteCache();
+      }
+    }, 250);
+  },
+
   async postGridAction(url, payload) {
     const response = await fetch(this.resolveApiUrl(url), {
       method: 'PATCH',
@@ -1402,7 +1418,10 @@ const MarginFundingContractMaintenancePage = {
     this.initViewActions();
     this.applyDefaultDensity();
     if (typeof this.gridApi?.addEventListener === 'function') {
-      this.gridApi.addEventListener('firstDataRendered', () => this.applyDefaultDensity());
+      this.gridApi.addEventListener('firstDataRendered', () => {
+        this.applyDefaultDensity();
+        this.scheduleInitialGridRefresh();
+      });
     }
 
     setTimeout(() => {

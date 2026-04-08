@@ -53,6 +53,11 @@
   font-size: var(--mfi-cell-font-size, 13px);
 }
 
+#mfcGrid.app-grid {
+  min-height: 540px;
+  height: clamp(540px, calc(100vh - 240px), 940px);
+}
+
 #mfcGrid.ag-theme-alpine.app-grid .ag-floating-filter-button {
   display: flex !important;
   align-items: center;
