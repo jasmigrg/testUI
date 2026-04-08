@@ -1222,22 +1222,6 @@ const MarginFundingMaintenanceManager = {
     );
   },
 
-  syncGridViewportLayout() {
-    if (!this.gridApi) return;
-
-    requestAnimationFrame(() => {
-      if (typeof this.gridApi.onRowHeightChanged === 'function') {
-        this.gridApi.onRowHeightChanged();
-      }
-      if (typeof this.gridApi.doLayout === 'function') {
-        this.gridApi.doLayout();
-      }
-      if (typeof this.gridApi.refreshCells === 'function') {
-        this.gridApi.refreshCells({ force: true });
-      }
-    });
-  },
-
   init() {
     this.apiBaseUrl = String(window.API_BASE_URL || '').trim().replace(/\/$/, '');
     this.gridElement = document.getElementById('mfiGrid');
@@ -1411,7 +1395,6 @@ const MarginFundingMaintenanceManager = {
     setTimeout(() => {
       if (window.gridApi && typeof GridManager !== 'undefined') {
         GridManager.init(window.gridApi, 'mfiGrid');
-        setTimeout(() => this.syncGridViewportLayout(), 250);
       }
     }, 500);
   }
