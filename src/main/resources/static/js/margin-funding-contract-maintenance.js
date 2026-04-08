@@ -666,12 +666,14 @@ const MarginFundingContractMaintenancePage = {
 
     setTimeout(() => {
       if (!this.gridApi) return;
-      this.pageRequestCache = new Map();
-
-      if (typeof this.gridApi.purgeInfiniteCache === 'function') {
-        this.gridApi.purgeInfiniteCache();
-      } else if (typeof this.gridApi.refreshInfiniteCache === 'function') {
-        this.gridApi.refreshInfiniteCache();
+      if (typeof this.gridApi.resetRowHeights === 'function') {
+        this.gridApi.resetRowHeights();
+      }
+      if (typeof this.gridApi.redrawRows === 'function') {
+        this.gridApi.redrawRows();
+      }
+      if (typeof this.gridApi.refreshCells === 'function') {
+        this.gridApi.refreshCells({ force: true });
       }
     }, 250);
   },
