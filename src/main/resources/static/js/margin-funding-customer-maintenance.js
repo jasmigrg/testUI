@@ -611,6 +611,12 @@ const MarginFundingCustomerMaintenanceManager = {
 
     setTimeout(() => {
       if (!this.gridApi) return;
+      if (typeof this.gridApi.refreshHeader === 'function') {
+        this.gridApi.refreshHeader();
+      }
+      if (typeof this.gridApi.doLayout === 'function') {
+        this.gridApi.doLayout();
+      }
       if (typeof this.gridApi.resetRowHeights === 'function') {
         this.gridApi.resetRowHeights();
       }
@@ -620,6 +626,7 @@ const MarginFundingCustomerMaintenanceManager = {
       if (typeof this.gridApi.refreshCells === 'function') {
         this.gridApi.refreshCells({ force: true });
       }
+      window.dispatchEvent(new Event('resize'));
     }, 250);
   },
 
