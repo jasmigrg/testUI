@@ -492,6 +492,10 @@ const MckBrandLogicPage = {
     }
   },
 
+  clearActiveGridRequestCache() {
+    this.pageRequestCacheByTab[this.activeTab] = new Map();
+  },
+
   async patchGridAction(payload) {
     const activeTabConfig = this.tabs[this.activeTab];
     if (!activeTabConfig?.updateEndpoint) {
@@ -512,6 +516,73 @@ const MckBrandLogicPage = {
       throw new Error(this.extractErrorMessage(responseBody) || `Request failed: ${response.status}`);
     }
     return responseBody;
+  },
+
+  extractPatchedRows(responseBody) {
+    if (Array.isArray(responseBody)) return responseBody;
+    if (!responseBody || typeof responseBody !== 'object') return [];
+
+    const candidateKeys = ['data', 'results', 'content', 'items', 'records', 'updatedRecords'];
+    for (const key of candidateKeys) {
+      const value = responseBody[key];
+      if (Array.isArray(value)) return value;
+      if (value && typeof value === 'object') {
+        if (Array.isArray(value.content)) return value.content;
+        if (Array.isArray(value.results)) return value.results;
+        if (Array.isArray(value.items)) return value.items;
+      }
+    }
+
+    return [responseBody];
+  },
+
+  applyLocalPatchToRows(ids, patch, responseBody = null) {
+    const activeGrid = this.getActiveGrid();
+    const gridApi = activeGrid?.api;
+    if (!gridApi || !Array.isArray(ids) || ids.length === 0) return;
+
+    const idSet = new Set(ids.map((id) => String(id)));
+    const patchedRows = this.extractPatchedRows(responseBody);
+    const patchedRowMap = new Map();
+
+    patchedRows.forEach((row) => {
+      const rowId = row?.uniqueId;
+      if (rowId == null || String(rowId).trim() === '') return;
+      patchedRowMap.set(String(rowId), row);
+    });
+
+    const fallbackPatch = {};
+    if (patch && typeof patch === 'object') {
+      if (patch.disableDate != null) fallbackPatch.disableDate = this.formatDateForDisplay(patch.disableDate);
+      if (patch.terminationDate != null) fallbackPatch.terminationDate = this.formatDateForDisplay(patch.terminationDate);
+      if (patch.notes != null) fallbackPatch.notes = patch.notes;
+    }
+
+    const updatedNodes = [];
+    if (typeof gridApi.forEachNode === 'function') {
+      gridApi.forEachNode((rowNode) => {
+        const rowId = rowNode?.data?.uniqueId;
+        if (rowId == null || !idSet.has(String(rowId))) return;
+
+        const responseRow = patchedRowMap.get(String(rowId));
+        const nextPatch = responseRow
+          ? this.transformRowForTab(this.tabs[this.activeTab], responseRow)
+          : fallbackPatch;
+
+        Object.assign(rowNode.data, nextPatch);
+        updatedNodes.push(rowNode);
+      });
+    }
+
+    if (updatedNodes.length > 0 && typeof gridApi.refreshCells === 'function') {
+      gridApi.refreshCells({ rowNodes: updatedNodes, force: true });
+    }
+    if (updatedNodes.length > 0 && typeof gridApi.redrawRows === 'function') {
+      gridApi.redrawRows({ rowNodes: updatedNodes });
+    }
+    if (typeof gridApi.deselectAll === 'function') {
+      gridApi.deselectAll();
+    }
   },
 
   async readJsonSafely(response) {
@@ -710,13 +781,15 @@ const MckBrandLogicPage = {
     this.clearDisableInlineError();
     try {
       if (this.disableSaveBtn) this.disableSaveBtn.disabled = true;
-      await this.patchGridAction({
+      const patchPayload = {
         ids,
         disableDate: this.formatDateAsMmDdYyyy(this.getTodayDateOnly()),
         notes
-      });
+      };
+      const responseBody = await this.patchGridAction(patchPayload);
+      this.applyLocalPatchToRows(ids, patchPayload, responseBody);
+      this.clearActiveGridRequestCache();
       this.closeDisableModal();
-      this.refreshActiveGridData();
       this.showInfo('Selected rows disabled successfully.', 'success');
     } catch (error) {
       console.error('Disable action failed:', error);
@@ -758,13 +831,15 @@ const MckBrandLogicPage = {
     this.clearUpdateTerminationInlineError();
     try {
       if (this.updateTerminationSaveBtn) this.updateTerminationSaveBtn.disabled = true;
-      await this.patchGridAction({
+      const patchPayload = {
         ids,
         terminationDate: this.formatDateAsMmDdYyyy(parsedDate),
         notes
-      });
+      };
+      const responseBody = await this.patchGridAction(patchPayload);
+      this.applyLocalPatchToRows(ids, patchPayload, responseBody);
+      this.clearActiveGridRequestCache();
       this.closeUpdateTerminationModal();
-      this.refreshActiveGridData();
       this.showInfo('Termination date updated successfully.', 'success');
     } catch (error) {
       console.error('Update termination date failed:', error);

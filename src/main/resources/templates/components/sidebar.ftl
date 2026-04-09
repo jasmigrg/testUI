@@ -40,6 +40,11 @@
                     </a>
                 </li>
                 <li class="submenu-item">
+                    <a href="/margin-funding-price-maintenance" class="submenu-link" title="Margin Funding Price Maintenance">
+                        <span class="text">Margin Funding Price Maintenance</span>
+                    </a>
+                </li>
+                <li class="submenu-item">
                     <a href="/cams-eligibility" class="submenu-link" title="CAMS Eligibility">
                         <span class="text">CAMS Eligibility</span>
                     </a>
