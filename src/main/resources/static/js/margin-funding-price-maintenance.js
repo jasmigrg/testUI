@@ -199,6 +199,11 @@ class MarginFundingPriceManualFloatingFilter {
 const MarginFundingPriceMaintenanceManager = {
   gridApi: null,
   gridElement: null,
+  apiBaseUrl: '',
+  priceApiEndpoint: '/api/v1/margin-funding',
+  bulkUpdateEndpoint: '/api/v1/margin-funding/updateMarginFunding',
+  downloadEndpoint: '/api/v1/margin-funding/export-csv',
+  pageRequestCache: new Map(),
   rowData: [],
   initialRowData: [],
   pendingDisableUniqueKeys: [],
@@ -235,6 +240,17 @@ const MarginFundingPriceMaintenanceManager = {
     container.className = 'app-page-toast-layer';
     document.body.appendChild(container);
     return container;
+  },
+
+  resolveApiUrl(path) {
+    const normalizedPath = String(path || '').trim();
+    if (!normalizedPath) return this.apiBaseUrl;
+    if (/^https?:\/\//i.test(normalizedPath)) return normalizedPath;
+    if (!this.apiBaseUrl) return normalizedPath;
+
+    const base = this.apiBaseUrl.replace(/\/$/, '');
+    const suffix = normalizedPath.startsWith('/') ? normalizedPath : `/${normalizedPath}`;
+    return `${base}${suffix}`;
   },
 
   parseInlineFilterExpression(rawValue, defaultType = 'contains') {
@@ -344,6 +360,13 @@ const MarginFundingPriceMaintenanceManager = {
     return 'text';
   },
 
+  mapColumnToApiField(colId) {
+    const fieldMap = {
+      updatedAtDisplay: 'updatedAt'
+    };
+    return fieldMap[colId] || colId;
+  },
+
   buildAlignedColumn(column) {
     const field = String(column?.field || column?.colId || '').trim();
     if (!field || field === 'select') return column;
@@ -378,6 +401,59 @@ const MarginFundingPriceMaintenanceManager = {
     const filterTime = filterLocalDateAtMidnight.setHours(0, 0, 0, 0);
     if (cellTime === filterTime) return 0;
     return cellTime < filterTime ? -1 : 1;
+  },
+
+  normalizeApiDateValue(value) {
+    const raw = String(value == null ? '' : value).trim();
+    if (!raw) return '';
+
+    const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ].*)?$/);
+    if (isoMatch) return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+
+    const usMatch = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (usMatch) {
+      const month = String(Number(usMatch[1])).padStart(2, '0');
+      const day = String(Number(usMatch[2])).padStart(2, '0');
+      return `${usMatch[3]}-${month}-${day}`;
+    }
+
+    return raw;
+  },
+
+  normalizeFilterModel(field, model) {
+    if (!model || typeof model !== 'object') return null;
+
+    const kind = this.getFieldFilterKind(field);
+    const filterType = String(model.filterType || '').trim();
+
+    if (kind === 'date' || filterType === 'date') {
+      const rawDate = model.dateFrom || model.filter;
+      const normalizedDate = this.normalizeApiDateValue(rawDate);
+      if (!normalizedDate) return null;
+      return {
+        value: normalizedDate,
+        operator: String(model.type || 'equals').trim() || 'equals'
+      };
+    }
+
+    if (kind === 'number' || filterType === 'number') {
+      const rawValue = model.filter;
+      if (rawValue == null || String(rawValue).trim() === '') return null;
+      return {
+        value: String(rawValue).trim(),
+        operator: String(model.type || 'equals').trim() || 'equals'
+      };
+    }
+
+    const rawInput = String(model.rawInput ?? model.filter ?? '').trim();
+    if (!rawInput) return null;
+    const parsed = this.parseInlineFilterExpression(rawInput, 'contains');
+    if (!parsed.value) return null;
+
+    return {
+      value: parsed.value,
+      operator: parsed.type
+    };
   },
 
   buildFilterableColumn(column) {
@@ -514,6 +590,8 @@ const MarginFundingPriceMaintenanceManager = {
   resetGridState() {
     if (!this.gridApi) return;
 
+    this.pageRequestCache = new Map();
+
     if (typeof this.gridApi.setFilterModel === 'function') {
       this.gridApi.setFilterModel(null);
     }
@@ -527,19 +605,239 @@ const MarginFundingPriceMaintenanceManager = {
       this.gridApi.deselectAll();
     }
 
-    this.rowData = this.cloneRows(this.initialRowData);
-    this.applyRowData();
+    if (typeof this.gridApi.purgeInfiniteCache === 'function') {
+      this.gridApi.purgeInfiniteCache();
+    } else if (typeof this.gridApi.refreshInfiniteCache === 'function') {
+      this.gridApi.refreshInfiniteCache();
+    }
   },
 
-  handleDownloadAction() {
-    if (!this.gridApi || typeof this.gridApi.exportDataAsCsv !== 'function') {
-      this.showInfo('Download is not available.', 'error');
-      return;
+  mapApiRow(row) {
+    return {
+      uniqueKeyId: row?.uniqueKeyId ?? row?.uniqueId ?? '',
+      vendorProgram: row?.vendorProgram ?? row?.recordId ?? '',
+      vendorFamilyNumber: row?.vendorFamilyNumber ?? row?.vendorFamilyNo ?? '',
+      vendorFamilyName: row?.vendorFamilyName ?? '',
+      priceFormula: row?.priceFormula ?? row?.szPriceFormula ?? '',
+      priceFormulaDescription: row?.priceFormulaDescription ?? '',
+      percent: row?.percent ?? row?.percentageBeneficiary ?? '',
+      effectiveDate: this.normalizeDateValueForDisplay(row?.effectiveDate),
+      terminationDate: this.normalizeDateValueForDisplay(row?.terminationDate),
+      updatedAtDisplay: row?.updatedAt ?? '',
+      disableDate: this.normalizeDateValueForDisplay(row?.disableDate),
+      notes: row?.notes ?? '',
+      userId: row?.userId ?? '',
+      programId: row?.programId ?? '',
+      workStationId: row?.workStationId ?? ''
+    };
+  },
+
+  async postGridAction(payload) {
+    const response = await fetch(this.resolveApiUrl(this.bulkUpdateEndpoint), {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json'
+      },
+      credentials: 'same-origin',
+      body: JSON.stringify(payload)
+    });
+
+    const responseBody = await this.readJsonSafely(response);
+    if (!response.ok) {
+      throw new Error(this.extractErrorMessage(responseBody) || `Request failed: ${response.status}`);
+    }
+    if (responseBody && responseBody.status === false) {
+      throw new Error(this.extractErrorMessage(responseBody) || 'Update failed.');
+    }
+    return responseBody;
+  },
+
+  async readJsonSafely(response) {
+    try {
+      return await response.json();
+    } catch (error) {
+      return null;
+    }
+  },
+
+  extractErrorMessage(payload) {
+    if (!payload || typeof payload !== 'object') return '';
+    if (typeof payload.message === 'string' && payload.message.trim()) return payload.message.trim();
+    if (Array.isArray(payload.errors) && payload.errors.length) {
+      const firstError = payload.errors[0];
+      if (typeof firstError === 'string' && firstError.trim()) return firstError.trim();
+      if (typeof firstError?.message === 'string' && firstError.message.trim()) return firstError.message.trim();
+    }
+    return '';
+  },
+
+  extractUpdatedRows(responseBody) {
+    if (Array.isArray(responseBody?.data?.distributionFees)) return responseBody.data.distributionFees;
+    if (Array.isArray(responseBody?.data)) return responseBody.data;
+    if (Array.isArray(responseBody?.distributionFees)) return responseBody.distributionFees;
+    return [];
+  },
+
+  applyLocalPatchToRows(uniqueKeys, fallbackPatch, responseBody = null) {
+    if (!this.gridApi || !Array.isArray(uniqueKeys) || uniqueKeys.length === 0) return;
+
+    const idSet = new Set(uniqueKeys.map((id) => String(id)));
+    const responseRowsById = new Map();
+    this.extractUpdatedRows(responseBody).forEach((row) => {
+      const id = row?.uniqueKeyId ?? row?.uniqueId ?? row?.id;
+      if (id == null || String(id).trim() === '') return;
+      responseRowsById.set(String(id), this.mapApiRow(row));
+    });
+
+    const updatedNodes = [];
+    if (typeof this.gridApi.forEachNode === 'function') {
+      this.gridApi.forEachNode((rowNode) => {
+        const id = rowNode?.data?.uniqueKeyId;
+        if (id == null || !idSet.has(String(id))) return;
+
+        const responsePatch = responseRowsById.get(String(id));
+        Object.assign(rowNode.data, responsePatch || fallbackPatch);
+        updatedNodes.push(rowNode);
+      });
     }
 
-    this.gridApi.exportDataAsCsv({
-      fileName: 'margin-funding-price-maintenance.csv'
-    });
+    if (updatedNodes.length > 0 && typeof this.gridApi.refreshCells === 'function') {
+      this.gridApi.refreshCells({ rowNodes: updatedNodes, force: true });
+    }
+    if (updatedNodes.length > 0 && typeof this.gridApi.redrawRows === 'function') {
+      this.gridApi.redrawRows({ rowNodes: updatedNodes });
+    }
+    if (typeof this.gridApi.deselectAll === 'function') {
+      this.gridApi.deselectAll();
+    }
+    this.pageRequestCache = new Map();
+  },
+
+  buildDatasource() {
+    return {
+      rowCount: null,
+      getRows: async (params) => {
+        const requestedBlockSize = params.endRow - params.startRow || 20;
+        const selectedPageSize =
+          typeof this.gridApi?.paginationGetPageSize === 'function'
+            ? this.gridApi.paginationGetPageSize() || requestedBlockSize
+            : requestedBlockSize;
+        const pageNumber = Math.floor((params.startRow || 0) / selectedPageSize);
+        const sortModel = Array.isArray(params.sortModel) ? params.sortModel[0] : null;
+        const queryParams = new URLSearchParams({
+          page: String(pageNumber),
+          size: String(selectedPageSize),
+          sortBy: this.mapColumnToApiField(sortModel?.colId || 'uniqueKeyId'),
+          sortDirection: String(sortModel?.sort || 'asc').toUpperCase()
+        });
+
+        Object.entries(params.filterModel || {}).forEach(([field, model]) => {
+          const parsed = this.normalizeFilterModel(field, model);
+          if (!parsed?.value) return;
+          const apiField = this.mapColumnToApiField(field);
+          queryParams.set(apiField, parsed.value);
+          queryParams.set(`${apiField}_op`, parsed.operator);
+        });
+
+        try {
+          const cacheKey = queryParams.toString();
+          let requestPromise = this.pageRequestCache.get(cacheKey);
+
+          if (!requestPromise) {
+            const requestUrl = `${this.resolveApiUrl(this.priceApiEndpoint)}?${queryParams.toString()}`;
+            requestPromise = fetch(requestUrl, {
+              method: 'GET',
+              headers: { Accept: 'application/json' },
+              credentials: 'same-origin'
+            }).then(async (response) => {
+              if (!response.ok) {
+                throw new Error(`Failed to load margin funding price data (${response.status})`);
+              }
+
+              const payload = await response.json();
+              const content = Array.isArray(payload?.data?.content) ? payload.data.content : [];
+              const rows = content.map((row) => this.mapApiRow(row));
+              const totalRows = Number(payload?.data?.totalElements ?? rows.length ?? 0);
+              return { rows, totalRows };
+            });
+
+            this.pageRequestCache.set(cacheKey, requestPromise);
+          }
+
+          const { rows, totalRows } = await requestPromise;
+          const pageStart = pageNumber * selectedPageSize;
+          const sliceStart = Math.max(0, (params.startRow || 0) - pageStart);
+          const sliceEnd = Math.min(sliceStart + requestedBlockSize, rows.length);
+          const blockRows = rows.slice(sliceStart, sliceEnd);
+          params.successCallback(blockRows, totalRows);
+          if (typeof this.gridApi?.hideOverlay === 'function') this.gridApi.hideOverlay();
+        } catch (error) {
+          this.pageRequestCache.delete(queryParams.toString());
+          console.error('Margin funding price maintenance load failed:', error);
+          params.successCallback([], 0);
+          if (typeof this.gridApi?.showNoRowsOverlay === 'function') this.gridApi.showNoRowsOverlay();
+        }
+      }
+    };
+  },
+
+  getDownloadFileNameFromResponse(response) {
+    const disposition = response?.headers?.get?.('content-disposition') || '';
+    if (!disposition) return '';
+
+    const utfMatch = disposition.match(/filename\*\s*=\s*UTF-8''([^;]+)/i);
+    if (utfMatch?.[1]) {
+      try {
+        return decodeURIComponent(utfMatch[1].trim());
+      } catch (error) {
+        return utfMatch[1].trim();
+      }
+    }
+
+    const plainMatch = disposition.match(/filename\s*=\s*"?([^\";]+)"?/i);
+    return plainMatch?.[1]?.trim() || '';
+  },
+
+  triggerFileDownload(blob, fileName) {
+    const downloadUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = fileName || 'margin-funding-price-maintenance.csv';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(downloadUrl), 0);
+  },
+
+  async handleDownloadAction() {
+    try {
+      const ids = this.getSelectedUniqueKeys();
+      const response = await fetch(this.resolveApiUrl(this.downloadEndpoint), {
+        method: 'POST',
+        headers: {
+          Accept: '*/*',
+          'Content-Type': 'application/json'
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          ids
+        })
+      });
+
+      if (!response.ok) {
+        const responseBody = await this.readJsonSafely(response);
+        throw new Error(this.extractErrorMessage(responseBody) || `Download failed (${response.status})`);
+      }
+
+      const blob = await response.blob();
+      const fileName =
+        this.getDownloadFileNameFromResponse(response) || 'margin-funding-price-maintenance.csv';
+      this.triggerFileDownload(blob, fileName);
+    } catch (error) {
+      console.error('Margin funding price maintenance download failed:', error);
+      this.showInfo(error?.message || 'Download failed.', 'error');
+    }
   },
 
   getSelectedRows() {
@@ -691,7 +989,7 @@ const MarginFundingPriceMaintenanceManager = {
     }
   },
 
-  handleDisableSave() {
+  async handleDisableSave() {
     const uniqueKeys = this.pendingDisableUniqueKeys || [];
     if (!uniqueKeys.length) {
       this.closeDisableModal();
@@ -706,17 +1004,27 @@ const MarginFundingPriceMaintenanceManager = {
     }
 
     const disableDate = this.formatDateAsMmDdYyyy(this.getTodayDateOnly());
-    this.rowData = this.rowData.map((row) => (
-      uniqueKeys.includes(row.uniqueKeyId)
-        ? { ...row, disableDate, notes }
-        : row
-    ));
-    this.applyRowData();
-    this.closeDisableModal();
-    this.showInfo('Selected rows disabled successfully.', 'success');
+    const payload = uniqueKeys.map((id) => ({
+      id,
+      disableDate,
+      notes
+    }));
+
+    try {
+      if (this.disableSaveBtn) this.disableSaveBtn.disabled = true;
+      const responseBody = await this.postGridAction(payload);
+      this.applyLocalPatchToRows(uniqueKeys, { disableDate, notes }, responseBody);
+      this.closeDisableModal();
+      this.showInfo(responseBody?.message || 'Selected rows disabled successfully.', 'success');
+    } catch (error) {
+      console.error('Margin funding price disable action failed:', error);
+      this.showInfo(error?.message || 'Failed to disable selected rows.', 'error');
+    } finally {
+      if (this.disableSaveBtn) this.disableSaveBtn.disabled = false;
+    }
   },
 
-  handleUpdateTerminationDateSave() {
+  async handleUpdateTerminationDateSave() {
     const uniqueKeys = this.pendingTerminationUpdateUniqueKeys || [];
     if (!uniqueKeys.length) {
       this.closeUpdateTerminationModal();
@@ -750,14 +1058,25 @@ const MarginFundingPriceMaintenanceManager = {
       return;
     }
 
-    this.rowData = this.rowData.map((row) => (
-      uniqueKeys.includes(row.uniqueKeyId)
-        ? { ...row, terminationDate: this.formatDateAsMmDdYyyy(parsedDate), notes }
-        : row
-    ));
-    this.applyRowData();
-    this.closeUpdateTerminationModal();
-    this.showInfo('Termination date updated successfully.', 'success');
+    const terminationDate = this.formatDateAsMmDdYyyy(parsedDate);
+    const payload = uniqueKeys.map((id) => ({
+      id,
+      terminationDate,
+      notes
+    }));
+
+    try {
+      if (this.updateTerminationSaveBtn) this.updateTerminationSaveBtn.disabled = true;
+      const responseBody = await this.postGridAction(payload);
+      this.applyLocalPatchToRows(uniqueKeys, { terminationDate, notes }, responseBody);
+      this.closeUpdateTerminationModal();
+      this.showInfo(responseBody?.message || 'Termination date updated successfully.', 'success');
+    } catch (error) {
+      console.error('Margin funding price termination date update failed:', error);
+      this.showInfo(error?.message || 'Failed to update termination date.', 'error');
+    } finally {
+      if (this.updateTerminationSaveBtn) this.updateTerminationSaveBtn.disabled = false;
+    }
   },
 
   handleDisableAction() {
@@ -897,9 +1216,8 @@ const MarginFundingPriceMaintenanceManager = {
   },
 
   init() {
+    this.apiBaseUrl = String(window.API_BASE_URL || '').trim().replace(/\/$/, '');
     this.gridElement = document.getElementById('mfpPriceGrid');
-    this.initialRowData = this.buildInitialRowData();
-    this.rowData = this.cloneRows(this.initialRowData);
 
     const compactPreset = window.GridToolbar?.DEFAULT_DENSITY_PRESETS?.compact || {
       rowHeight: 40,
@@ -913,13 +1231,51 @@ const MarginFundingPriceMaintenanceManager = {
       pageSizeSelector: [10, 20, 50, 100, 200],
       floatingFilter: true,
       manualFilterApply: true,
-      paginationType: 'client',
+      paginationType: 'server',
+      useSpringPagination: true,
       gridOptions: {
-        rowModelType: 'clientSide',
-        rowData: this.cloneRows(this.rowData),
         rowHeight: compactPreset.rowHeight,
         headerHeight: compactPreset.headerHeight,
         floatingFiltersHeight: compactPreset.floatingFiltersHeight,
+        onPaginationChanged: (params) => {
+          if (!params?.api || typeof params.api.paginationGetPageSize !== 'function') return;
+          if (params.api.__isUpdatingPageSize) return;
+
+          const newPageSize = params.api.paginationGetPageSize();
+          const lastKnownPageSize = params.api.__lastKnownPageSize || 20;
+          if (!newPageSize || newPageSize === lastKnownPageSize) return;
+
+          params.api.__isUpdatingPageSize = true;
+          params.api.__lastKnownPageSize = newPageSize;
+          this.pageRequestCache = new Map();
+
+          setTimeout(() => {
+            if (typeof params.api.updateGridOptions === 'function') {
+              params.api.updateGridOptions({ cacheBlockSize: newPageSize });
+            } else if (typeof params.api.setGridOption === 'function') {
+              params.api.setGridOption('cacheBlockSize', newPageSize);
+            }
+
+            const currentPage =
+              typeof params.api.paginationGetCurrentPage === 'function'
+                ? params.api.paginationGetCurrentPage()
+                : 0;
+
+            if (currentPage > 0 && typeof params.api.paginationGoToFirstPage === 'function') {
+              params.api.paginationGoToFirstPage();
+            } else if (typeof params.api.purgeInfiniteCache === 'function') {
+              params.api.purgeInfiniteCache();
+            } else if (typeof params.api.refreshInfiniteCache === 'function') {
+              params.api.refreshInfiniteCache();
+            }
+
+            params.api.__isUpdatingPageSize = false;
+          }, 50);
+        },
+        onGridReady: (params) => {
+          params.api.__lastKnownPageSize = 20;
+          params.api.__isUpdatingPageSize = false;
+        },
         rowSelection: 'multiple',
         suppressRowClickSelection: true,
         isRowSelectable: (rowNode) => String(rowNode?.data?.disableDate || '').trim() === '',
@@ -1008,6 +1364,7 @@ const MarginFundingPriceMaintenanceManager = {
     };
 
     this.gridApi = DynamicGrid.createGrid(gridConfig);
+    this.gridApi?.setGridOption?.('datasource', this.buildDatasource());
     if (this.gridApi) {
       this.gridApi.applyPendingFloatingFilters = () => {
         const filters = this.gridApi.__manualFloatingFilters;
