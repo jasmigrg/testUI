@@ -22,7 +22,7 @@
   <script>
     window.API_BASE_URL = window.API_BASE_URL || '${(apiBaseUrl!'')?js_string}';
     window.GRID_PREF_TEST_USER_ID = window.GRID_PREF_TEST_USER_ID || '${(userId!'test-user')?js_string}';
-    window.CUSTOMER_GPO_ADJUSTMENTS_LIST_PAGE_URL = window.CUSTOMER_GPO_ADJUSTMENTS_LIST_PAGE_URL || '${ctx}/adjustments';
+    window.CUSTOMER_GPO_ADJUSTMENTS_LIST_PAGE_URL = window.CUSTOMER_GPO_ADJUSTMENTS_LIST_PAGE_URL || '${ctx}/customer-gpo-adjustments';
     window.CUSTOMER_GPO_ADJUSTMENTS_ENTITY_NAME = window.CUSTOMER_GPO_ADJUSTMENTS_ENTITY_NAME || 'customer-gpo-adjustment';
     window.GRID_PREF_SCREEN_ID_BY_GRID = Object.assign({}, window.GRID_PREF_SCREEN_ID_BY_GRID, {
       customerGpoAdjustmentsAddGrid: 'id_customer_gpo_adjustments_add'
@@ -52,13 +52,13 @@
   <input type="hidden" id="currentUserId" value="${userId!'test-user'}" />
 
   <div class="app-shell">
-    <@sidebar.navigation currentPath="/adjustments" />
+    <@sidebar.navigation currentPath="/customer-gpo-adjustments/add" />
 
     <main class="content">
       <div class="content-card">
         <@pageHeader.render
           title="Customer GPO Adjustments"
-          crumbs=[{"label":"Home","href":"${ctx}/"},{"label":"Adjustments","href":"${ctx}/adjustments"},{"label":"Customer GPO Adjustments","href":"${ctx}/customer-gpo-adjustments"},{"label":"Add"}]
+          crumbs=[{"label":"Home","href":"${ctx}/"},{"label":"Adjustments"},{"label":"Customer GPO Adjustments","href":"${ctx}/customer-gpo-adjustments"},{"label":"Add"}]
         />
 
         <#assign iconBack><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6L9 12L15 18" /></svg></#assign>

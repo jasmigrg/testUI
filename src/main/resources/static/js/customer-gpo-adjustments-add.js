@@ -1,5 +1,4 @@
 const CUSTOMER_GPO_FIELD_DEFS = [
-  { field: 'uniqueKeyId', headerName: 'Unique Key ID', minWidth: 150, editable: false },
   { field: 'customerPriority', headerName: 'Customer Priority', minWidth: 160 },
   { field: 'itemPriority', headerName: 'Item Priority', minWidth: 140 },
   { field: 'accountType', headerName: 'Account Type', minWidth: 140 },
@@ -14,7 +13,6 @@ const CUSTOMER_GPO_FIELD_DEFS = [
   { field: 'programSubType', headerName: 'Program Sub Type', minWidth: 170 },
   { field: 'effectiveFrom', headerName: 'Effective From', minWidth: 150, type: 'date' },
   { field: 'terminationDate', headerName: 'Termination Date', minWidth: 150, type: 'date' },
-  { field: 'disableDate', headerName: 'Disable Date', minWidth: 140, type: 'date' },
   { field: 'productFamily', headerName: 'Product Family', minWidth: 160 },
   { field: 'productCategory', headerName: 'Product Category', minWidth: 160 },
   { field: 'productGroup', headerName: 'Product Group', minWidth: 150 },
@@ -23,18 +21,14 @@ const CUSTOMER_GPO_FIELD_DEFS = [
   { field: 'mckBrandNonContractPercent', headerName: 'McK Brand Non Contract %', minWidth: 200, type: 'number' },
   { field: 'allOtherContractPercent', headerName: 'All Other Contract %', minWidth: 180, type: 'number' },
   { field: 'allOtherNonContractPercent', headerName: 'All Other Non Contract %', minWidth: 200, type: 'number' },
-  { field: 'notes', headerName: 'Notes', minWidth: 180 },
   { field: 'createdByUser', headerName: 'Created By User', minWidth: 160, editable: false },
   { field: 'createdDate', headerName: 'Created Date', minWidth: 140, editable: false, type: 'date' },
-  { field: 'createTime', headerName: 'Create Time', minWidth: 130, editable: false },
-  { field: 'dateUpdated', headerName: 'Date Updated', minWidth: 140, editable: false, type: 'date' },
-  { field: 'timeUpdated', headerName: 'Time Updated', minWidth: 140, editable: false },
   { field: 'programId', headerName: 'Program ID', minWidth: 130 },
   { field: 'userId', headerName: 'User ID', minWidth: 120 },
   { field: 'workStnId', headerName: 'Work Stn ID', minWidth: 140 }
 ];
 
-const CUSTOMER_GPO_DATE_FIELDS = new Set(['effectiveFrom', 'terminationDate', 'disableDate', 'createdDate', 'dateUpdated']);
+const CUSTOMER_GPO_DATE_FIELDS = new Set(['effectiveFrom', 'terminationDate', 'createdDate']);
 const CUSTOMER_GPO_NUMBER_FIELDS = new Set([
   'mckBrandContractPercent',
   'mckBrandNonContractPercent',
@@ -57,7 +51,6 @@ const CUSTOMER_GPO_OUTBOUND_FIELDS = [
   { localField: 'workStnId', backendField: 'workStationId', useContextFallback: 'workStationId' },
   { localField: 'effectiveFrom', backendField: 'effectiveFrom' },
   { localField: 'terminationDate', backendField: 'terminationDate' },
-  { localField: 'disableDate', backendField: 'disableDate' },
   { localField: 'customerPriority', backendField: 'customerPriority' },
   { localField: 'itemPriority', backendField: 'itemPriority' },
   { localField: 'accountType', backendField: 'accountType' },
@@ -78,7 +71,6 @@ const CUSTOMER_GPO_OUTBOUND_FIELDS = [
   { localField: 'mckBrandNonContractPercent', backendField: 'mckBrandNonContractPct' },
   { localField: 'allOtherContractPercent', backendField: 'allOtherContractPct' },
   { localField: 'allOtherNonContractPercent', backendField: 'allOtherNonContractPct' },
-  { localField: 'notes', backendField: 'notes' },
   { localField: 'createdByUser', backendField: 'createdByUser' },
   { localField: 'createdDate', backendField: 'createDate' }
 ];
@@ -446,7 +438,7 @@ const CustomerGpoAdjustmentsAddPage = {
 
       switch (actionButton.dataset.action) {
         case 'back':
-          window.location.href = window.CUSTOMER_GPO_ADJUSTMENTS_LIST_PAGE_URL || '/adjustments';
+          window.location.href = window.CUSTOMER_GPO_ADJUSTMENTS_LIST_PAGE_URL || '/customer-gpo-adjustments';
           break;
         case 'delete':
           this.deleteSelectedRows();
@@ -892,10 +884,6 @@ const CustomerGpoAdjustmentsAddPage = {
   normalizeResultRow(item) {
     const baseRow = this.normalizeRow(this.toBackendDataShape(item?.data || {}));
     const mainTableId = item?.mainTableId ?? null;
-    const createTime = String(item?.data?.createTime ?? item?.createTime ?? '').trim();
-    const updatedAt = String(item?.data?.updatedAt ?? item?.updatedAt ?? '').trim();
-    const { datePart: createdDatePart, timePart: createTimePart } = this.splitBackendDateTime(createTime);
-    const { datePart: updatedDatePart, timePart: updatedTimePart } = this.splitBackendDateTime(updatedAt);
     const fieldErrorMessages = this.extractFieldErrorMessages(item);
     const uploadErrors = Array.from(new Set([
       ...(Array.isArray(item?.errorFields) ? item.errorFields.map((field) => this.mapErrorField(field)).filter(Boolean) : []),
@@ -906,11 +894,6 @@ const CustomerGpoAdjustmentsAddPage = {
 
     return {
       ...baseRow,
-      uniqueKeyId: baseRow.uniqueKeyId || (mainTableId == null ? '' : String(mainTableId)),
-      createdDate: baseRow.createdDate || createdDatePart,
-      createTime: baseRow.createTime || createTimePart,
-      dateUpdated: baseRow.dateUpdated || updatedDatePart,
-      timeUpdated: baseRow.timeUpdated || updatedTimePart,
       uploadStatus,
       uploadErrors,
       errorMessages: Array.isArray(item?.errorMessages) ? item.errorMessages : [],
@@ -920,16 +903,6 @@ const CustomerGpoAdjustmentsAddPage = {
       rowNumber: item?.rowNumber ?? null,
       mainTableId,
       isBackendRow: true
-    };
-  },
-
-  splitBackendDateTime(value) {
-    const raw = String(value || '').trim();
-    if (!raw) return { datePart: '', timePart: '' };
-    const [dateToken = '', timeToken = ''] = raw.split(/\s+/, 2);
-    return {
-      datePart: this.toUsDate(dateToken),
-      timePart: timeToken
     };
   },
 
@@ -1305,7 +1278,7 @@ const CustomerGpoAdjustmentsAddPage = {
 
   isRowEmpty(row) {
     return CUSTOMER_GPO_FIELD_DEFS
-      .filter(({ field }) => !['uniqueKeyId', 'createdByUser', 'createdDate', 'createTime', 'dateUpdated', 'timeUpdated'].includes(field))
+      .filter(({ field }) => !['createdByUser', 'createdDate'].includes(field))
       .every(({ field }) => !String(row[field] || '').trim());
   },
 
