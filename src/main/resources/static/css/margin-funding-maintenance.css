@@ -76,6 +76,34 @@
   fill: #ffffff !important;
 }
 
+.mfi-page .ag-theme-alpine .ag-filter-apply-panel .ag-button,
+.mfi-page .ag-theme-alpine .ag-filter-apply-panel .ag-standard-button {
+  border-radius: 8px;
+  font-weight: 600;
+  min-height: 34px;
+}
+
+.mfi-page .ag-theme-alpine .ag-filter-apply-panel .ag-standard-button:first-child {
+  background: #007c91;
+  color: #ffffff;
+  border: 1px solid #007c91;
+}
+
+.mfi-page .ag-theme-alpine .ag-filter-apply-panel .ag-standard-button:first-child:hover {
+  background: #006d7f;
+  border-color: #006d7f;
+}
+
+.mfi-page .ag-theme-alpine .ag-filter-apply-panel .ag-standard-button:last-child {
+  background: #ffffff;
+  color: #007c91;
+  border: 1px solid #007c91;
+}
+
+.mfi-page .ag-theme-alpine .ag-filter-apply-panel .ag-standard-button:last-child:hover {
+  background: #eef8fa;
+}
+
 .mf-action-modal[hidden] {
   display: none !important;
 }
