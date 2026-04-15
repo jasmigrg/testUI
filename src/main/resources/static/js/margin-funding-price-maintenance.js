@@ -131,6 +131,8 @@ class MarginFundingPriceManualFloatingFilter {
 
     if (parentModel && parentModel.rawInput != null) {
       next = String(parentModel.rawInput);
+    } else if (parentModel && parentModel.filter != null && this.isDateTimeFilter()) {
+      next = this.rebuildOperatorInput(parentModel.type, parentModel.filter);
     } else if (parentModel && parentModel.dateFrom != null && this.isNumericOrDateFilter()) {
       next = this.rebuildOperatorInput(
         parentModel.type,
@@ -153,7 +155,7 @@ class MarginFundingPriceManualFloatingFilter {
 
     const value = this.input.value.trim();
     this.currentValue = value;
-    const fallbackOperator = this.isNumericOrDateFilter() ? 'equals' : 'contains';
+    const fallbackOperator = this.isNumericOrDateFilter() || this.isDateTimeFilter() ? 'equals' : 'contains';
     const parsedInput = MarginFundingPriceMaintenanceManager.parseInlineFilterExpression(
       value,
       fallbackOperator
@@ -168,6 +170,10 @@ class MarginFundingPriceManualFloatingFilter {
   isNumericOrDateFilter() {
     const filter = this.params?.column?.getColDef?.()?.filter;
     return filter === 'agNumberColumnFilter' || filter === 'agDateColumnFilter';
+  }
+
+  isDateTimeFilter() {
+    return this.params?.column?.getColId?.() === 'updatedAtDisplay';
   }
 
   rebuildOperatorInput(type, value) {
@@ -345,6 +351,58 @@ const MarginFundingPriceMaintenanceManager = {
     return `${isoMatch[2]}/${isoMatch[3]}/${isoMatch[1]}`;
   },
 
+  parseUsDateTimeValue(value) {
+    const raw = String(value ?? '').trim();
+    if (!raw) return null;
+
+    const match = raw.match(
+      /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2})(?::(\d{1,2}))?(?::(\d{1,2}))?)?$/
+    );
+    if (!match) return null;
+
+    const month = Number(match[1]);
+    const day = Number(match[2]);
+    const year = Number(match[3]);
+    const hour = match[4] == null ? 0 : Number(match[4]);
+    const minute = match[5] == null ? 0 : Number(match[5]);
+    const second = match[6] == null ? 0 : Number(match[6]);
+
+    if (
+      month < 1 || month > 12 ||
+      day < 1 || day > 31 ||
+      hour < 0 || hour > 23 ||
+      minute < 0 || minute > 59 ||
+      second < 0 || second > 59
+    ) {
+      return null;
+    }
+
+    const parsed = new Date(year, month - 1, day, hour, minute, second, 0);
+    if (
+      parsed.getFullYear() !== year ||
+      parsed.getMonth() !== month - 1 ||
+      parsed.getDate() !== day ||
+      parsed.getHours() !== hour ||
+      parsed.getMinutes() !== minute ||
+      parsed.getSeconds() !== second
+    ) {
+      return null;
+    }
+
+    return parsed;
+  },
+
+  compareDateTimeValues(leftValue, rightValue) {
+    const left = this.parseUsDateTimeValue(leftValue);
+    const right = this.parseUsDateTimeValue(rightValue);
+    if (!left || !right) return null;
+
+    const leftTime = left.getTime();
+    const rightTime = right.getTime();
+    if (leftTime === rightTime) return 0;
+    return leftTime < rightTime ? -1 : 1;
+  },
+
   getTodayDateOnly() {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -354,15 +412,29 @@ const MarginFundingPriceMaintenanceManager = {
     if (['uniqueKeyId', 'vendorProgram', 'vendorFamilyNumber', 'percent'].includes(field)) {
       return 'number';
     }
-    if (['effectiveDate', 'terminationDate', 'disableDate', 'updatedAtDisplay'].includes(field)) {
+    if (['effectiveDate', 'terminationDate', 'disableDate'].includes(field)) {
       return 'date';
     }
     return 'text';
   },
 
-  mapColumnToApiField(colId) {
+  mapColumnToApiField(colId, context = 'filter') {
     const fieldMap = {
-      updatedAtDisplay: 'updatedAt'
+      uniqueKeyId: 'uniqueKeyId',
+      vendorProgram: 'vendorProgram',
+      vendorFamilyNumber: 'vendorFamilyNumber',
+      vendorFamilyName: 'vendorFamilyName',
+      priceFormula: 'priceFormula',
+      priceFormulaDescription: 'priceFormulaDescription',
+      percent: 'percent',
+      effectiveDate: context === 'filter' ? 'effectiveDateStr' : 'effectiveDate',
+      terminationDate: context === 'filter' ? 'terminationDateStr' : 'terminationDate',
+      disableDate: context === 'filter' ? 'disableDateStr' : 'disableDate',
+      updatedAtDisplay: context === 'filter' ? 'updatedDate' : 'updatedAt',
+      userId: 'userId',
+      programId: 'programId',
+      workStationId: 'workStationId',
+      notes: 'notes'
     };
     return fieldMap[colId] || colId;
   },
@@ -408,16 +480,22 @@ const MarginFundingPriceMaintenanceManager = {
     if (!raw) return '';
 
     const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ].*)?$/);
-    if (isoMatch) return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+    if (isoMatch) return `${isoMatch[2]}/${isoMatch[3]}/${isoMatch[1]}`;
 
     const usMatch = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
     if (usMatch) {
       const month = String(Number(usMatch[1])).padStart(2, '0');
       const day = String(Number(usMatch[2])).padStart(2, '0');
-      return `${usMatch[3]}-${month}-${day}`;
+      return `${month}/${day}/${usMatch[3]}`;
     }
 
-    return raw;
+    const parsed = new Date(raw);
+    if (Number.isNaN(parsed.getTime())) return raw;
+
+    const month = String(parsed.getMonth() + 1).padStart(2, '0');
+    const day = String(parsed.getDate()).padStart(2, '0');
+    const year = parsed.getFullYear();
+    return `${month}/${day}/${year}`;
   },
 
   normalizeFilterModel(field, model) {
@@ -425,6 +503,15 @@ const MarginFundingPriceMaintenanceManager = {
 
     const kind = this.getFieldFilterKind(field);
     const filterType = String(model.filterType || '').trim();
+
+    if (field === 'updatedAtDisplay') {
+      const rawInput = String(model.rawInput ?? model.filter ?? '').trim();
+      if (!rawInput) return null;
+      return {
+        value: rawInput,
+        operator: String(model.type || 'equals').trim() || 'equals'
+      };
+    }
 
     if (kind === 'date' || filterType === 'date') {
       const rawDate = model.dateFrom || model.filter;
@@ -462,6 +549,65 @@ const MarginFundingPriceMaintenanceManager = {
 
     const aligned = this.buildAlignedColumn(column);
     const kind = this.getFieldFilterKind(field);
+
+    if (field === 'updatedAtDisplay') {
+      return {
+        ...aligned,
+        filter: 'agTextColumnFilter',
+        floatingFilter: true,
+        floatingFilterComponent: 'manualApplyFloatingFilter',
+        filterParams: {
+          buttons: ['apply', 'reset'],
+          closeOnApply: true,
+          maxNumConditions: 1,
+          numAlwaysVisibleConditions: 1,
+          filterOptions: [
+            {
+              displayKey: 'equals',
+              displayName: 'Equals',
+              predicate: ([filterValue], cellValue) => this.compareDateTimeValues(cellValue, filterValue) === 0,
+              numberOfInputs: 1
+            },
+            {
+              displayKey: 'notEqual',
+              displayName: 'Does not equal',
+              predicate: ([filterValue], cellValue) => this.compareDateTimeValues(cellValue, filterValue) !== 0,
+              numberOfInputs: 1
+            },
+            {
+              displayKey: 'greaterThan',
+              displayName: 'Greater than',
+              predicate: ([filterValue], cellValue) => this.compareDateTimeValues(cellValue, filterValue) === 1,
+              numberOfInputs: 1
+            },
+            {
+              displayKey: 'lessThan',
+              displayName: 'Less than',
+              predicate: ([filterValue], cellValue) => this.compareDateTimeValues(cellValue, filterValue) === -1,
+              numberOfInputs: 1
+            },
+            {
+              displayKey: 'greaterThanOrEqual',
+              displayName: 'Greater than or equal',
+              predicate: ([filterValue], cellValue) => {
+                const comparison = this.compareDateTimeValues(cellValue, filterValue);
+                return comparison === 0 || comparison === 1;
+              },
+              numberOfInputs: 1
+            },
+            {
+              displayKey: 'lessThanOrEqual',
+              displayName: 'Less than or equal',
+              predicate: ([filterValue], cellValue) => {
+                const comparison = this.compareDateTimeValues(cellValue, filterValue);
+                return comparison === 0 || comparison === -1;
+              },
+              numberOfInputs: 1
+            }
+          ]
+        }
+      };
+    }
 
     if (kind === 'date') {
       return {
@@ -728,14 +874,14 @@ const MarginFundingPriceMaintenanceManager = {
         const queryParams = new URLSearchParams({
           page: String(pageNumber),
           size: String(selectedPageSize),
-          sortBy: this.mapColumnToApiField(sortModel?.colId || 'uniqueKeyId'),
+          sortBy: this.mapColumnToApiField(sortModel?.colId || 'uniqueKeyId', 'sort'),
           sortDirection: String(sortModel?.sort || 'asc').toUpperCase()
         });
 
         Object.entries(params.filterModel || {}).forEach(([field, model]) => {
           const parsed = this.normalizeFilterModel(field, model);
           if (!parsed?.value) return;
-          const apiField = this.mapColumnToApiField(field);
+          const apiField = this.mapColumnToApiField(field, 'filter');
           queryParams.set(apiField, parsed.value);
           queryParams.set(`${apiField}_op`, parsed.operator);
         });
@@ -756,9 +902,10 @@ const MarginFundingPriceMaintenanceManager = {
               }
 
               const payload = await response.json();
-              const content = Array.isArray(payload?.data?.content) ? payload.data.content : [];
+              const payloadData = payload?.data && typeof payload.data === 'object' ? payload.data : payload;
+              const content = Array.isArray(payloadData?.content) ? payloadData.content : [];
               const rows = content.map((row) => this.mapApiRow(row));
-              const totalRows = Number(payload?.data?.totalElements ?? rows.length ?? 0);
+              const totalRows = Number(payloadData?.totalElements ?? rows.length ?? 0);
               return { rows, totalRows };
             });
 
@@ -766,11 +913,7 @@ const MarginFundingPriceMaintenanceManager = {
           }
 
           const { rows, totalRows } = await requestPromise;
-          const pageStart = pageNumber * selectedPageSize;
-          const sliceStart = Math.max(0, (params.startRow || 0) - pageStart);
-          const sliceEnd = Math.min(sliceStart + requestedBlockSize, rows.length);
-          const blockRows = rows.slice(sliceStart, sliceEnd);
-          params.successCallback(blockRows, totalRows);
+          params.successCallback(rows, totalRows);
           if (typeof this.gridApi?.hideOverlay === 'function') this.gridApi.hideOverlay();
         } catch (error) {
           this.pageRequestCache.delete(queryParams.toString());
