@@ -563,15 +563,14 @@ const MarginFundingPriceMaintenanceManager = {
           numAlwaysVisibleConditions: 1,
           filterOptions: [
             {
-              displayKey: 'equals',
-              displayName: 'Equals',
-              predicate: ([filterValue], cellValue) => this.compareDateTimeValues(cellValue, filterValue) === 0,
-              numberOfInputs: 1
-            },
-            {
-              displayKey: 'notEqual',
-              displayName: 'Does not equal',
-              predicate: ([filterValue], cellValue) => this.compareDateTimeValues(cellValue, filterValue) !== 0,
+              displayKey: 'contains',
+              displayName: 'Contains',
+              predicate: ([filterValue], cellValue) => {
+                const normalizedFilter = String(filterValue ?? '').trim().toLowerCase();
+                const normalizedCell = String(cellValue ?? '').trim().toLowerCase();
+                if (!normalizedFilter) return true;
+                return normalizedCell.includes(normalizedFilter);
+              },
               numberOfInputs: 1
             },
             {
@@ -858,6 +857,24 @@ const MarginFundingPriceMaintenanceManager = {
       this.gridApi.deselectAll();
     }
     this.pageRequestCache = new Map();
+  },
+
+  refreshGridData() {
+    if (!this.gridApi) return;
+
+    this.pageRequestCache = new Map();
+
+    if (typeof this.gridApi.refreshInfiniteCache === 'function') {
+      this.gridApi.refreshInfiniteCache();
+    } else if (typeof this.gridApi.purgeInfiniteCache === 'function') {
+      this.gridApi.purgeInfiniteCache();
+    } else if (typeof this.gridApi.refreshServerSideStore === 'function') {
+      this.gridApi.refreshServerSideStore({ purge: true });
+    }
+
+    if (typeof this.gridApi.deselectAll === 'function') {
+      this.gridApi.deselectAll();
+    }
   },
 
   buildDatasource() {
@@ -1156,8 +1173,8 @@ const MarginFundingPriceMaintenanceManager = {
     try {
       if (this.disableSaveBtn) this.disableSaveBtn.disabled = true;
       const responseBody = await this.postGridAction(payload);
-      this.applyLocalPatchToRows(uniqueKeys, { disableDate, notes }, responseBody);
       this.closeDisableModal();
+      this.refreshGridData();
       this.showInfo(responseBody?.message || 'Selected rows disabled successfully.', 'success');
     } catch (error) {
       console.error('Margin funding price disable action failed:', error);
@@ -1211,8 +1228,8 @@ const MarginFundingPriceMaintenanceManager = {
     try {
       if (this.updateTerminationSaveBtn) this.updateTerminationSaveBtn.disabled = true;
       const responseBody = await this.postGridAction(payload);
-      this.applyLocalPatchToRows(uniqueKeys, { terminationDate, notes }, responseBody);
       this.closeUpdateTerminationModal();
+      this.refreshGridData();
       this.showInfo(responseBody?.message || 'Termination date updated successfully.', 'success');
     } catch (error) {
       console.error('Margin funding price termination date update failed:', error);
