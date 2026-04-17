@@ -46,34 +46,34 @@
   box-sizing: border-box;
   display: flex;
   flex-wrap: nowrap;
-  gap: 18px;
+  gap: 14px;
   align-items: center;
   width: 100%;
   padding: 16px 18px;
   border: none;
   border-radius: 10px;
   background: #f4f6f8;
-  overflow-x: auto;
+  overflow-x: visible;
 }
 
 .agi-inline-field {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex: 0 0 auto;
   min-width: 0;
 }
 
 .agi-date-input {
   position: relative;
-  width: 176px;
+  width: 168px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
 }
 
 .agi-date-input .agi-input {
-  width: 150px;
+  width: 142px;
 }
 
 .agi-form-actions {
@@ -87,13 +87,13 @@
 
 .agi-label {
   white-space: nowrap;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 400;
   color: #334652;
 }
 
 .agi-input {
-  width: 132px;
+  width: 124px;
   height: 30px;
   border: 1px solid #cfd8df;
   border-radius: 4px;
@@ -159,7 +159,7 @@
 }
 
 .agi-btn {
-  min-width: 110px;
+  min-width: 104px;
   height: 30px;
   border-radius: 5px;
   border: 1px solid #cfd8df;
@@ -247,7 +247,7 @@
   background: #d8eef8;
 }
 
-@media (max-width: 1560px) {
+@media (max-width: 1200px) {
   .agi-input-form {
     flex-wrap: wrap;
     overflow-x: visible;
