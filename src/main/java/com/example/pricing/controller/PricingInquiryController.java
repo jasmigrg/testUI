@@ -15,6 +15,12 @@ public class PricingInquiryController {
     return "pricing-inquiry";
   }
 
+  @GetMapping("/all-guidance-inquiry")
+  public String allGuidanceInquiry(Model model) {
+    model.addAttribute("apiBaseUrl", apiBaseUrl);
+    return "all-guidance-inquiry";
+  }
+
   @GetMapping("/margin-funding-maintenance")
   public String marginFundingMaintenance(Model model) {
     model.addAttribute("apiBaseUrl", apiBaseUrl);

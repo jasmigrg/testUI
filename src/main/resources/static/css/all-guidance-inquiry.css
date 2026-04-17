@@ -1,0 +1,274 @@
+.all-guidance-page .content-card {
+  gap: 14px;
+}
+
+.all-guidance-page .screen-page-shell {
+  gap: 18px;
+}
+
+.agi-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.agi-section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.agi-section-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: #add8e6;
+  border: none;
+}
+
+.agi-section-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #2c3d47;
+}
+
+.agi-panel--input {
+  padding-bottom: 8px;
+  border-bottom: 1px solid #d9e0e6;
+}
+
+.agi-panel--input .agi-section-header {
+  margin-top: 6px;
+}
+
+.agi-input-form {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 18px;
+  align-items: center;
+  width: 100%;
+  padding: 16px 18px;
+  border: none;
+  border-radius: 10px;
+  background: #f4f6f8;
+  overflow-x: auto;
+}
+
+.agi-inline-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.agi-date-input {
+  position: relative;
+  width: 176px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.agi-date-input .agi-input {
+  width: 150px;
+}
+
+.agi-form-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  white-space: nowrap;
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.agi-label {
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 400;
+  color: #334652;
+}
+
+.agi-input {
+  width: 132px;
+  height: 30px;
+  border: 1px solid #cfd8df;
+  border-radius: 4px;
+  background: #fff;
+  padding: 0 10px;
+  font-size: 13px;
+  color: #20313a;
+}
+
+.agi-date-input .agi-input {
+  height: 30px;
+  border: 1px solid #cfd8df;
+  border-radius: 4px;
+  background: #fff;
+  padding: 0 10px;
+  font-size: 13px;
+  color: #20313a;
+}
+
+.agi-input:focus {
+  outline: 2px solid rgba(0, 124, 145, 0.18);
+  border-color: #007c91;
+}
+
+.agi-input.agi-input--invalid,
+.agi-date-input .agi-input.agi-input--invalid {
+  border-color: #d84b4b;
+  background: #fff7f7;
+}
+
+.agi-input.agi-input--invalid:focus,
+.agi-date-input .agi-input.agi-input--invalid:focus {
+  outline: 2px solid rgba(216, 75, 75, 0.18);
+  border-color: #d84b4b;
+}
+
+.agi-date-btn {
+  position: static;
+  width: 26px;
+  height: 26px;
+  border: none;
+  background: transparent;
+  color: #6b7c86;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.agi-date-btn svg {
+  width: 24px;
+  height: 24px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.8;
+}
+
+.agi-native-date {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.agi-btn {
+  min-width: 110px;
+  height: 30px;
+  border-radius: 5px;
+  border: 1px solid #cfd8df;
+  font-size: 13px;
+  font-weight: 400;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.agi-btn__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+}
+
+.agi-btn__icon svg {
+  width: 14px;
+  height: 14px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.9;
+}
+
+.agi-btn--secondary {
+  background: #fff;
+  color: #52636e;
+}
+
+.agi-btn--secondary:hover {
+  background: #f7fafb;
+}
+
+.agi-btn--primary {
+  background: #007c91;
+  border-color: #007c91;
+  color: #fff;
+}
+
+.agi-btn--primary:hover {
+  background: #006d7f;
+  border-color: #006d7f;
+}
+
+.all-guidance-page .gt-grid-controls {
+  padding-top: 2px;
+}
+
+.all-guidance-page .ag-theme-alpine.app-grid .ag-floating-filter-button {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  min-width: 28px;
+  height: 30px;
+  margin-left: 6px;
+}
+
+.all-guidance-page .ag-theme-alpine.app-grid .ag-floating-filter-button .ag-icon,
+.all-guidance-page .ag-theme-alpine.app-grid .ag-floating-filter-button .ag-icon-filter,
+.all-guidance-page .ag-theme-alpine.app-grid .ag-floating-filter-button .ag-icon-filter::before {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+  fill: #ffffff !important;
+}
+
+.all-guidance-page .grid-wrapper {
+  min-width: 0;
+}
+
+.all-guidance-page .screen-grid {
+  width: 100%;
+}
+
+.all-guidance-page .ag-theme-alpine .ag-cell.agi-override-level-cell {
+  background: #e6f5fb;
+}
+
+.all-guidance-page .ag-theme-alpine .ag-row-hover .ag-cell.agi-override-level-cell {
+  background: #d8eef8;
+}
+
+@media (max-width: 1400px) {
+  .agi-input-form {
+    gap: 14px;
+  }
+}
+
+@media (max-width: 800px) {
+  .agi-input-form {
+    flex-wrap: wrap;
+  }
+
+  .agi-inline-field {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .agi-input,
+  .agi-date-input {
+    width: 100%;
+  }
+
+  .agi-form-actions {
+    width: 100%;
+    margin-left: 0;
+  }
+}
