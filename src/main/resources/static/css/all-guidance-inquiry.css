@@ -43,6 +43,7 @@
 }
 
 .agi-input-form {
+  box-sizing: border-box;
   display: flex;
   flex-wrap: nowrap;
   gap: 18px;
@@ -246,15 +247,22 @@
   background: #d8eef8;
 }
 
-@media (max-width: 1400px) {
+@media (max-width: 1560px) {
   .agi-input-form {
-    gap: 14px;
+    flex-wrap: wrap;
+    overflow-x: visible;
+    row-gap: 12px;
+  }
+
+  .agi-form-actions {
+    margin-left: 0;
   }
 }
 
 @media (max-width: 800px) {
   .agi-input-form {
     flex-wrap: wrap;
+    overflow-x: visible;
   }
 
   .agi-inline-field {

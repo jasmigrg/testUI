@@ -126,7 +126,7 @@
 
             <@actionToolbar.render actions=actionItems toolbarLabel="All guidance inquiry actions" rightSectionLabel="Grid manager view actions">
               <@gridManager.gridManager />
-              <@gridViewActions.render defaultDensity="compact" showDownload=false />
+              <@gridViewActions.render defaultDensity="compact" />
             </@actionToolbar.render>
 
             <section class="grid-wrapper">

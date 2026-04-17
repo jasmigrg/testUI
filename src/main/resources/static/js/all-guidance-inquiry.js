@@ -395,6 +395,16 @@ const AllGuidanceInquiryPage = {
     return `${yyyy}-${mm}-${dd}`;
   },
 
+  formatTimestampForFileName(date = new Date()) {
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const dd = String(date.getDate()).padStart(2, '0');
+    const hh = String(date.getHours()).padStart(2, '0');
+    const min = String(date.getMinutes()).padStart(2, '0');
+    const ss = String(date.getSeconds()).padStart(2, '0');
+    return `${yyyy}${mm}${dd}_${hh}${min}${ss}`;
+  },
+
   getTodayDateOnly() {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -456,6 +466,42 @@ const AllGuidanceInquiryPage = {
     const numeric = Number(value);
     if (Number.isNaN(numeric)) return String(value);
     return String(numeric);
+  },
+
+  getDisplayedRowsForExport() {
+    if (!this.gridApi || typeof this.gridApi.forEachNodeAfterFilterAndSort !== 'function') return [];
+    const rows = [];
+    this.gridApi.forEachNodeAfterFilterAndSort((node) => {
+      if (node?.group || node?.rowPinned) return;
+      if (node?.data) rows.push(node.data);
+    });
+    return rows;
+  },
+
+  escapeCsvValue(value) {
+    const raw = String(value == null ? '' : value);
+    if (!/[",\n]/.test(raw)) return raw;
+    return `"${raw.replace(/"/g, '""')}"`;
+  },
+
+  downloadCsv(rows) {
+    const exportRows = Array.isArray(rows) ? rows : [];
+    const headers = this.columnDefs.map((column) => column.headerName);
+    const fields = this.columnDefs.map((column) => column.field);
+    const csvLines = [
+      headers.map((value) => this.escapeCsvValue(value)).join(','),
+      ...exportRows.map((row) => fields.map((field) => this.escapeCsvValue(row?.[field] ?? '')).join(','))
+    ];
+
+    const blob = new Blob([csvLines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `all_guidance_inquiry_${this.formatTimestampForFileName()}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
   },
 
   mapApiRow(row, index) {
@@ -769,6 +815,7 @@ const AllGuidanceInquiryPage = {
     const favoriteBtn = document.querySelector('.gt-action-btn[data-action="favorite"]');
     const refreshBtn = document.querySelector('.gt-action-btn[data-action="refresh"]');
     const executeBtn = document.querySelector('.gt-action-btn[data-action="execute"]');
+    const downloadBtn = document.querySelector('.gt-view-btn[data-action="download"]');
 
     backBtn?.addEventListener('click', () => window.location.assign('/'));
     favoriteBtn?.addEventListener('click', () => this.showInfo('Favorite action is not configured yet.', 'warning'));
@@ -777,6 +824,14 @@ const AllGuidanceInquiryPage = {
       if (this.gridApi && typeof this.gridApi.applyPendingFloatingFilters === 'function') {
         this.gridApi.applyPendingFloatingFilters();
       }
+    });
+    downloadBtn?.addEventListener('click', () => {
+      const rows = this.getDisplayedRowsForExport();
+      if (!rows.length) {
+        this.showInfo('No rows available to download.', 'warning');
+        return;
+      }
+      this.downloadCsv(rows);
     });
   },
 
