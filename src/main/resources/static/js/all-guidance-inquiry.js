@@ -261,22 +261,10 @@ const AllGuidanceInquiryPage = {
 
     const kind = this.getFieldFilterKind(field);
     const baseClass = kind === 'text' ? 'cell-align-left' : 'cell-align-right';
-    const alignedColumn = {
+    return {
       ...column,
       cellClass: baseClass
     };
-
-    if (field === 'overrideLevel') {
-      alignedColumn.cellClassRules = {
-        ...(column.cellClassRules || {}),
-        'agi-override-level-cell': (params) => {
-          const value = params?.value;
-          return value != null && String(value).trim() !== '';
-        }
-      };
-    }
-
-    return alignedColumn;
   },
 
   getNumericFilterValue(value) {
@@ -607,6 +595,13 @@ const AllGuidanceInquiryPage = {
         floatingFiltersHeight: compactPreset.floatingFiltersHeight,
         animateRows: false,
         suppressRowClickSelection: true,
+        rowClassRules: {
+          'agi-row-highlight--override-90': (params) => String(params?.data?.overrideLevel ?? '').trim() === '90',
+          'agi-row-highlight--override-other': (params) => {
+            const value = String(params?.data?.overrideLevel ?? '').trim();
+            return value !== '' && value !== '90';
+          }
+        },
         components: {
           manualApplyFloatingFilter: AllGuidanceManualFloatingFilter
         },

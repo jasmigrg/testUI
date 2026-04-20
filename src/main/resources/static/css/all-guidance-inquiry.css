@@ -245,12 +245,22 @@
   width: 100%;
 }
 
-.all-guidance-page .ag-theme-alpine .ag-cell.agi-override-level-cell {
-  background: #e6f5fb;
+.all-guidance-page .ag-theme-alpine .ag-row.agi-row-highlight--override-90 .ag-cell {
+  background: #dff2fb;
 }
 
-.all-guidance-page .ag-theme-alpine .ag-row-hover .ag-cell.agi-override-level-cell {
-  background: #d8eef8;
+.all-guidance-page .ag-theme-alpine .ag-row.agi-row-highlight--override-90.ag-row-hover .ag-cell,
+.all-guidance-page .ag-theme-alpine .ag-row.agi-row-highlight--override-90:hover .ag-cell {
+  background: #cfe9f8;
+}
+
+.all-guidance-page .ag-theme-alpine .ag-row.agi-row-highlight--override-other .ag-cell {
+  background: #edf7fd;
+}
+
+.all-guidance-page .ag-theme-alpine .ag-row.agi-row-highlight--override-other.ag-row-hover .ag-cell,
+.all-guidance-page .ag-theme-alpine .ag-row.agi-row-highlight--override-other:hover .ag-cell {
+  background: #deeff9;
 }
 
 @media (max-width: 1200px) {
