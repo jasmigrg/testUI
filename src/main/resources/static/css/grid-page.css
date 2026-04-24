@@ -63,9 +63,9 @@
   flex-direction: column;
   min-height: 0;
   min-width: 0;
-  max-width: 2100px;
   width: 100%;
-  margin: 0 auto;
+  max-width: none;
+  margin: 0;
 }
 
 .mfi-page .grid-wrapper,

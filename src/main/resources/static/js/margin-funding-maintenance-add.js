@@ -49,6 +49,92 @@ const MFC_OUTBOUND_FIELDS = [
   { localField: 'marginFundingPctType', backendField: 'marginFundingPctType' }
 ];
 
+class GtPageSelectHeader {
+  init(params) {
+    this.params = params;
+    this.eGui = document.createElement('div');
+    this.eGui.className = 'gt-header-select-all';
+
+    this.checkbox = document.createElement('input');
+    this.checkbox.type = 'checkbox';
+    this.checkbox.className = 'gt-header-select-checkbox';
+    this.checkbox.setAttribute('aria-label', 'Select visible rows');
+
+    this.stopEvent = (event) => event.stopPropagation();
+    this.onToggle = () => this.toggleVisibleRows();
+    this.onSync = () => this.syncState();
+
+    this.checkbox.addEventListener('click', this.stopEvent);
+    this.checkbox.addEventListener('mousedown', this.stopEvent);
+    this.checkbox.addEventListener('change', this.onToggle);
+
+    this.params.api.addEventListener('selectionChanged', this.onSync);
+    this.params.api.addEventListener('paginationChanged', this.onSync);
+    this.params.api.addEventListener('filterChanged', this.onSync);
+    this.params.api.addEventListener('sortChanged', this.onSync);
+
+    this.eGui.appendChild(this.checkbox);
+    this.syncState();
+  }
+
+  getGui() {
+    return this.eGui;
+  }
+
+  toggleVisibleRows() {
+    const shouldSelect = this.checkbox.checked;
+    const pageSize = this.params.api.paginationGetPageSize?.() || 20;
+    const currentPage = this.params.api.paginationGetCurrentPage?.() || 0;
+    const from = currentPage * pageSize;
+    const to = from + pageSize;
+
+    for (let index = from; index < to; index += 1) {
+      const rowNode = this.params.api.getDisplayedRowAtIndex(index);
+      if (!rowNode) continue;
+      if (rowNode.rowPinned || rowNode.group || rowNode.selectable === false) continue;
+      rowNode.setSelected(shouldSelect);
+    }
+
+    this.syncState();
+  }
+
+  syncState() {
+    if (!this.checkbox || !this.params?.api) return;
+    const pageSize = this.params.api.paginationGetPageSize?.() || 20;
+    const currentPage = this.params.api.paginationGetCurrentPage?.() || 0;
+    const from = currentPage * pageSize;
+    const to = from + pageSize;
+    let selectableCount = 0;
+    let selectedCount = 0;
+
+    for (let index = from; index < to; index += 1) {
+      const rowNode = this.params.api.getDisplayedRowAtIndex(index);
+      if (!rowNode) continue;
+      if (rowNode.rowPinned || rowNode.group || rowNode.selectable === false) continue;
+      selectableCount += 1;
+      if (rowNode.isSelected()) selectedCount += 1;
+    }
+
+    this.checkbox.indeterminate =
+      selectableCount > 0 && selectedCount > 0 && selectedCount < selectableCount;
+    this.checkbox.checked = selectableCount > 0 && selectedCount === selectableCount;
+  }
+
+  destroy() {
+    if (!this.checkbox) return;
+    this.checkbox.removeEventListener('click', this.stopEvent);
+    this.checkbox.removeEventListener('mousedown', this.stopEvent);
+    this.checkbox.removeEventListener('change', this.onToggle);
+
+    if (this.params?.api) {
+      this.params.api.removeEventListener('selectionChanged', this.onSync);
+      this.params.api.removeEventListener('paginationChanged', this.onSync);
+      this.params.api.removeEventListener('filterChanged', this.onSync);
+      this.params.api.removeEventListener('sortChanged', this.onSync);
+    }
+  }
+}
+
 const MarginFundingItemMaintenanceAddPage = {
   entityName: '',
   gridApi: null,
@@ -58,6 +144,9 @@ const MarginFundingItemMaintenanceAddPage = {
   uploadFilter: 'all',
   selectedJobId: null,
   jobRows: [],
+  draftEditsByRowNumber: new Map(),
+  selectedRowNumbers: new Set(),
+  backendRowsByRowNumber: new Map(),
   detachCommunityPaste: null,
   pollTimer: null,
   maxPasteRows: 5000,
@@ -132,6 +221,10 @@ const MarginFundingItemMaintenanceAddPage = {
         enableBrowserTooltips: true,
         stopEditingWhenCellsLoseFocus: true,
         onCellValueChanged: (event) => this.onCellValueChanged(event),
+        onSelectionChanged: () => this.syncSelectedRowNumbersFromGrid(),
+        components: {
+          gtPageSelectHeader: GtPageSelectHeader
+        },
         icons: {
           sortUnSort:
             '<span class="gt-sort-icon gt-sort-icon--none" aria-hidden="true"><svg viewBox="0 0 8 12" focusable="false"><path d="M4 1L7 4H1L4 1Z"></path><path d="M4 11L1 8H7L4 11Z"></path></svg></span>',
@@ -174,9 +267,8 @@ const MarginFundingItemMaintenanceAddPage = {
         {
           field: 'select',
           headerName: '',
+          headerComponent: 'gtPageSelectHeader',
           checkboxSelection: (params) => this.canSelectRow(params?.data),
-          headerCheckboxSelection: (params) => this.hasSelectableRows(params?.api),
-          headerCheckboxSelectionFilteredOnly: true,
           showDisabledCheckboxes: true,
           width: 44,
           minWidth: 44,
@@ -854,6 +946,89 @@ const MarginFundingItemMaintenanceAddPage = {
     };
   },
 
+  getRowNumberKey(rowOrRowNumber) {
+    const rowNumber = typeof rowOrRowNumber === 'object' && rowOrRowNumber
+      ? rowOrRowNumber.rowNumber
+      : rowOrRowNumber;
+    if (rowNumber == null || rowNumber === '') return '';
+    return String(rowNumber);
+  },
+
+  cacheBackendRows(rows) {
+    if (!Array.isArray(rows)) return;
+    rows.forEach((row) => {
+      const key = this.getRowNumberKey(row);
+      if (!key) return;
+      this.backendRowsByRowNumber.set(key, { ...row });
+    });
+  },
+
+  mergeDraftIntoBackendRow(row) {
+    const key = this.getRowNumberKey(row);
+    if (!key) return row;
+
+    if (this.isSuccessfulUploadRow(row)) {
+      this.draftEditsByRowNumber.delete(key);
+      this.selectedRowNumbers.delete(key);
+      return row;
+    }
+
+    const draft = this.draftEditsByRowNumber.get(key);
+    if (!draft) return row;
+
+    return {
+      ...row,
+      ...draft,
+      rowNumber: row.rowNumber,
+      isBackendRow: true
+    };
+  },
+
+  syncSelectedRowNumbersFromGrid() {
+    if (!this.gridApi) return;
+
+    this.gridApi.forEachNode((node) => {
+      const row = node?.data;
+      if (!row || !row.isBackendRow) return;
+      const key = this.getRowNumberKey(row);
+      if (!key) return;
+
+      if (node.isSelected() && this.canSelectRow(row)) {
+        this.selectedRowNumbers.add(key);
+      } else {
+        this.selectedRowNumbers.delete(key);
+      }
+    });
+  },
+
+  restoreSelectedRowsInGrid() {
+    if (!this.gridApi) return;
+    this.gridApi.forEachNode((node) => {
+      const row = node?.data;
+      if (!row || !row.isBackendRow) return;
+      const key = this.getRowNumberKey(row);
+      if (!key) return;
+      const shouldSelect = this.selectedRowNumbers.has(key) && this.canSelectRow(row);
+      node.setSelected(shouldSelect);
+    });
+  },
+
+  getSelectedCorrectionRows() {
+    if (!this.selectedJobId || this.selectedRowNumbers.size === 0) {
+      return this.gridApi?.getSelectedRows?.() || [];
+    }
+
+    const rows = [];
+    this.selectedRowNumbers.forEach((rowNumber) => {
+      const key = this.getRowNumberKey(rowNumber);
+      if (!key) return;
+      const candidate = this.draftEditsByRowNumber.get(key) || this.backendRowsByRowNumber.get(key);
+      if (!candidate || !this.canSelectRow(candidate)) return;
+      rows.push(candidate);
+    });
+    return rows;
+  },
+
   async loadJobResults(jobId, options = {}) {
     if (!jobId) return;
     const { showToast = true, resetUploadFilter = true, clearColumnFilters = false } = options;
@@ -868,9 +1043,10 @@ const MarginFundingItemMaintenanceAddPage = {
       this.upsertJobRow(normalizedStatus);
 
       const rows = Array.isArray(resultsPayload?.results)
-        ? resultsPayload.results.map((row) => this.normalizeResultRow(row))
+        ? resultsPayload.results.map((row) => this.mergeDraftIntoBackendRow(this.normalizeResultRow(row)))
         : [];
 
+      this.cacheBackendRows(rows);
       this.uploadedRows = rows;
       if (resetUploadFilter) {
         this.uploadFilter = 'all';
@@ -881,6 +1057,7 @@ const MarginFundingItemMaintenanceAddPage = {
       if (this.uploadStatusRow) this.uploadStatusRow.hidden = rows.length === 0;
       if (clearColumnFilters) this.clearColumnFilters();
       this.applyUploadFilter();
+      this.restoreSelectedRowsInGrid();
       if (showToast) this.showInfo(`Loaded job ${jobId} (${rows.length} row(s)).`, 'success');
     } catch (error) {
       console.error('Failed to load job results:', error);
@@ -1005,7 +1182,7 @@ const MarginFundingItemMaintenanceAddPage = {
   },
 
   processGridRows() {
-    const selectedRows = this.gridApi?.getSelectedRows?.() || [];
+    const selectedRows = this.getSelectedCorrectionRows();
     const sourceRows = selectedRows.length > 0 ? selectedRows : this.getGridRows();
     const normalizedRows = sourceRows
       .map((row) => this.normalizeRow(row))
@@ -1037,6 +1214,8 @@ const MarginFundingItemMaintenanceAddPage = {
       if (mode === 'resubmit') {
         if (typeof this.gridApi?.deselectAll === 'function') this.gridApi.deselectAll();
         submitRows.forEach((submittedRow) => {
+          const rowKey = this.getRowNumberKey(submittedRow);
+          if (rowKey) this.selectedRowNumbers.delete(rowKey);
           const match = this.uploadedRows.find((row) => row.isBackendRow && row.rowNumber === submittedRow.rowNumber);
           if (!match) return;
           match.uploadStatus = 'processing';
@@ -1159,10 +1338,19 @@ const MarginFundingItemMaintenanceAddPage = {
     if (!field || !rowNode?.data) return;
 
     const normalized = this.normalizeRow(rowNode.data);
-    Object.assign(rowNode.data, this.buildEditedRowState(normalized, field));
+    const nextRowState = this.buildEditedRowState(normalized, field);
+    Object.assign(rowNode.data, nextRowState);
+    if (rowNode.data?.isBackendRow) {
+      const key = this.getRowNumberKey(rowNode.data);
+      if (key) {
+        this.draftEditsByRowNumber.set(key, { ...nextRowState });
+        this.backendRowsByRowNumber.set(key, { ...nextRowState });
+      }
+    }
     if (this.gridApi?.refreshCells) this.gridApi.refreshCells({ rowNodes: [rowNode], force: true });
     if (this.selectedJobId) {
       if (typeof this.gridApi?.deselectNode === 'function') this.gridApi.deselectNode(rowNode);
+      this.syncSelectedRowNumbersFromGrid();
       this.applyUploadFilter();
       return;
     }
@@ -1248,6 +1436,7 @@ const MarginFundingItemMaintenanceAddPage = {
       ? this.uploadedRows
       : this.uploadedRows.filter((row) => row.uploadStatus === this.uploadFilter);
     this.gridApi.setGridOption('rowData', filteredRows.length > 0 ? filteredRows : (this.selectedJobId ? [] : this.initialRows()));
+    this.restoreSelectedRowsInGrid();
   },
 
   clearColumnFilters() {
