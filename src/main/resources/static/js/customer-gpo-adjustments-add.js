@@ -773,7 +773,14 @@ const CustomerGpoAdjustmentsAddPage = {
 
   mapErrorField(field) {
     const normalized = this.normalizeHeader(field);
-    const match = CUSTOMER_GPO_FIELD_DEFS.find((column) => this.normalizeHeader(column.headerName) === normalized || this.normalizeHeader(column.field) === normalized);
+    const match = CUSTOMER_GPO_FIELD_DEFS.find((column) => {
+      if (this.normalizeHeader(column.headerName) === normalized || this.normalizeHeader(column.field) === normalized) {
+        return true;
+      }
+
+      const aliases = CUSTOMER_GPO_BACKEND_ALIASES[column.field] || [];
+      return aliases.some((alias) => this.normalizeHeader(alias) === normalized);
+    });
     return match?.field || '';
   },
 
