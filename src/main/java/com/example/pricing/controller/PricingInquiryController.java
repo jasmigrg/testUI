@@ -69,6 +69,18 @@ public class PricingInquiryController {
     return "margin-funding-price-maintenance-add";
   }
 
+  @GetMapping("/govt-list-price-reason-code-maintenance")
+  public String govtListPriceReasonCodeMaintenance(Model model) {
+    model.addAttribute("apiBaseUrl", apiBaseUrl);
+    return "govt-list-price-reason-code-maintenance";
+  }
+
+  @GetMapping("/govt-list-price-reason-code-maintenance/add")
+  public String govtListPriceReasonCodeMaintenanceAdd(Model model) {
+    model.addAttribute("apiBaseUrl", apiBaseUrl);
+    return "govt-list-price-reason-code-maintenance-add";
+  }
+
   @GetMapping("/cams-eligibility")
   public String camsEligibility() {
     return "pricing/cams-eligibility";

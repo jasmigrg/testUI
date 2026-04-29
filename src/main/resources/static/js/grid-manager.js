@@ -330,7 +330,7 @@ function createGridManager(gridApi, gridId, configOverrides = {}) {
 
       const dataColumns = allColumns.filter((col) => {
         const colDef = col.getColDef();
-        return colDef.field && !colDef.checkboxSelection;
+        return colDef.field && !colDef.checkboxSelection && !colDef.excludeFromGridManager;
       });
 
       console.log('Populating columns menu with', dataColumns.length, 'data columns from', allColumns.length, 'total columns');
@@ -367,7 +367,7 @@ function createGridManager(gridApi, gridId, configOverrides = {}) {
 
       const allColumns = this.gridApi.getColumns();
       const visibleFields = allColumns
-        .filter((col) => col.getColDef().field && !col.getColDef().checkboxSelection)
+        .filter((col) => col.getColDef().field && !col.getColDef().checkboxSelection && !col.getColDef().excludeFromGridManager)
         .map((col) => col.getColDef().field);
 
       this.savedPreferences['default'] = {
@@ -705,7 +705,7 @@ function createGridManager(gridApi, gridId, configOverrides = {}) {
 
       const allColumns = this.gridApi.getColumns();
       const visibleColumns = allColumns
-        .filter((col) => col.isVisible() && col.getColDef().field)
+        .filter((col) => col.isVisible() && col.getColDef().field && !col.getColDef().excludeFromGridManager)
         .map((col) => col.getColDef().field);
 
       console.log('Selected columns (from AG-Grid):', visibleColumns);
@@ -962,7 +962,7 @@ function createGridManager(gridApi, gridId, configOverrides = {}) {
 
       const allColumns = this.gridApi.getColumns();
       const allFields = allColumns
-        .filter((col) => !col.getColDef().checkboxSelection)
+        .filter((col) => !col.getColDef().checkboxSelection && !col.getColDef().excludeFromGridManager)
         .map((col) => col.getColDef().field)
         .filter(Boolean);
 
@@ -998,7 +998,7 @@ function createGridManager(gridApi, gridId, configOverrides = {}) {
         const colDef = col.getColDef();
         const field = colDef.field;
 
-        if (colDef.checkboxSelection) {
+        if (colDef.checkboxSelection || colDef.excludeFromGridManager) {
           this.gridApi.setColumnsVisible([col.getColId()], true);
           return;
         }
@@ -1036,9 +1036,11 @@ function createGridManager(gridApi, gridId, configOverrides = {}) {
       });
 
       const newColumnOrder = [];
-
-      const checkboxCol = allColumns.find((col) => col.getColDef().checkboxSelection);
-      if (checkboxCol) newColumnOrder.push(checkboxCol);
+      const fixedUtilityColumns = allColumns.filter((col) => {
+        const colDef = col.getColDef();
+        return colDef.checkboxSelection || colDef.excludeFromGridManager;
+      });
+      fixedUtilityColumns.forEach((col) => newColumnOrder.push(col));
 
       columnOrder.forEach((field) => {
         if (columnMap[field]) {

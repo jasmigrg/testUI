@@ -1,0 +1,259 @@
+.govt-reason-page .content-card {
+  gap: 12px;
+}
+
+.govt-reason-summary-card {
+  background: #f7f8fa;
+  border: 1px solid #e1e6eb;
+  border-radius: 18px;
+  padding: 28px 32px;
+  box-shadow: 0 2px 10px rgba(34, 47, 62, 0.08);
+}
+
+.govt-reason-summary-grid {
+  display: grid;
+  grid-template-columns: minmax(160px, 240px) minmax(220px, 420px) minmax(220px, 1fr);
+  align-items: center;
+  gap: 18px 18px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.govt-reason-summary-label {
+  font-size: 15px;
+  font-weight: 400;
+  color: #4a5259;
+}
+
+.govt-reason-summary-field {
+  min-width: 0;
+}
+
+.govt-reason-summary-input {
+  width: 100%;
+  min-width: 0;
+  height: 38px;
+  border: 1px solid #dde3e9;
+  border-radius: 8px;
+  background: #eef1f4;
+  padding: 0 14px;
+  font-size: 15px;
+  font-weight: 400;
+  color: #4a5259;
+}
+
+.govt-reason-summary-input[readonly] {
+  cursor: not-allowed;
+  user-select: none;
+}
+
+.govt-reason-summary-input--editable {
+  background: #ffffff;
+  color: #1f2a33;
+  font-weight: 400;
+}
+
+.govt-reason-summary-input--editable::placeholder {
+  color: #8d98a3;
+  font-weight: 400;
+}
+
+.govt-reason-summary-input:focus {
+  outline: 2px solid rgba(0, 124, 145, 0.18);
+  border-color: #007c91;
+}
+
+.govt-reason-summary-note {
+  font-size: 15px;
+  font-weight: 400;
+  font-style: italic;
+  color: #6b737b;
+}
+
+.govt-reason-summary-note--empty {
+  visibility: hidden;
+}
+
+.govt-reason-page .grid-wrapper {
+  margin-top: 0;
+}
+
+.govt-reason-grid-topbar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+
+.govt-reason-grid-topbar .gt-grid-manager-tools {
+  margin-left: 0;
+  flex: 0 1 auto;
+}
+
+.govt-reason-page .screen-grid .ag-cell,
+.govt-reason-page .screen-grid .ag-header-cell {
+  font-size: 14px;
+}
+
+.govt-reason-page .screen-grid .ag-header-cell {
+  padding: 8px 10px !important;
+}
+
+.govt-reason-page .screen-grid .ag-header {
+  background: linear-gradient(180deg, #0f96a0 0%, #0c8690 100%);
+}
+
+.govt-reason-page .screen-grid .ag-header-cell,
+.govt-reason-page .screen-grid .ag-header-group-cell {
+  color: #ffffff;
+}
+
+.govt-reason-page .screen-grid .ag-header-cell-last-left-pinned,
+.govt-reason-page .screen-grid .ag-cell-last-left-pinned {
+  border-right: none !important;
+  box-shadow: none !important;
+}
+
+.govt-reason-page .screen-grid .ag-header-cell .ag-header-icon,
+.govt-reason-page .screen-grid .ag-header-cell .ag-header-icon .ag-icon,
+.govt-reason-page .screen-grid .ag-header-cell .ag-header-icon .ag-icon::before {
+  color: rgba(255, 255, 255, 0.95) !important;
+}
+
+.govt-reason-page .screen-grid .ag-header-cell-label {
+  white-space: normal !important;
+  line-height: 1.2 !important;
+  align-items: center !important;
+  justify-content: center;
+}
+
+.govt-reason-page .screen-grid .ag-header-row.ag-header-row-column .ag-header-cell[col-id="select"] .ag-header-cell-comp-wrapper {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.govt-reason-page .screen-grid .mfi-floating-filter-input,
+.govt-reason-page .screen-grid .ag-floating-filter-input,
+.govt-reason-page .screen-grid .ag-input-field-input:not(.ag-checkbox-input),
+.govt-reason-page .screen-grid .ag-text-field-input {
+  height: 30px !important;
+  min-height: 30px !important;
+  margin: 0 !important;
+}
+
+.govt-reason-page .screen-grid .gt-sort-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 4px;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.govt-reason-page .screen-grid .gt-sort-icon svg {
+  width: 10px;
+  height: 14px;
+  fill: currentColor;
+}
+
+.govt-reason-page .screen-grid .gt-sort-icon--none {
+  opacity: 0.78;
+}
+
+.govt-reason-page .screen-grid .ag-floating-filter-button {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  min-width: 28px;
+  height: 30px;
+  margin-left: 6px;
+}
+
+.govt-reason-page .screen-grid .ag-floating-filter-button .ag-icon,
+.govt-reason-page .screen-grid .ag-floating-filter-button .ag-icon-filter,
+.govt-reason-page .screen-grid .ag-floating-filter-button .ag-icon-filter::before {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+  fill: #ffffff !important;
+}
+
+.govt-reason-page .screen-grid .ag-floating-filter-button:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+}
+
+.govt-reason-page .ag-theme-alpine .ag-filter-apply-panel .ag-button,
+.govt-reason-page .ag-theme-alpine .ag-filter-apply-panel .ag-standard-button {
+  border-radius: 8px;
+  font-weight: 600;
+  min-height: 34px;
+}
+
+.govt-reason-page .ag-theme-alpine .ag-filter-apply-panel .ag-standard-button:first-child {
+  background: #007c91;
+  color: #ffffff;
+  border: 1px solid #007c91;
+}
+
+.govt-reason-page .ag-theme-alpine .ag-filter-apply-panel .ag-standard-button:first-child:hover {
+  background: #006d7f;
+  border-color: #006d7f;
+}
+
+.govt-reason-page .ag-theme-alpine .ag-filter-apply-panel .ag-standard-button:last-child {
+  background: #ffffff;
+  color: #007c91;
+  border: 1px solid #007c91;
+}
+
+.govt-reason-page .ag-theme-alpine .ag-filter-apply-panel .ag-standard-button:last-child:hover {
+  background: #eef8fa;
+}
+
+.govt-reason-page .screen-grid .ag-cell {
+  display: flex;
+  align-items: center;
+}
+
+.govt-reason-page .screen-grid .ag-cell.cell-center {
+  justify-content: center;
+}
+
+.govt-reason-page .screen-grid .ag-cell.cell-left {
+  justify-content: flex-start;
+}
+
+.govt-reason-page .screen-grid .ag-checkbox-input-wrapper {
+  transform: scale(1.05);
+}
+
+@media (max-width: 1180px) {
+  .govt-reason-summary-card {
+    padding: 22px 20px;
+  }
+
+  .govt-reason-summary-grid {
+    grid-template-columns: minmax(150px, 220px) minmax(220px, 1fr);
+    max-width: none;
+    margin: 0;
+  }
+
+  .govt-reason-summary-note {
+    grid-column: 2;
+    margin-top: -8px;
+  }
+}
+
+@media (max-width: 760px) {
+  .govt-reason-summary-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .govt-reason-summary-note {
+    grid-column: auto;
+    margin-top: 0;
+  }
+}
