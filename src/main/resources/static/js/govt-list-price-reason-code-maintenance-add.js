@@ -335,6 +335,12 @@ const GovtListPriceReasonCodeMaintenanceAddPage = {
 
     submitEntries.forEach(({ rowIndex }) => this.clearRowErrors(rowIndex));
 
+    const clientValidationErrors = this.validateSubmitEntries(submitEntries);
+    if (clientValidationErrors > 0) {
+      this.showInfo(`${clientValidationErrors} row(s) need review.`, 'error');
+      return;
+    }
+
     const payload = {
       records: submitEntries.map(({ row }) => this.toBackendRecord(row))
     };
@@ -356,6 +362,44 @@ const GovtListPriceReasonCodeMaintenanceAddPage = {
         console.error(error);
         this.showInfo(error?.message || 'Unable to create government list price reason code records.', 'error');
       });
+  },
+
+  validateSubmitEntries(submitEntries) {
+    let errorCount = 0;
+
+    submitEntries.forEach(({ row, rowIndex }) => {
+      const fieldErrorMessages = {};
+      const uploadErrors = [];
+
+      if (String(row.specialHandling || '').trim() && this.parseHardCodedBoolean(row.specialHandling) === null) {
+        fieldErrorMessages.specialHandling = 'Special Handling must be Y or N.';
+        uploadErrors.push('specialHandling');
+      }
+
+      if (String(row.hardCoded || '').trim() && this.parseHardCodedBoolean(row.hardCoded) === null) {
+        fieldErrorMessages.hardCoded = 'Hard Coded must be Y or N.';
+        uploadErrors.push('hardCoded');
+      }
+
+      if (uploadErrors.length > 0) {
+        errorCount += 1;
+        this.updateRow(rowIndex, {
+          ...row,
+          uploadStatus: 'error',
+          uploadErrors,
+          errorMessages: Object.values(fieldErrorMessages),
+          fieldErrorMessages,
+          editedFields: [],
+          wasEditedAfterError: false
+        });
+      }
+    });
+
+    if (errorCount > 0) {
+      this.gridApi?.refreshCells?.({ force: true });
+    }
+
+    return errorCount;
   },
 
   getGridRows() {
