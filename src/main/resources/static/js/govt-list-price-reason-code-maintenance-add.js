@@ -565,6 +565,7 @@ const GovtListPriceReasonCodeMaintenanceAddPage = {
     const resultsByRowNumber = new Map(results.map((item) => [Number(item?.rowNumber), item]));
     let successCount = 0;
     let errorCount = 0;
+    const successfulRowsToRemove = [];
 
     submitEntries.forEach(({ row, rowIndex }, index) => {
       const result = resultsByRowNumber.get(index + 1);
@@ -576,19 +577,33 @@ const GovtListPriceReasonCodeMaintenanceAddPage = {
       ]));
       const isError = String(result?.status || '').trim().toUpperCase() === 'ERROR' || uploadErrors.length > 0;
 
-      this.updateRow(rowIndex, {
-        ...mergedRow,
-        uploadStatus: isError ? 'error' : 'success',
-        uploadErrors,
-        errorMessages: Array.isArray(result?.errorMessages) ? result.errorMessages : [],
-        fieldErrorMessages,
-        editedFields: [],
-        wasEditedAfterError: false
-      });
-
-      if (isError) errorCount += 1;
-      else successCount += 1;
+      if (isError) {
+        this.updateRow(rowIndex, {
+          ...mergedRow,
+          uploadStatus: 'error',
+          uploadErrors,
+          errorMessages: Array.isArray(result?.errorMessages) ? result.errorMessages : [],
+          fieldErrorMessages,
+          editedFields: [],
+          wasEditedAfterError: false
+        });
+        errorCount += 1;
+      } else {
+        successCount += 1;
+        const rowNode = this.gridApi?.getDisplayedRowAtIndex?.(rowIndex);
+        if (rowNode?.data) {
+          successfulRowsToRemove.push(rowNode.data);
+        }
+      }
     });
+
+    if (successfulRowsToRemove.length > 0) {
+      this.gridApi?.applyTransaction?.({ remove: successfulRowsToRemove });
+    }
+
+    if ((this.gridApi?.getDisplayedRowCount?.() || 0) === 0) {
+      this.gridApi?.setGridOption?.('rowData', [this.createBlankRow()]);
+    }
 
     this.gridApi?.refreshCells?.({ force: true });
 
