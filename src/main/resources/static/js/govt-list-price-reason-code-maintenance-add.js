@@ -620,14 +620,6 @@ const GovtListPriceReasonCodeMaintenanceAddPage = {
       headers['Content-Type'] = 'application/json';
     }
 
-    const currentUserId = String(document.getElementById('currentUserId')?.value || '').trim();
-    const workStationId = String(window.WORK_STATION_ID || window.WORKSTATION_ID || '').trim();
-    const programId = String(window.PROGRAM_ID || '').trim();
-
-    if (currentUserId) headers['X-User-Id'] = currentUserId;
-    if (workStationId) headers['X-WorkStation-Id'] = workStationId;
-    if (programId) headers['X-Program-Id'] = programId;
-
     return headers;
   },
 
