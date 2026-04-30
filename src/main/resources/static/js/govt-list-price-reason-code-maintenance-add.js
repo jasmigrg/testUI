@@ -186,6 +186,7 @@ const GovtListPriceReasonCodeMaintenanceAddPage = {
           filter: false,
           floatingFilter: false,
           suppressHeaderMenuButton: true,
+          suppressCsvExport: true,
           resizable: false,
           editable: false,
           cellClass: 'cell-center'
@@ -703,10 +704,25 @@ const GovtListPriceReasonCodeMaintenanceAddPage = {
       defaultMode: 'compact'
     });
 
-    GridToolbar.bindDownloadControl({
-      gridApi: this.gridApi,
-      fileName: 'govt-list-price-reason-code-maintenance-add.csv'
+    const downloadButton = document.querySelector('.gt-view-btn[data-action="download"]');
+    downloadButton?.addEventListener('click', () => this.handleDownloadAction());
+  },
+
+  handleDownloadAction() {
+    if (!this.gridApi || typeof this.gridApi.exportDataAsCsv !== 'function') return;
+
+    this.gridApi.exportDataAsCsv({
+      fileName: this.buildDownloadFileName(),
+      columnKeys: ['code', 'description01', 'description02', 'specialHandling', 'hardCoded']
     });
+  },
+
+  buildDownloadFileName() {
+    const now = new Date();
+    const pad = (value) => String(value).padStart(2, '0');
+    const datePart = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}`;
+    const timePart = `${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+    return `user_defined_codes_${this.productCode}_${this.userDefinedCodes}_${datePart}_${timePart}.csv`;
   },
 
   showInfo(message, type = 'success') {
