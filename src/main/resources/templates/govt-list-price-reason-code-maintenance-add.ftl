@@ -28,6 +28,7 @@
 
   <script src="${ctx}/js/sidebar.js" defer></script>
   <script src="${ctx}/js/dynamic-grid.js" defer></script>
+  <script src="${ctx}/js/community-grid-paste.js" defer></script>
   <script src="${ctx}/js/grid-manager.js" defer></script>
   <script src="${ctx}/js/grid-toolbar.js" defer></script>
   <script src="${ctx}/js/page-toast.js" defer></script>

@@ -84,12 +84,29 @@ class GtPageSelectHeader {
   }
 }
 
+const GOVT_REASON_ADD_FIELD_ALIASES = {
+  code: ['userDefinedCode'],
+  description01: ['description'],
+  description02: ['description2'],
+  specialHandling: ['specialHandlingCode'],
+  hardCoded: ['hardCodedYn']
+};
+
 const GovtListPriceReasonCodeMaintenanceAddPage = {
+  apiBaseUrl: '',
+  createEndpoint: '/api/v1/bulk-create',
+  productCode: '57',
+  userDefinedCodes: 'R0',
+  detachCommunityPaste: null,
+  maxPasteRows: 5000,
+  maxPasteCols: 5,
+  maxPasteCells: 25000,
   gridApi: null,
   gridElement: null,
   codeInput: null,
 
   init() {
+    this.apiBaseUrl = String(window.API_BASE_URL || '').trim();
     this.codeInput = document.getElementById('govtReasonCodeInput');
     this.initGrid();
     this.bindToolbarActions();
@@ -102,7 +119,13 @@ const GovtListPriceReasonCodeMaintenanceAddPage = {
       description01: '',
       description02: '',
       specialHandling: '',
-      hardCoded: 'N'
+      hardCoded: '',
+      uploadStatus: '',
+      uploadErrors: [],
+      errorMessages: [],
+      fieldErrorMessages: {},
+      editedFields: [],
+      wasEditedAfterError: false
     };
   },
 
@@ -118,7 +141,12 @@ const GovtListPriceReasonCodeMaintenanceAddPage = {
         rowSelection: 'multiple',
         suppressRowClickSelection: true,
         singleClickEdit: true,
+        enableRangeSelection: true,
+        suppressClipboardPaste: false,
+        copyHeadersToClipboard: false,
+        enableBrowserTooltips: true,
         stopEditingWhenCellsLoseFocus: true,
+        onCellValueChanged: (event) => this.onCellValueChanged(event),
         icons: {
           sortUnSort:
             '<span class="gt-sort-icon gt-sort-icon--none" aria-hidden="true"><svg viewBox="0 0 8 12" focusable="false"><path d="M4 1L7 4H1L4 1Z"></path><path d="M4 11L1 8H7L4 11Z"></path></svg></span>',
@@ -173,6 +201,31 @@ const GovtListPriceReasonCodeMaintenanceAddPage = {
     this.gridElement = document.getElementById('govtListPriceReasonCodeAddGrid');
     if (!this.gridApi) return;
 
+    if (typeof this.detachCommunityPaste === 'function') {
+      this.detachCommunityPaste();
+      this.detachCommunityPaste = null;
+    }
+
+    if (window.CommunityGridPaste?.attach) {
+      const editableFields = ['code', 'description01', 'description02', 'specialHandling', 'hardCoded'];
+      this.detachCommunityPaste = window.CommunityGridPaste.attach({
+        gridElement: this.gridElement,
+        gridApi: this.gridApi,
+        editableFieldOrder: editableFields,
+        maxRows: this.maxPasteRows,
+        maxCols: this.maxPasteCols,
+        maxCells: this.maxPasteCells,
+        showInfo: (message, type) => this.showInfo(message, type),
+        ensureRowCapacity: (rowCount, startRowIndex) => this.ensureRowCapacityForPaste(rowCount, startRowIndex),
+        normalizeRow: (row) => this.normalizeRow(row),
+        validateRow: () => ({ isValid: true, errors: [] }),
+        resolveHeaderField: (header, allowedFields) => this.resolvePasteHeaderField(header, allowedFields),
+        requireHeaderMapping: false,
+        headerMatchThreshold: 2,
+        onApplied: () => this.gridApi?.refreshCells?.({ force: true })
+      });
+    }
+
     setTimeout(() => {
       if (typeof GridManager !== 'undefined') {
         GridManager.init(this.gridApi, 'govtListPriceReasonCodeAddGrid');
@@ -187,6 +240,8 @@ const GovtListPriceReasonCodeMaintenanceAddPage = {
       minWidth,
       flex: 1,
       cellClass: field === 'specialHandling' || field === 'hardCoded' ? 'cell-center' : 'cell-left',
+      cellClassRules: this.validationCellRules(field),
+      tooltipValueGetter: (params) => this.getCellErrorTooltip(params, field),
       filterParams: {
         buttons: ['apply', 'reset'],
         closeOnApply: true,
@@ -195,6 +250,26 @@ const GovtListPriceReasonCodeMaintenanceAddPage = {
         filterOptions: ['contains', 'notContains', 'equals', 'notEqual']
       }
     };
+  },
+
+  validationCellRules(field) {
+    return {
+      'screen-add-cell-error': (params) => Array.isArray(params.data?.uploadErrors) && params.data.uploadErrors.includes(field)
+    };
+  },
+
+  getCellErrorTooltip(params, field) {
+    const row = params?.data;
+    if (!row || !field) return '';
+
+    const fieldMessage = row.fieldErrorMessages?.[field];
+    if (fieldMessage) return fieldMessage;
+
+    if (Array.isArray(row.uploadErrors) && row.uploadErrors.includes(field) && Array.isArray(row.errorMessages) && row.errorMessages.length > 0) {
+      return row.errorMessages.join('\n');
+    }
+
+    return '';
   },
 
   bindToolbarActions() {
@@ -215,7 +290,7 @@ const GovtListPriceReasonCodeMaintenanceAddPage = {
             this.gridApi?.applyPendingFloatingFilters?.();
             break;
           case 'favorite':
-            this.showInfo('Prototype add screen saved as a design reference.', 'success');
+            this.showInfo('Favorite action is not configured yet.', 'warning');
             break;
           default:
             break;
@@ -240,30 +315,306 @@ const GovtListPriceReasonCodeMaintenanceAddPage = {
       this.gridApi.applyTransaction({ add: [this.createBlankRow(this.codeInput?.value?.trim() || '')] });
     }
 
-    this.showInfo(`${selectedRows.length} row(s) removed from the prototype grid.`, 'success');
+    this.showInfo(`${selectedRows.length} row(s) removed from the grid.`, 'success');
   },
 
   submitPrototype() {
     if (!this.gridApi) return;
 
-    const rows = [];
     this.gridApi.stopEditing?.();
-    this.gridApi.forEachNode((node) => rows.push(node.data || {}));
+    this.seedCodeInputIntoGrid();
 
-    const filledRows = rows.filter((row) =>
-      [row.code, row.description01, row.description02, row.specialHandling, row.hardCoded]
-        .some((value) => String(value || '').trim() !== '')
-    );
+    const submitEntries = this.getGridRows()
+      .map((row, index) => ({ row: this.normalizeRow(row), rowIndex: index }))
+      .filter(({ row }) => !this.isRowEmpty(row));
 
-    if (!filledRows.length && !(this.codeInput?.value || '').trim()) {
-      this.showInfo('Enter at least one value before submitting the prototype.', 'warning');
+    if (!submitEntries.length) {
+      this.showInfo('Enter at least one row before submitting.', 'warning');
       return;
     }
 
-    this.showInfo(
-      `Prototype submit captured ${filledRows.length} grid row(s). API wiring can plug in here next.`,
-      'success'
+    submitEntries.forEach(({ rowIndex }) => this.clearRowErrors(rowIndex));
+
+    const payload = {
+      records: submitEntries.map(({ row }) => this.toBackendRecord(row))
+    };
+
+    fetch(this.resolveApiUrl(this.createEndpoint), {
+      method: 'POST',
+      headers: this.buildHeaders({ contentTypeJson: true }),
+      body: JSON.stringify(payload)
+    })
+      .then(async (response) => {
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(body?.message || 'Unable to create government list price reason code records.');
+        }
+        return body;
+      })
+      .then((responsePayload) => this.applySubmitResults(responsePayload, submitEntries))
+      .catch((error) => {
+        console.error(error);
+        this.showInfo(error?.message || 'Unable to create government list price reason code records.', 'error');
+      });
+  },
+
+  getGridRows() {
+    const rows = [];
+    this.gridApi?.forEachNode?.((node) => rows.push(node.data || {}));
+    return rows;
+  },
+
+  ensureRowCapacityForPaste(rowCountToPaste, startRowIndex = null) {
+    if (!this.gridApi || rowCountToPaste <= 0) return;
+    const focused = this.gridApi.getFocusedCell?.();
+    const resolvedStartRowIndex = Number.isInteger(startRowIndex)
+      ? startRowIndex
+      : (Number.isInteger(focused?.rowIndex) ? focused.rowIndex : 0);
+    const requiredRows = resolvedStartRowIndex + rowCountToPaste;
+    const currentRows = typeof this.gridApi.getDisplayedRowCount === 'function'
+      ? this.gridApi.getDisplayedRowCount()
+      : this.getGridRows().length;
+    const missingRows = requiredRows - currentRows;
+    if (missingRows > 0) this.appendBlankRows(missingRows);
+  },
+
+  appendBlankRows(count) {
+    if (!this.gridApi || !Number.isInteger(count) || count <= 0) return;
+    this.gridApi.applyTransaction({ add: Array.from({ length: count }, () => this.createBlankRow()) });
+  },
+
+  normalizeRow(row) {
+    return {
+      ...this.createBlankRow(),
+      ...(row || {}),
+      code: String(row?.code || '').trim(),
+      description01: String(row?.description01 || '').trim(),
+      description02: String(row?.description02 || '').trim(),
+      specialHandling: String(row?.specialHandling || '').trim(),
+      hardCoded: String(row?.hardCoded || '').trim().toUpperCase()
+    };
+  },
+
+  resolvePasteHeaderField(header, allowedFields = null) {
+    const normalizedHeader = this.normalizeFieldName(header);
+    const allowed = Array.isArray(allowedFields) && allowedFields.length > 0
+      ? allowedFields
+      : ['code', 'description01', 'description02', 'specialHandling', 'hardCoded'];
+
+    const matches = allowed.find((field) => {
+      if (this.normalizeFieldName(field) === normalizedHeader) return true;
+
+      const aliases = GOVT_REASON_ADD_FIELD_ALIASES[field] || [];
+      if (aliases.some((alias) => this.normalizeFieldName(alias) === normalizedHeader)) return true;
+
+      const headerLabels = {
+        code: 'Codes',
+        description01: 'Description 01',
+        description02: 'Description 02',
+        specialHandling: 'Special Handling',
+        hardCoded: 'Hard Coded'
+      };
+
+      return this.normalizeFieldName(headerLabels[field] || '') === normalizedHeader;
+    });
+
+    return matches || '';
+  },
+
+  isRowEmpty(row) {
+    return !['code', 'description01', 'description02', 'specialHandling', 'hardCoded']
+      .some((field) => String(row?.[field] || '').trim() !== '');
+  },
+
+  seedCodeInputIntoGrid() {
+    const topCode = String(this.codeInput?.value || '').trim();
+    if (!topCode || !this.gridApi) return;
+
+    const firstRowNode = this.gridApi.getDisplayedRowAtIndex?.(0);
+    if (!firstRowNode?.data || String(firstRowNode.data.code || '').trim()) return;
+
+    firstRowNode.setData({
+      ...firstRowNode.data,
+      code: topCode
+    });
+  },
+
+  toBackendRecord(row) {
+    const record = {
+      userDefinedCode: row.code,
+      description: row.description01
+    };
+
+    if (row.description02) record.description2 = row.description02;
+    if (row.specialHandling) record.specialHandlingCode = row.specialHandling;
+    if (row.hardCoded) record.hardCodedYn = row.hardCoded;
+
+    return record;
+  },
+
+  mapErrorField(field) {
+    const normalized = this.normalizeFieldName(field);
+    const match = Object.entries(GOVT_REASON_ADD_FIELD_ALIASES).find(([localField, aliases]) =>
+      this.normalizeFieldName(localField) === normalized
+      || aliases.some((alias) => this.normalizeFieldName(alias) === normalized)
     );
+    return match?.[0] || '';
+  },
+
+  normalizeFieldName(value) {
+    return String(value || '').replace(/[^a-z0-9]/gi, '').toLowerCase();
+  },
+
+  extractFieldErrorMessages(item) {
+    const messagesByField = {};
+    const assignMessage = (field, message) => {
+      const mappedField = this.mapErrorField(field);
+      if (!mappedField || message == null || message === '') return;
+      messagesByField[mappedField] = String(message);
+    };
+
+    if (Array.isArray(item?.errorFields) && Array.isArray(item?.errorMessages) && item.errorFields.length === item.errorMessages.length) {
+      item.errorFields.forEach((field, index) => assignMessage(field, item.errorMessages[index]));
+    }
+
+    return messagesByField;
+  },
+
+  mergeBackendDataIntoRow(row, backendData) {
+    return {
+      ...row,
+      code: backendData?.userDefinedCode ?? row.code,
+      description01: backendData?.description ?? row.description01,
+      description02: backendData?.description2 ?? row.description02,
+      specialHandling: backendData?.specialHandlingCode ?? row.specialHandling,
+      hardCoded: backendData?.hardCodedYn ?? row.hardCoded
+    };
+  },
+
+  applySubmitResults(responsePayload, submitEntries) {
+    const results = Array.isArray(responsePayload?.results) ? responsePayload.results : [];
+    const resultsByRowNumber = new Map(results.map((item) => [Number(item?.rowNumber), item]));
+    let successCount = 0;
+    let errorCount = 0;
+
+    submitEntries.forEach(({ row, rowIndex }, index) => {
+      const result = resultsByRowNumber.get(index + 1);
+      const mergedRow = result?.data ? this.mergeBackendDataIntoRow(row, result.data) : row;
+      const fieldErrorMessages = this.extractFieldErrorMessages(result);
+      const uploadErrors = Array.from(new Set([
+        ...(Array.isArray(result?.errorFields) ? result.errorFields.map((field) => this.mapErrorField(field)).filter(Boolean) : []),
+        ...Object.keys(fieldErrorMessages)
+      ]));
+      const isError = String(result?.status || '').trim().toUpperCase() === 'ERROR' || uploadErrors.length > 0;
+
+      this.updateRow(rowIndex, {
+        ...mergedRow,
+        uploadStatus: isError ? 'error' : 'success',
+        uploadErrors,
+        errorMessages: Array.isArray(result?.errorMessages) ? result.errorMessages : [],
+        fieldErrorMessages,
+        editedFields: [],
+        wasEditedAfterError: false
+      });
+
+      if (isError) errorCount += 1;
+      else successCount += 1;
+    });
+
+    this.gridApi?.refreshCells?.({ force: true });
+
+    if (successCount > 0 && errorCount > 0) {
+      this.showInfo(`${successCount} row(s) submitted successfully. ${errorCount} row(s) need review.`, 'warning');
+      return;
+    }
+
+    if (errorCount > 0) {
+      this.showInfo(`${errorCount} row(s) need review.`, 'error');
+      return;
+    }
+
+    this.showInfo(`${successCount} row(s) submitted successfully.`, 'success');
+  },
+
+  updateRow(rowIndex, nextRow) {
+    const rowNode = this.gridApi?.getDisplayedRowAtIndex?.(rowIndex);
+    if (!rowNode) return;
+    rowNode.setData({
+      ...this.createBlankRow(),
+      ...nextRow
+    });
+  },
+
+  clearRowErrors(rowIndex) {
+    const rowNode = this.gridApi?.getDisplayedRowAtIndex?.(rowIndex);
+    if (!rowNode?.data) return;
+
+    rowNode.setData({
+      ...rowNode.data,
+      uploadStatus: '',
+      uploadErrors: [],
+      errorMessages: [],
+      fieldErrorMessages: {},
+      editedFields: [],
+      wasEditedAfterError: false
+    });
+  },
+
+  onCellValueChanged(event) {
+    const field = event?.colDef?.field;
+    const rowNode = event?.node;
+    if (!field || !rowNode?.data) return;
+
+    const nextFieldErrorMessages = { ...(rowNode.data.fieldErrorMessages || {}) };
+    delete nextFieldErrorMessages[field];
+
+    const nextUploadErrors = Array.isArray(rowNode.data.uploadErrors)
+      ? rowNode.data.uploadErrors.filter((errorField) => errorField !== field)
+      : [];
+
+    rowNode.setData({
+      ...rowNode.data,
+      uploadStatus: nextUploadErrors.length > 0 ? 'error' : '',
+      uploadErrors: nextUploadErrors,
+      fieldErrorMessages: nextFieldErrorMessages,
+      editedFields: Array.from(new Set([...(Array.isArray(rowNode.data.editedFields) ? rowNode.data.editedFields : []), field])),
+      wasEditedAfterError: true
+    });
+
+    this.gridApi?.refreshCells?.({ rowNodes: [rowNode], force: true });
+  },
+
+  buildHeaders(options = {}) {
+    const headers = {
+      Accept: 'application/json',
+      'X-Product-Code': this.productCode,
+      'X-User-Defined-Codes': this.userDefinedCodes
+    };
+
+    if (options.contentTypeJson) {
+      headers['Content-Type'] = 'application/json';
+    }
+
+    const currentUserId = String(document.getElementById('currentUserId')?.value || '').trim();
+    const workStationId = String(window.WORK_STATION_ID || window.WORKSTATION_ID || '').trim();
+    const programId = String(window.PROGRAM_ID || '').trim();
+
+    if (currentUserId) headers['X-User-Id'] = currentUserId;
+    if (workStationId) headers['X-WorkStation-Id'] = workStationId;
+    if (programId) headers['X-Program-Id'] = programId;
+
+    return headers;
+  },
+
+  resolveApiUrl(path) {
+    const normalizedPath = String(path || '').trim();
+    if (!normalizedPath) return this.apiBaseUrl;
+    if (/^https?:\/\//i.test(normalizedPath)) return normalizedPath;
+    if (!this.apiBaseUrl) return normalizedPath;
+
+    const base = this.apiBaseUrl.replace(/\/$/, '');
+    const suffix = normalizedPath.startsWith('/') ? normalizedPath : `/${normalizedPath}`;
+    return `${base}${suffix}`;
   },
 
   initViewActions() {
