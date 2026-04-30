@@ -391,8 +391,28 @@ const GovtListPriceReasonCodeMaintenanceAddPage = {
       description01: String(row?.description01 || '').trim(),
       description02: String(row?.description02 || '').trim(),
       specialHandling: String(row?.specialHandling || '').trim(),
-      hardCoded: String(row?.hardCoded || '').trim().toUpperCase()
+      hardCoded: this.formatHardCodedDisplay(row?.hardCoded)
     };
+  },
+
+  formatHardCodedDisplay(value) {
+    if (value === true) return 'Y';
+    if (value === false) return 'N';
+
+    const normalized = String(value || '').trim().toUpperCase();
+    if (normalized === 'TRUE') return 'Y';
+    if (normalized === 'FALSE') return 'N';
+    return normalized;
+  },
+
+  parseHardCodedBoolean(value) {
+    if (value === true || value === false) return value;
+
+    const normalized = String(value || '').trim().toUpperCase();
+    if (!normalized) return null;
+    if (normalized === 'Y' || normalized === 'TRUE') return true;
+    if (normalized === 'N' || normalized === 'FALSE') return false;
+    return null;
   },
 
   resolvePasteHeaderField(header, allowedFields = null) {
@@ -447,7 +467,12 @@ const GovtListPriceReasonCodeMaintenanceAddPage = {
 
     if (row.description02) record.description2 = row.description02;
     if (row.specialHandling) record.specialHandlingCode = row.specialHandling;
-    if (row.hardCoded) record.hardCodedYn = row.hardCoded;
+    if (String(row.hardCoded || '').trim()) {
+      const hardCodedBoolean = this.parseHardCodedBoolean(row.hardCoded);
+      if (hardCodedBoolean !== null) {
+        record.hardCodedYn = hardCodedBoolean;
+      }
+    }
 
     return record;
   },
@@ -487,7 +512,7 @@ const GovtListPriceReasonCodeMaintenanceAddPage = {
       description01: backendData?.description ?? row.description01,
       description02: backendData?.description2 ?? row.description02,
       specialHandling: backendData?.specialHandlingCode ?? row.specialHandling,
-      hardCoded: backendData?.hardCodedYn ?? row.hardCoded
+      hardCoded: this.formatHardCodedDisplay(backendData?.hardCodedYn ?? row.hardCoded)
     };
   },
 
