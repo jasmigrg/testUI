@@ -103,19 +103,17 @@ const GovtListPriceReasonCodeMaintenanceAddPage = {
   maxPasteCells: 25000,
   gridApi: null,
   gridElement: null,
-  codeInput: null,
 
   init() {
     this.apiBaseUrl = String(window.API_BASE_URL || '').trim();
-    this.codeInput = document.getElementById('govtReasonCodeInput');
     this.initGrid();
     this.bindToolbarActions();
     this.initViewActions();
   },
 
-  createBlankRow(codeValue = '') {
+  createBlankRow() {
     return {
-      code: codeValue,
+      code: '',
       description01: '',
       description02: '',
       specialHandling: '',
@@ -227,6 +225,8 @@ const GovtListPriceReasonCodeMaintenanceAddPage = {
       });
     }
 
+    this.gridApi.applyPendingFloatingFilters = () => this.applyAdvancedFilters();
+
     setTimeout(() => {
       if (typeof GridManager !== 'undefined') {
         GridManager.init(this.gridApi, 'govtListPriceReasonCodeAddGrid');
@@ -313,7 +313,7 @@ const GovtListPriceReasonCodeMaintenanceAddPage = {
     const remainingRows = [];
     this.gridApi.forEachNode((node) => remainingRows.push(node.data));
     if (!remainingRows.length) {
-      this.gridApi.applyTransaction({ add: [this.createBlankRow(this.codeInput?.value?.trim() || '')] });
+      this.gridApi.applyTransaction({ add: [this.createBlankRow()] });
     }
 
     this.showInfo(`${selectedRows.length} row(s) removed from the grid.`, 'success');
@@ -323,7 +323,6 @@ const GovtListPriceReasonCodeMaintenanceAddPage = {
     if (!this.gridApi) return;
 
     this.gridApi.stopEditing?.();
-    this.seedCodeInputIntoGrid();
 
     const submitEntries = this.getGridRows()
       .map((row, index) => ({ row: this.normalizeRow(row), rowIndex: index }))
@@ -486,22 +485,31 @@ const GovtListPriceReasonCodeMaintenanceAddPage = {
     return matches || '';
   },
 
+  applyAdvancedFilters() {
+    const fieldTypeMap = {
+      code: 'text',
+      description01: 'text',
+      description02: 'text',
+      specialHandling: 'text',
+      hardCoded: 'text'
+    };
+
+    if (window.GridFilterOperatorUtils?.applyFloatingFilters) {
+      window.GridFilterOperatorUtils.applyFloatingFilters({
+        gridApi: this.gridApi,
+        gridElement: this.gridElement,
+        fieldTypeMap,
+        onValidationError: (field, reason) => this.showInfo(`${field}: ${reason}`, 'error')
+      });
+      return;
+    }
+
+    if (typeof this.gridApi?.onFilterChanged === 'function') this.gridApi.onFilterChanged();
+  },
+
   isRowEmpty(row) {
     return !['code', 'description01', 'description02', 'specialHandling', 'hardCoded']
       .some((field) => String(row?.[field] || '').trim() !== '');
-  },
-
-  seedCodeInputIntoGrid() {
-    const topCode = String(this.codeInput?.value || '').trim();
-    if (!topCode || !this.gridApi) return;
-
-    const firstRowNode = this.gridApi.getDisplayedRowAtIndex?.(0);
-    if (!firstRowNode?.data || String(firstRowNode.data.code || '').trim()) return;
-
-    firstRowNode.setData({
-      ...firstRowNode.data,
-      code: topCode
-    });
   },
 
   toBackendRecord(row) {

@@ -1,0 +1,752 @@
+.pricing-engine-batch-page .content-card {
+  gap: 12px;
+}
+
+.pricing-engine-batch-page .peb-grid-action {
+  display: none;
+}
+
+.pricing-engine-batch-page.peb-results-ready .peb-grid-action {
+  display: inline-flex;
+}
+
+.peb-top-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+  align-items: stretch;
+}
+
+.peb-card {
+  background: #f7f8fa;
+  border: 1px solid #e1e6eb;
+  border-radius: 18px;
+  padding: 16px 18px 18px;
+  box-shadow: 0 2px 10px rgba(34, 47, 62, 0.06);
+  min-width: 0;
+}
+
+.peb-request-card,
+.peb-search-card {
+  min-height: 156px;
+}
+
+.peb-request-card {
+  padding-top: 18px;
+  padding-bottom: 20px;
+}
+
+.peb-card-title {
+  margin: 0 0 16px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #1d2b36;
+}
+
+.peb-request-row {
+  display: grid;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.peb-request-row--full {
+  grid-template-columns:
+    42px
+    minmax(0, 1.7fr)
+    16px
+    minmax(0, 1.7fr)
+    46px
+    minmax(0, 0.92fr)
+    16px
+    minmax(0, 0.62fr);
+}
+
+.peb-step-label,
+.peb-or-label {
+  color: #57636f;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.peb-step-label {
+  width: auto;
+  flex: none;
+  min-width: 0;
+}
+
+.peb-pill-btn {
+  min-width: 0;
+  width: 100%;
+  height: 34px;
+  padding: 0 8px;
+  border-radius: 8px;
+  border: 1px solid #d8dde3;
+  background: #ffffff;
+  color: #4f5c68;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.peb-pill-btn--wide {
+  min-width: 0;
+  letter-spacing: -0.1px;
+}
+
+.peb-pill-btn:hover {
+  border-color: #a8c9d0;
+  color: #007c91;
+}
+
+.peb-pill-btn.is-active {
+  border-color: #d8dde3;
+  color: #4f5c68;
+  background: #ffffff;
+  box-shadow: none;
+}
+
+.peb-mode-btn {
+  min-width: 0;
+}
+
+.peb-search-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.peb-search-row {
+  display: grid;
+  align-items: center;
+  gap: 10px 8px;
+  min-width: 0;
+}
+
+.peb-search-row--top {
+  grid-template-columns: 74px minmax(180px, 1fr) 126px minmax(150px, 1fr);
+}
+
+.peb-search-row--bottom {
+  grid-template-columns: 74px minmax(180px, 1fr) 126px minmax(150px, 1fr);
+}
+
+.peb-inline-field {
+  display: contents;
+}
+
+.peb-inline-field span {
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.peb-inline-field input {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.peb-inline-field--description {
+  display: contents;
+}
+
+.peb-inline-field--stacked {
+  display: grid;
+  grid-template-columns: auto minmax(96px, 1fr);
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.peb-inline-field--stacked span,
+.peb-inline-field--stacked input {
+  min-width: 0;
+}
+
+.peb-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.peb-inline-field span,
+.peb-field span,
+.peb-inline-check span:first-child {
+  font-size: 11px;
+  font-weight: 600;
+  color: #32414d;
+}
+
+.peb-inline-field input,
+.peb-field input {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  height: 30px;
+  border: 1px solid #dde3e9;
+  border-radius: 5px;
+  background: #ffffff;
+  padding: 0 10px;
+  font-size: 11px;
+  color: #1f2a33;
+}
+
+.peb-inline-field input[readonly],
+.peb-field input[readonly] {
+  background: #eef1f4;
+  color: #4f5c68;
+}
+
+.peb-inline-field input:focus,
+.peb-field input:focus {
+  outline: 2px solid rgba(0, 124, 145, 0.18);
+  border-color: #007c91;
+}
+
+.peb-field--compact input {
+  max-width: 160px;
+}
+
+.peb-inline-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.peb-inline-check input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #0f96a0;
+}
+
+.peb-search-sidegroup {
+  grid-column: 3 / 5;
+  display: grid;
+  grid-template-columns: 80px 24px 80px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+}
+
+.peb-search-sidegroup > * {
+  min-width: 0;
+}
+
+.peb-report-output-label {
+  white-space: nowrap;
+  min-width: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: #32414d;
+}
+
+.peb-report-output-checkbox {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: #0f96a0;
+  justify-self: start;
+}
+
+.peb-output-type-label {
+  white-space: nowrap;
+  min-width: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: #32414d;
+}
+
+.peb-output-type-input {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  height: 30px;
+  border: 1px solid #dde3e9;
+  border-radius: 5px;
+  background: #eef1f4;
+  padding: 0 10px;
+  font-size: 11px;
+  color: #4f5c68;
+}
+
+#pebDescription {
+  background: #eef1f4;
+  color: #4f5c68;
+}
+
+.peb-inline-check--modal {
+  align-self: end;
+  min-height: 38px;
+}
+
+.peb-results-shell[hidden] {
+  display: none !important;
+}
+
+.peb-grid-topbar[hidden] {
+  display: none !important;
+}
+
+.peb-batch-shell[hidden],
+.peb-batch-toolbar[hidden] {
+  display: none !important;
+}
+
+.peb-batch-shell {
+  margin-top: 10px;
+}
+
+.peb-batch-toolbar {
+  margin-top: 2px;
+}
+
+.pricing-engine-batch-page .peb-screen-add-upload-row {
+  display: flex;
+  justify-content: flex-end;
+  margin: 6px 0 10px;
+  gap: 12px;
+}
+
+.pricing-engine-batch-page .screen-add-bulk-upload-btn {
+  border: none;
+  border-radius: 8px;
+  height: 36px;
+  padding: 0 18px;
+  background: var(--color-primary, #0f8a9d);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pricing-engine-batch-page .screen-add-bulk-upload-btn:hover {
+  background: var(--color-primary-hover, #0b7884);
+}
+
+.pricing-engine-batch-page .peb-screen-add-status-row {
+  margin: 4px 0 10px;
+  border: 1px solid #edf1f7;
+  border-radius: 10px;
+  background: #fff;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 26px;
+  padding: 0 16px;
+}
+
+.pricing-engine-batch-page .screen-add-status-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #374151;
+  font-size: 15px;
+}
+
+.pricing-engine-batch-page .screen-add-status-option input[type='radio'] {
+  accent-color: #0d8b99;
+}
+
+.pricing-engine-batch-page .peb-batch-grid-wrapper {
+  box-sizing: border-box;
+  padding-bottom: 8px;
+  overflow-x: auto;
+  overflow-y: visible;
+}
+
+.peb-grid-topbar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin-top: 4px;
+  margin-bottom: 8px;
+}
+
+.pricing-engine-batch-page .peb-grid-topbar .gt-grid-manager-tools {
+  margin-left: 0;
+  flex: 0 1 auto;
+}
+
+.pricing-engine-batch-page .grid-wrapper {
+  margin-top: 0;
+}
+
+.pricing-engine-batch-page .screen-grid .ag-header {
+  background: linear-gradient(180deg, #0f96a0 0%, #0c8690 100%);
+}
+
+.pricing-engine-batch-page .screen-grid .ag-header-cell,
+.pricing-engine-batch-page .screen-grid .ag-header-group-cell {
+  color: #ffffff;
+}
+
+.pricing-engine-batch-page .screen-grid .ag-header-cell {
+  padding: 8px 10px !important;
+}
+
+.pricing-engine-batch-page .screen-grid .ag-header-cell-label {
+  white-space: normal !important;
+  line-height: 1.2 !important;
+  align-items: center !important;
+}
+
+.pricing-engine-batch-page .screen-grid .ag-cell {
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+}
+
+.pricing-engine-batch-page .screen-grid .ag-cell.cell-center {
+  justify-content: center;
+}
+
+.pricing-engine-batch-page .screen-grid .ag-cell.cell-left {
+  justify-content: flex-start;
+}
+
+.pricing-engine-batch-page .screen-grid .ag-checkbox-input-wrapper {
+  transform: scale(1.05);
+}
+
+.pricing-engine-batch-page .screen-grid .gt-sort-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 4px;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.pricing-engine-batch-page .screen-grid .gt-sort-icon svg {
+  width: 10px;
+  height: 14px;
+  fill: currentColor;
+}
+
+.pricing-engine-batch-page .screen-grid .gt-sort-icon--none {
+  opacity: 0.78;
+}
+
+.pricing-engine-batch-page .screen-grid .ag-floating-filter-button {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  min-width: 28px;
+  height: 30px;
+  margin-left: 6px;
+}
+
+.pricing-engine-batch-page .screen-grid .ag-floating-filter-button .ag-icon,
+.pricing-engine-batch-page .screen-grid .ag-floating-filter-button .ag-icon-filter,
+.pricing-engine-batch-page .screen-grid .ag-floating-filter-button .ag-icon-filter::before {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+  fill: #ffffff !important;
+}
+
+.pricing-engine-batch-page .screen-grid .ag-floating-filter-button:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+}
+
+.pricing-engine-batch-page .screen-grid .mfi-floating-filter-input,
+.pricing-engine-batch-page .screen-grid .ag-floating-filter-input,
+.pricing-engine-batch-page .screen-grid .ag-input-field-input:not(.ag-checkbox-input),
+.pricing-engine-batch-page .screen-grid .ag-text-field-input {
+  height: 30px !important;
+  min-height: 30px !important;
+  margin: 0 !important;
+}
+
+.peb-modal[hidden] {
+  display: none !important;
+}
+
+.peb-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.peb-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(16, 24, 32, 0.38);
+}
+
+.peb-modal__dialog {
+  position: relative;
+  width: min(920px, calc(100vw - 48px));
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 26px 34px 24px;
+  box-shadow: 0 20px 48px rgba(18, 35, 48, 0.2);
+}
+
+.peb-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.peb-modal__title {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.2;
+  font-weight: 700;
+  color: #2d3440;
+}
+
+.peb-modal__close {
+  border: none;
+  background: transparent;
+  color: #384553;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.peb-modal__close svg {
+  width: 22px;
+  height: 22px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.peb-modal__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.02fr) minmax(0, 0.98fr);
+  gap: 18px 24px;
+  min-width: 0;
+}
+
+.peb-modal__column {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.peb-modal-field {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.peb-modal-field span,
+.peb-modal-check span:first-child,
+.peb-modal-inline-field span {
+  font-size: 12px;
+  font-weight: 600;
+  color: #32414d;
+  white-space: nowrap;
+}
+
+.peb-modal-field input,
+.peb-modal-inline-field input {
+  width: 100%;
+  min-width: 0;
+  height: 30px;
+  border: 1px solid #dde3e9;
+  border-radius: 3px;
+  background: #ffffff;
+  padding: 0 10px;
+  font-size: 12px;
+  color: #1f2a33;
+  box-sizing: border-box;
+}
+
+.peb-modal-field input[readonly],
+.peb-modal-inline-field input[readonly] {
+  background: #eef1f4;
+  color: #4f5c68;
+}
+
+.peb-modal-check {
+  display: grid;
+  grid-template-columns: 122px 24px;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.peb-modal-check input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: #0f96a0;
+}
+
+.peb-modal-side-row {
+  display: grid;
+  grid-template-columns: 184px minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  width: 100%;
+}
+
+.peb-modal-inline-field {
+  display: grid;
+  grid-template-columns: 90px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  width: 100%;
+  justify-self: stretch;
+}
+
+.peb-modal-side-row .peb-modal-inline-field--small:first-child {
+  width: 100%;
+  max-width: 100%;
+}
+
+.peb-modal-side-row .peb-modal-inline-field--small:last-child {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.peb-modal-inline-field--wide {
+  grid-template-columns: 104px minmax(0, 1fr);
+}
+
+.peb-inline-check--retrieve {
+  margin-top: 18px;
+  align-items: center;
+  gap: 12px;
+}
+
+.peb-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 14px;
+  margin-top: 26px;
+}
+
+.peb-secondary-btn,
+.peb-primary-btn {
+  min-width: 112px;
+  height: 38px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+
+.peb-secondary-btn {
+  border: 1px solid #d8dde3;
+  background: #ffffff;
+  color: #596572;
+}
+
+.peb-secondary-btn:hover {
+  border-color: #c2ccd5;
+  background: #f7f9fb;
+}
+
+.peb-primary-btn {
+  border: 1px solid #0f96a0;
+  background: #0f96a0;
+  color: #ffffff;
+}
+
+.peb-primary-btn:hover {
+  border-color: #0d8590;
+  background: #0d8590;
+}
+
+.pricing-engine-batch-page.peb-modal-open {
+  overflow: hidden;
+}
+
+@media (max-width: 1280px) {
+  .peb-top-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .peb-modal__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .peb-request-row {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .peb-step-label {
+    font-size: 16px;
+  }
+
+  .peb-search-row {
+    grid-template-columns: 1fr;
+  }
+
+  .peb-modal-side-row,
+  .peb-modal-field,
+  .peb-modal-inline-field,
+  .peb-modal-check {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .peb-inline-field {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .peb-inline-check--search {
+    justify-self: start;
+  }
+
+  .peb-field--compact input {
+    max-width: none;
+  }
+
+  .peb-modal__dialog {
+    padding: 22px 18px 18px;
+    width: min(100%, calc(100vw - 24px));
+  }
+
+  .peb-modal__actions {
+    justify-content: stretch;
+    flex-wrap: wrap;
+  }
+
+  .peb-secondary-btn,
+  .peb-primary-btn {
+    flex: 1 1 180px;
+  }
+}

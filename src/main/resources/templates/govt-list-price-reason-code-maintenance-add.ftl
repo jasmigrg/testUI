@@ -83,12 +83,6 @@
               <input class="govt-reason-summary-input" type="text" value="R0" readonly tabindex="-1" aria-label="User Defined Codes" />
             </div>
             <div class="govt-reason-summary-note">Government List Price Reason Code</div>
-
-            <div class="govt-reason-summary-label">Code</div>
-            <div class="govt-reason-summary-field">
-              <input id="govtReasonCodeInput" class="govt-reason-summary-input govt-reason-summary-input--editable" type="text" placeholder="Enter Code" aria-label="Code" />
-            </div>
-            <div class="govt-reason-summary-note govt-reason-summary-note--empty" aria-hidden="true"></div>
           </div>
         </section>
 

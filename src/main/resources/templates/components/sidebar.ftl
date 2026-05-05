@@ -50,6 +50,11 @@
                     </a>
                 </li>
                 <li class="submenu-item">
+                    <a href="/pricing-engine-batch" class="submenu-link" title="Pricing Engine Batch">
+                        <span class="text">Pricing Engine Batch</span>
+                    </a>
+                </li>
+                <li class="submenu-item">
                     <a href="/cams-eligibility" class="submenu-link" title="CAMS Eligibility">
                         <span class="text">CAMS Eligibility</span>
                     </a>

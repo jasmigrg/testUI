@@ -81,6 +81,12 @@ public class PricingInquiryController {
     return "govt-list-price-reason-code-maintenance-add";
   }
 
+  @GetMapping("/pricing-engine-batch")
+  public String pricingEngineBatch(Model model) {
+    model.addAttribute("apiBaseUrl", apiBaseUrl);
+    return "pricing-engine-batch";
+  }
+
   @GetMapping("/cams-eligibility")
   public String camsEligibility() {
     return "pricing/cams-eligibility";
